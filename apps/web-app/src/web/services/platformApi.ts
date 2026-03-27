@@ -2,9 +2,11 @@ import axios from "axios";
 import { apiConfig } from "../../config/api";
 import type {
   AuthLoginInput,
+  AuthRegistrationChallenge,
   AuthRegisterInput,
   CivicRequest,
   District,
+  EmailVerificationInput,
   NewsCreateInput,
   NewsItem,
   NotificationItem,
@@ -17,6 +19,7 @@ import type {
   RequestReason,
   RequestStatus,
   RequestStatusUpdateInput,
+  ResendVerificationInput,
   SavedLocation,
   SavedLocationInput,
   User,
@@ -242,6 +245,23 @@ function mergeRequestMessages(request: CivicRequest, messages: RequestMessage[])
   };
 }
 
+function normalizeRegistrationChallenge(payload: unknown): AuthRegistrationChallenge {
+  const record =
+    typeof payload === "object" && payload !== null && !Array.isArray(payload)
+      ? (payload as Record<string, unknown>)
+      : {};
+
+  return {
+    status: "verification_required",
+    registrationId: String(record.registration_id ?? record.registrationId ?? ""),
+    email: String(record.email ?? ""),
+    expiresInSeconds: Number(record.expires_in_seconds ?? record.expiresInSeconds ?? 0),
+    resendAvailableInSeconds: Number(
+      record.resend_available_in_seconds ?? record.resendAvailableInSeconds ?? 0,
+    ),
+  };
+}
+
 async function fileToDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -294,6 +314,17 @@ export const platformApi = {
       email: payload.email,
       password: payload.password,
       full_name: payload.name,
+      phone: payload.phone,
+      language: payload.language,
+    });
+
+    return normalizeRegistrationChallenge(response.data);
+  },
+
+  async verifyEmail(payload: EmailVerificationInput) {
+    const response = await platformClient.post(apiConfig.endpoints.verifyEmail, {
+      registration_id: payload.registrationId,
+      code: payload.code,
     });
     const normalized = normalizeAuthResponse(response.data);
     const token = normalized.accessToken ?? normalized.token;
@@ -302,14 +333,15 @@ export const platformApi = {
       session.setToken(token);
     }
 
-    if (payload.language && payload.language !== "ru") {
-      await platformClient.put("/auth/language", { language: payload.language });
-    }
+    return normalized;
+  },
 
-    return {
-      ...normalized,
-      user: normalized.user ? { ...normalized.user, language: payload.language } : normalized.user,
-    };
+  async resendVerification(payload: ResendVerificationInput) {
+    const response = await platformClient.post(apiConfig.endpoints.resendVerification, {
+      registration_id: payload.registrationId,
+    });
+
+    return normalizeRegistrationChallenge(response.data);
   },
 
   async recoverPassword(_payload: PasswordRecoveryInput) {

@@ -1,5 +1,6 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -14,6 +15,13 @@ import jwt
 from passlib.context import CryptContext
 import base64
 import random
+import asyncio
+import hashlib
+import secrets
+import smtplib
+import ssl
+from email.message import EmailMessage
+from email.utils import formataddr
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -27,6 +35,20 @@ db = client[os.environ['DB_NAME']]
 SECRET_KEY = os.environ.get('JWT_SECRET', 'ikomek109-secret-key-2025-secure')
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
+EMAIL_VERIFICATION_EXPIRE_MINUTES = int(os.environ.get("EMAIL_VERIFICATION_EXPIRE_MINUTES", "10"))
+EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS = int(
+    os.environ.get("EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS", "60")
+)
+EMAIL_VERIFICATION_MAX_ATTEMPTS = int(os.environ.get("EMAIL_VERIFICATION_MAX_ATTEMPTS", "5"))
+
+SMTP_HOST = os.environ.get("SMTP_HOST", "").strip()
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+SMTP_USERNAME = os.environ.get("SMTP_USERNAME", "").strip()
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "").strip()
+SMTP_SENDER_EMAIL = os.environ.get("SMTP_SENDER_EMAIL", SMTP_USERNAME).strip()
+SMTP_SENDER_NAME = os.environ.get("SMTP_SENDER_NAME", "iKOMEK 109").strip()
+SMTP_USE_TLS = os.environ.get("SMTP_USE_TLS", "true").lower() == "true"
+SMTP_USE_SSL = os.environ.get("SMTP_USE_SSL", "false").lower() == "true"
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -54,6 +76,7 @@ class UserCreate(BaseModel):
     password: str
     full_name: str
     phone: Optional[str] = None
+    language: str = "ru"
     role: str = ROLE_CITIZEN  # Default role is citizen
 
 class UserLogin(BaseModel):
@@ -73,6 +96,20 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+class RegistrationStartResponse(BaseModel):
+    status: str = "verification_required"
+    registration_id: str
+    email: str
+    expires_in_seconds: int
+    resend_available_in_seconds: int
+
+class VerificationCodeRequest(BaseModel):
+    registration_id: str
+    code: str = Field(min_length=4, max_length=10)
+
+class VerificationResendRequest(BaseModel):
+    registration_id: str
 
 class SavedLocation(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -198,6 +235,110 @@ def create_access_token(data: dict) -> str:
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+def utcnow() -> datetime:
+    return datetime.utcnow()
+
+def normalize_email(email: str) -> str:
+    return email.strip().lower()
+
+def normalize_language(language: Optional[str]) -> str:
+    if language in ["ru", "kz", "en"]:
+        return language
+    return "ru"
+
+def seconds_until(value: Optional[datetime]) -> int:
+    if not value:
+        return 0
+    return max(0, int((value - utcnow()).total_seconds()))
+
+def generate_verification_code() -> str:
+    return f"{secrets.randbelow(1_000_000):06d}"
+
+def hash_verification_code(registration_id: str, code: str) -> str:
+    payload = f"{SECRET_KEY}:{registration_id}:{code}".encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+def email_delivery_configured() -> bool:
+    return bool(SMTP_HOST and SMTP_SENDER_EMAIL)
+
+def build_verification_email(language: str, code: str):
+    expire_minutes = EMAIL_VERIFICATION_EXPIRE_MINUTES
+    templates = {
+        "ru": {
+            "subject": "Код подтверждения iKOMEK 109",
+            "body": (
+                "Здравствуйте!\n\n"
+                f"Ваш код подтверждения iKOMEK 109: {code}\n\n"
+                f"Код действует {expire_minutes} минут. Если вы не запрашивали регистрацию, просто проигнорируйте это письмо."
+            ),
+        },
+        "kz": {
+            "subject": "iKOMEK 109 растау коды",
+            "body": (
+                "Сәлеметсіз бе!\n\n"
+                f"Сіздің iKOMEK 109 растау кодыңыз: {code}\n\n"
+                f"Код {expire_minutes} минут жарамды. Егер тіркелуді сұрамаған болсаңыз, бұл хатты елемеңіз."
+            ),
+        },
+        "en": {
+            "subject": "Your iKOMEK 109 verification code",
+            "body": (
+                "Hello,\n\n"
+                f"Your iKOMEK 109 verification code is: {code}\n\n"
+                f"This code expires in {expire_minutes} minutes. If you did not request registration, you can ignore this email."
+            ),
+        },
+    }
+    return templates.get(language, templates["en"])
+
+def send_email_sync(recipient: str, subject: str, body: str):
+    if not email_delivery_configured():
+        raise RuntimeError("SMTP email delivery is not configured")
+
+    message = EmailMessage()
+    message["Subject"] = subject
+    message["From"] = formataddr((SMTP_SENDER_NAME, SMTP_SENDER_EMAIL))
+    message["To"] = recipient
+    message.set_content(body)
+
+    if SMTP_USE_SSL:
+        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, context=ssl.create_default_context()) as server:
+            if SMTP_USERNAME and SMTP_PASSWORD:
+                server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            server.send_message(message)
+        return
+
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+        if SMTP_USE_TLS:
+            server.starttls(context=ssl.create_default_context())
+        if SMTP_USERNAME and SMTP_PASSWORD:
+            server.login(SMTP_USERNAME, SMTP_PASSWORD)
+        server.send_message(message)
+
+async def send_verification_code_email(recipient: str, language: str, code: str):
+    email_copy = build_verification_email(language, code)
+    await asyncio.to_thread(send_email_sync, recipient, email_copy["subject"], email_copy["body"])
+
+def build_registration_start_response(pending: dict) -> RegistrationStartResponse:
+    return RegistrationStartResponse(
+        registration_id=pending["id"],
+        email=pending["email"],
+        expires_in_seconds=seconds_until(pending.get("code_expires_at")),
+        resend_available_in_seconds=seconds_until(pending.get("resend_available_at")),
+    )
+
+def build_unverified_login_response(pending: dict):
+    return JSONResponse(
+        status_code=status.HTTP_403_FORBIDDEN,
+        content={
+            "detail": "Your account is not verified yet",
+            "code": "email_not_verified",
+            "registration_id": pending["id"],
+            "email": pending["email"],
+            "resend_available_in_seconds": seconds_until(pending.get("resend_available_at")),
+        },
+    )
+
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     try:
         payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
@@ -224,53 +365,86 @@ def require_role(allowed_roles: List[str]):
 # AUTH ENDPOINTS
 # ================================
 
-@api_router.post("/auth/register", response_model=TokenResponse)
+@api_router.post("/auth/register", response_model=RegistrationStartResponse)
 async def register(user_data: UserCreate):
-    existing_user = await db.users.find_one({"email": user_data.email})
+    email = normalize_email(user_data.email)
+    existing_user = await db.users.find_one({"email": email})
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
-    
+
     # Only admins can create operator/admin accounts
     role = ROLE_CITIZEN if user_data.role not in [ROLE_CITIZEN] else user_data.role
-    
-    user_id = str(uuid.uuid4())
-    hashed_password = get_password_hash(user_data.password)
-    user_doc = {
-        "id": user_id,
-        "email": user_data.email,
-        "password": hashed_password,
+    language = normalize_language(user_data.language)
+    now = utcnow()
+    pending = await db.pending_registrations.find_one({"email": email})
+    registration_id = pending["id"] if pending else str(uuid.uuid4())
+    pending_doc = {
+        "id": registration_id,
+        "email": email,
+        "password": get_password_hash(user_data.password),
         "full_name": user_data.full_name,
         "phone": user_data.phone,
         "role": role,
-        "language": "ru",
-        "created_at": datetime.utcnow(),
-        "onboarding_completed": False
+        "language": language,
+        "created_at": pending.get("created_at", now) if pending else now,
+        "updated_at": now,
+        "verification_attempts": pending.get("verification_attempts", 0) if pending else 0,
     }
-    await db.users.insert_one(user_doc)
-    
-    access_token = create_access_token({"sub": user_id})
-    
-    return TokenResponse(
-        access_token=access_token,
-        user=UserResponse(
-            id=user_id,
-            email=user_data.email,
-            full_name=user_data.full_name,
-            phone=user_data.phone,
-            role=role,
-            language="ru",
-            created_at=user_doc["created_at"]
+
+    can_send_new_code = pending is None or seconds_until(pending.get("resend_available_at")) == 0
+    if can_send_new_code:
+        code = generate_verification_code()
+        code_expires_at = now + timedelta(minutes=EMAIL_VERIFICATION_EXPIRE_MINUTES)
+        resend_available_at = now + timedelta(seconds=EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS)
+
+        try:
+            await send_verification_code_email(email, language, code)
+        except Exception as error:
+            logging.exception("Failed to send verification email")
+            raise HTTPException(status_code=500, detail="Unable to send verification email") from error
+
+        pending_doc.update(
+            {
+                "verification_code_hash": hash_verification_code(registration_id, code),
+                "code_expires_at": code_expires_at,
+                "code_sent_at": now,
+                "resend_available_at": resend_available_at,
+                "verification_attempts": 0,
+                "verified_at": None,
+            }
         )
-    )
+    elif pending:
+        pending_doc.update(
+            {
+                "verification_code_hash": pending["verification_code_hash"],
+                "code_expires_at": pending["code_expires_at"],
+                "code_sent_at": pending["code_sent_at"],
+                "resend_available_at": pending["resend_available_at"],
+                "verified_at": pending.get("verified_at"),
+            }
+        )
+
+    await db.pending_registrations.update_one({"id": registration_id}, {"$set": pending_doc}, upsert=True)
+    return build_registration_start_response(pending_doc)
 
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login(credentials: UserLogin):
-    user = await db.users.find_one({"email": credentials.email})
+    email = normalize_email(credentials.email)
+    user = await db.users.find_one({"email": email})
     if not user or not verify_password(credentials.password, user["password"]):
+        pending = await db.pending_registrations.find_one({"email": email})
+        if pending and verify_password(credentials.password, pending["password"]):
+            return build_unverified_login_response(pending)
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    
+
+    if user.get("is_verified", True) is False:
+        pending = await db.pending_registrations.find_one({"email": email})
+        if pending:
+            return build_unverified_login_response(pending)
+        raise HTTPException(status_code=403, detail="Your account is not verified yet")
+
     access_token = create_access_token({"sub": user["id"]})
-    
+
     return TokenResponse(
         access_token=access_token,
         user=UserResponse(
@@ -283,6 +457,104 @@ async def login(credentials: UserLogin):
             created_at=user["created_at"]
         )
     )
+
+@api_router.post("/auth/verify-email", response_model=TokenResponse)
+async def verify_email_code(payload: VerificationCodeRequest):
+    pending = await db.pending_registrations.find_one({"id": payload.registration_id})
+    if not pending:
+        raise HTTPException(status_code=404, detail="Verification session not found")
+
+    now = utcnow()
+    if pending.get("code_expires_at") and pending["code_expires_at"] < now:
+        raise HTTPException(status_code=400, detail="Code expired")
+
+    attempts = int(pending.get("verification_attempts", 0))
+    if attempts >= EMAIL_VERIFICATION_MAX_ATTEMPTS:
+        raise HTTPException(status_code=429, detail="Too many verification attempts. Request a new code.")
+
+    expected_hash = pending.get("verification_code_hash", "")
+    received_hash = hash_verification_code(payload.registration_id, payload.code.strip())
+    if not expected_hash or received_hash != expected_hash:
+        await db.pending_registrations.update_one(
+            {"id": payload.registration_id},
+            {"$set": {"updated_at": now}, "$inc": {"verification_attempts": 1}},
+        )
+        remaining_attempts = max(0, EMAIL_VERIFICATION_MAX_ATTEMPTS - attempts - 1)
+        if remaining_attempts == 0:
+            raise HTTPException(status_code=429, detail="Too many verification attempts. Request a new code.")
+        raise HTTPException(status_code=400, detail="Invalid code")
+
+    existing_user = await db.users.find_one({"email": pending["email"]})
+    if existing_user:
+        await db.pending_registrations.delete_one({"id": payload.registration_id})
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    user_id = str(uuid.uuid4())
+    user_doc = {
+        "id": user_id,
+        "email": pending["email"],
+        "password": pending["password"],
+        "full_name": pending["full_name"],
+        "phone": pending.get("phone"),
+        "role": pending.get("role", ROLE_CITIZEN),
+        "language": normalize_language(pending.get("language")),
+        "created_at": now,
+        "onboarding_completed": False,
+        "is_verified": True,
+        "verified_at": now,
+    }
+    await db.users.insert_one(user_doc)
+    await db.pending_registrations.delete_one({"id": payload.registration_id})
+
+    access_token = create_access_token({"sub": user_id})
+    return TokenResponse(
+        access_token=access_token,
+        user=UserResponse(
+            id=user_id,
+            email=user_doc["email"],
+            full_name=user_doc["full_name"],
+            phone=user_doc.get("phone"),
+            role=user_doc["role"],
+            language=user_doc["language"],
+            created_at=user_doc["created_at"],
+        ),
+    )
+
+@api_router.post("/auth/resend-verification", response_model=RegistrationStartResponse)
+async def resend_verification_code(payload: VerificationResendRequest):
+    pending = await db.pending_registrations.find_one({"id": payload.registration_id})
+    if not pending:
+        raise HTTPException(status_code=404, detail="Verification session not found")
+
+    now = utcnow()
+    remaining_cooldown = seconds_until(pending.get("resend_available_at"))
+    if remaining_cooldown > 0:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Please wait {remaining_cooldown} seconds before requesting a new code",
+        )
+
+    code = generate_verification_code()
+    code_expires_at = now + timedelta(minutes=EMAIL_VERIFICATION_EXPIRE_MINUTES)
+    resend_available_at = now + timedelta(seconds=EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS)
+
+    try:
+        await send_verification_code_email(pending["email"], normalize_language(pending.get("language")), code)
+    except Exception as error:
+        logging.exception("Failed to resend verification email")
+        raise HTTPException(status_code=500, detail="Unable to send verification email") from error
+
+    update_data = {
+        "verification_code_hash": hash_verification_code(payload.registration_id, code),
+        "code_expires_at": code_expires_at,
+        "code_sent_at": now,
+        "resend_available_at": resend_available_at,
+        "verification_attempts": 0,
+        "updated_at": now,
+    }
+    await db.pending_registrations.update_one({"id": payload.registration_id}, {"$set": update_data})
+    pending.update(update_data)
+    return build_registration_start_response(pending)
 
 @api_router.get("/auth/me", response_model=UserResponse)
 async def get_me(current_user: dict = Depends(get_current_user)):
@@ -708,7 +980,9 @@ async def seed_demo_data():
             "role": ROLE_CITIZEN,
             "language": "ru",
             "created_at": datetime.utcnow(),
-            "onboarding_completed": True
+            "onboarding_completed": True,
+            "is_verified": True,
+            "verified_at": datetime.utcnow(),
         },
         {
             "id": demo_operator_id,
@@ -719,7 +993,9 @@ async def seed_demo_data():
             "role": ROLE_OPERATOR,
             "language": "ru",
             "created_at": datetime.utcnow(),
-            "onboarding_completed": True
+            "onboarding_completed": True,
+            "is_verified": True,
+            "verified_at": datetime.utcnow(),
         },
         {
             "id": demo_admin_id,
@@ -730,7 +1006,9 @@ async def seed_demo_data():
             "role": ROLE_ADMIN,
             "language": "ru",
             "created_at": datetime.utcnow(),
-            "onboarding_completed": True
+            "onboarding_completed": True,
+            "is_verified": True,
+            "verified_at": datetime.utcnow(),
         }
     ]
     

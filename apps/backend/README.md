@@ -6,6 +6,12 @@ Main entrypoint:
 
 - [server.py](/Users/argame/Documents/ikomek-project/apps/backend/server.py)
 
+Important:
+
+- new registrations require email verification by one-time code
+- SMTP settings are configured through `apps/backend/.env`
+- an example config is available in `apps/backend/.env.example`
+
 Run manually:
 
 ```bash

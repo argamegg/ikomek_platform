@@ -205,6 +205,7 @@ export type AuthLoginInput = {
 export type AuthRegisterInput = {
   name: string;
   email: string;
+  phone?: string;
   password: string;
   language: Locale;
 };
@@ -213,10 +214,27 @@ export type PasswordRecoveryInput = {
   email: string;
 };
 
+export type EmailVerificationInput = {
+  registrationId: string;
+  code: string;
+};
+
+export type ResendVerificationInput = {
+  registrationId: string;
+};
+
 export type AuthResponse = {
   accessToken?: string;
   token?: string;
   user?: User;
+};
+
+export type AuthRegistrationChallenge = {
+  status: "verification_required";
+  registrationId: string;
+  email: string;
+  expiresInSeconds: number;
+  resendAvailableInSeconds: number;
 };
 
 export type RequestCreateInput = {

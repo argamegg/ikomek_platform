@@ -112,6 +112,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       full_name: fullName,
       phone
     });
+
+    if (response.data?.status === 'verification_required') {
+      throw new Error('A verification code was sent to your email. Verify your account before signing in.');
+    }
     
     const { access_token, user: userData } = response.data;
     

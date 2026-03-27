@@ -25,6 +25,17 @@ Create `apps/backend/.env`:
 MONGO_URL=mongodb://localhost:27017
 DB_NAME=ikomek_db
 JWT_SECRET=ikomek109-secret-key-2025-secure
+SMTP_HOST=localhost
+SMTP_PORT=1025
+SMTP_USERNAME=
+SMTP_PASSWORD=
+SMTP_SENDER_EMAIL=no-reply@ikomek.local
+SMTP_SENDER_NAME=iKOMEK 109
+SMTP_USE_TLS=false
+SMTP_USE_SSL=false
+EMAIL_VERIFICATION_EXPIRE_MINUTES=10
+EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS=60
+EMAIL_VERIFICATION_MAX_ATTEMPTS=5
 ```
 
 ### Mobile App
@@ -125,6 +136,51 @@ After the backend is up:
 curl -X POST http://localhost:8001/api/seed
 ```
 
+## 6. Email Verification Setup
+
+New registrations require email verification before login is allowed.
+
+### Local development
+
+The easiest local option is to run an SMTP catcher such as Mailpit or MailHog and point the backend to it.
+
+Example backend email settings for local Mailpit:
+
+```env
+SMTP_HOST=localhost
+SMTP_PORT=1025
+SMTP_USERNAME=
+SMTP_PASSWORD=
+SMTP_SENDER_EMAIL=no-reply@ikomek.local
+SMTP_SENDER_NAME=iKOMEK 109
+SMTP_USE_TLS=false
+SMTP_USE_SSL=false
+```
+
+With Mailpit, you can usually open the inbox UI at:
+
+```text
+http://localhost:8025
+```
+
+### Production
+
+For production, use your real SMTP provider and set:
+
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USERNAME`
+- `SMTP_PASSWORD`
+- `SMTP_SENDER_EMAIL`
+- `SMTP_SENDER_NAME`
+- `SMTP_USE_TLS` or `SMTP_USE_SSL`
+
+Recommended verification defaults:
+
+- `EMAIL_VERIFICATION_EXPIRE_MINUTES=10`
+- `EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS=60`
+- `EMAIL_VERIFICATION_MAX_ATTEMPTS=5`
+
 ## Troubleshooting
 
 ### Backend does not start
@@ -132,6 +188,7 @@ curl -X POST http://localhost:8001/api/seed
 - Make sure MongoDB is running
 - Make sure `apps/backend/.env` exists
 - Make sure Python dependencies are installed
+- Make sure SMTP settings are configured if you want registration email verification to work
 
 ### Web app cannot reach backend
 

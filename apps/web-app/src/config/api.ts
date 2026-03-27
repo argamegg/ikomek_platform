@@ -31,6 +31,9 @@ export const apiConfig = {
   endpoints: {
     login: import.meta.env.VITE_API_LOGIN_PATH ?? "/auth/login",
     register: import.meta.env.VITE_API_REGISTER_PATH ?? "/auth/register",
+    verifyEmail: import.meta.env.VITE_API_VERIFY_EMAIL_PATH ?? "/auth/verify-email",
+    resendVerification:
+      import.meta.env.VITE_API_RESEND_VERIFICATION_PATH ?? "/auth/resend-verification",
     recoverPassword: import.meta.env.VITE_API_RECOVER_PASSWORD_PATH ?? "",
     logout: import.meta.env.VITE_API_LOGOUT_PATH ?? "",
     currentUser: import.meta.env.VITE_API_CURRENT_USER_PATH ?? "/auth/me",

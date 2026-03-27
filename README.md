@@ -130,6 +130,14 @@ Example values:
 MONGO_URL=mongodb://localhost:27017
 DB_NAME=ikomek_db
 JWT_SECRET=ikomek109-secret-key-2025-secure
+SMTP_HOST=localhost
+SMTP_PORT=1025
+SMTP_SENDER_EMAIL=no-reply@ikomek.local
+SMTP_SENDER_NAME=iKOMEK 109
+SMTP_USE_TLS=false
+EMAIL_VERIFICATION_EXPIRE_MINUTES=10
+EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS=60
+EMAIL_VERIFICATION_MAX_ATTEMPTS=5
 ```
 
 ### Mobile App
@@ -179,6 +187,7 @@ curl -X POST http://localhost:8001/api/seed
 
 - MongoDB must be running before the backend starts.
 - The web app now targets the same FastAPI contract as the mobile app.
+- New registrations now require email verification by one-time code before the account becomes active.
 - The web frontend contains a few frontend-side fallbacks for data the current backend does not expose with dedicated endpoints yet, such as districts, request reasons, and notifications.
 
 ## Helpful Files
