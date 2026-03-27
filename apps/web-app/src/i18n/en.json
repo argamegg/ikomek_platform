@@ -1,0 +1,349 @@
+{
+  "navigation": [
+    "Home",
+    "Authentication",
+    "Citizen dashboard",
+    "Submit request",
+    "My requests",
+    "Request details",
+    "Request chat",
+    "News and alerts",
+    "Map and analytics",
+    "Profile and settings",
+    "Operator dashboard",
+    "Admin dashboard",
+    "Architecture"
+  ],
+  "header": {
+    "kicker": "Unified smart city ecosystem",
+    "title": "iKomek 109 web platform for citizens, operators, and city administrators",
+    "summary": "This web experience extends the same iKomek platform as mobile, using the same backend, entities, media, requests, statuses, saved locations, chats, and news so every action stays synchronized across channels.",
+    "languageLabel": "Language",
+    "primaryAction": "Submit a request",
+    "secondaryAction": "Open live map"
+  },
+  "sharedSystem": {
+    "title": "One backend, one data model",
+    "description": "The website is not a separate product. It is a production-ready desktop extension of the existing iKomek ecosystem and must use the same shared database and API contracts as the mobile application.",
+    "sidebarNote": "Any request, chat message, status update, profile edit, news item, or address change must instantly remain consistent between web and mobile."
+  },
+  "home": {
+    "kicker": "1. Home page",
+    "title": "Public landing experience with trust, urgency, and fast access",
+    "description": "The homepage explains what iKomek is, how residents can report issues, where to see city news, and how to explore the live urban situation through map and analytics modules.",
+    "heroTitle": "A government-grade civic-tech interface aligned with the mobile concept",
+    "heroHighlights": [
+      "Orange-first brand language",
+      "Fast report CTA",
+      "Live city alerts",
+      "Public map visibility"
+    ],
+    "quickAccessTitle": "Homepage blocks",
+    "quickAccessItems": [
+      "Hero with report problem CTA and trust statement",
+      "Service category shortcuts from the shared taxonomy",
+      "Urgent city announcements with priority styling",
+      "Latest news feed with category tags and time relevance",
+      "Map snapshot showing Astana complaint activity",
+      "How it works steps tied to the shared request lifecycle"
+    ],
+    "stats": [
+      {
+        "value": "109",
+        "label": "City contact identity",
+        "detail": "Keep the existing brand anchor visible at all major trust points."
+      },
+      {
+        "value": "3",
+        "label": "Platform languages",
+        "detail": "Russian, Kazakh, and English are available from the same UI shell."
+      },
+      {
+        "value": "1",
+        "label": "Shared data source",
+        "detail": "Web and mobile operate on one backend and one canonical entity set."
+      }
+    ],
+    "sections": [
+      {
+        "title": "Official but warm",
+        "description": "Use white surfaces, orange actions, soft shadows, and high readability so the service feels reliable instead of bureaucratic."
+      },
+      {
+        "title": "Cross-platform familiar",
+        "description": "The web version extends the same request logic, statuses, maps, and content structure already defined for mobile."
+      },
+      {
+        "title": "Scalable entry point",
+        "description": "Public access, citizen self-service, operational tools, and administration all live inside one coherent information architecture."
+      }
+    ]
+  },
+  "auth": {
+    "kicker": "2. Authentication",
+    "title": "Shared sign-in flows with polished web transitions",
+    "description": "Authentication must respect the current backend methods and session rules while improving clarity through larger-screen layouts, clear validation, and helpful error recovery.",
+    "methodsTitle": "Supported methods",
+    "methods": [
+      "Email login and registration with inline validation",
+      "Password recovery using existing backend recovery flow",
+      "Google and Apple entry points if already supported in backend",
+      "Role-based redirect after authentication"
+    ],
+    "statesTitle": "Microinteraction states",
+    "states": [
+      "Animated step transitions between login, registration, and recovery",
+      "Localized field-level validation and error messages",
+      "Subtle success state after account creation or password reset",
+      "Session persistence across desktop browser refreshes"
+    ]
+  },
+  "citizenDashboard": {
+    "kicker": "3. Citizen dashboard",
+    "title": "A command center for residents",
+    "description": "The citizen dashboard summarizes the resident’s active relationship with the city and gives immediate access to requests, alerts, map exploration, and saved places.",
+    "panels": [
+      {
+        "title": "Request status overview",
+        "description": "Top summary cards show active, pending, and recently closed requests from the same shared request records used in mobile."
+      },
+      {
+        "title": "Saved addresses",
+        "description": "Home, work, study, road, environment, and custom places appear as reusable quick-start sources for new issue reports."
+      },
+      {
+        "title": "City pulse",
+        "description": "Latest alerts and news appear beside a quick map shortcut so the citizen dashboard feels informative, not only transactional."
+      }
+    ]
+  },
+  "requestFlow": {
+    "kicker": "4. Submit request flow",
+    "title": "Desktop-friendly version of the existing mobile request creation logic",
+    "description": "The request form follows the same backend-driven taxonomy and submission rules as mobile, while using a spacious side-by-side layout for review, location confirmation, and media upload.",
+    "steps": [
+      {
+        "title": "Select address",
+        "description": "Choose from saved locations, manual search, map pick, or browser geolocation."
+      },
+      {
+        "title": "Select place and issue",
+        "description": "Place variants and issue types are driven by shared category and reason entities."
+      },
+      {
+        "title": "Describe and attach",
+        "description": "Add structured reason, free-text description, and photos through the shared attachment pipeline."
+      },
+      {
+        "title": "Review and submit",
+        "description": "Show selected address, reason, description, map preview, and files before final confirmation."
+      }
+    ],
+    "inputs": [
+      {
+        "title": "Saved location logic",
+        "description": "Address chips show type labels like Home, Work, Study, Road, Environment, and Other without deviating from the existing SavedLocation entity."
+      },
+      {
+        "title": "Reason structure",
+        "description": "Reasons are not hardcoded per web page. They come from the shared RequestReason dataset already serving mobile flows."
+      },
+      {
+        "title": "Fast completion UX",
+        "description": "Use sticky summaries, drag-and-drop uploads, address prediction, and contextual hints to reduce form fatigue on desktop."
+      }
+    ]
+  },
+  "requestList": {
+    "kicker": "5. My requests",
+    "title": "Citizen request management with cards and table modes",
+    "description": "Residents need a clear history of all requests with meaningful filters and a visual understanding of where each issue stands today.",
+    "statuses": ["Pending", "In progress", "Closed"],
+    "features": [
+      "Toggle between card view and compact table view",
+      "Filter by status, category, address, date, urgency, and sort order",
+      "Expose the current stage through status color, progress line, and latest update snippet",
+      "Open the request detail page without losing the list filter context"
+    ]
+  },
+  "requestDetails": {
+    "kicker": "6. Request details",
+    "title": "A full record of each issue across mobile and web",
+    "description": "The detail page is the same logical request object shown through a richer desktop layout with map, gallery, timeline, and messaging context visible together.",
+    "columns": [
+      {
+        "title": "Core details",
+        "items": [
+          "Title, address, place, geo point, issue type, reason, description",
+          "Uploaded photos and attachments",
+          "Created date, current status, and assigned department when relevant"
+        ]
+      },
+      {
+        "title": "Operational history",
+        "items": [
+          "Status history timeline backed by RequestStatusHistory",
+          "Operator messages and completion evidence",
+          "Shared chat thread and notifications synchronized with mobile"
+        ]
+      }
+    ]
+  },
+  "chat": {
+    "kicker": "7. Chat with operator",
+    "title": "Request-specific communication synchronized across channels",
+    "description": "Chat is tied to the request entity so all citizens and operators see the same conversation and status context, regardless of whether they use web or mobile.",
+    "roles": [
+      {
+        "title": "Citizen actions",
+        "items": [
+          "Send messages with timestamps",
+          "Attach extra photos when policy allows",
+          "Receive clarification requests and status notices"
+        ]
+      },
+      {
+        "title": "Operator actions",
+        "items": [
+          "Ask for missing information",
+          "Send progress updates and completion confirmations",
+          "Trigger status changes from the same operational workspace"
+        ]
+      }
+    ]
+  },
+  "news": {
+    "kicker": "8. News and alerts",
+    "title": "Structured city information with clear urgency levels",
+    "description": "The website exposes the same city communication stream as mobile, but gives more room for filtering, detailed reading, and location-aware alert presentation.",
+    "priorities": [
+      {
+        "badge": "Critical",
+        "title": "Emergency works and city-level incidents",
+        "description": "Use high-contrast alert cards, persistent header visibility, and time/location scope for urgent utility, safety, and weather disruptions."
+      },
+      {
+        "badge": "Warning",
+        "title": "Planned disruption and cautionary updates",
+        "description": "Highlight road closures, transport changes, and local service interruptions with map relevance and active periods."
+      },
+      {
+        "badge": "Information",
+        "title": "News, public service updates, and civic context",
+        "description": "Show the broader city narrative through categorized editorial cards and deeper article pages linked from the dashboard and home."
+      }
+    ]
+  },
+  "map": {
+    "kicker": "9. Map and analytics",
+    "title": "OpenLayers-based city visibility for public issues and personal requests",
+    "description": "The map must start in Astana and clearly separate personal activity from the public issue landscape through layers, style systems, clustering, and focus modes rather than simple text labels.",
+    "legend": ["My requests layer", "Public requests layer", "Heatmap density"],
+    "behaviorTitle": "OpenLayers behavior",
+    "behaviors": [
+      "Default city extent centered on Astana with district-aware overlays",
+      "Distinct marker system for personal requests versus public complaints",
+      "Layer toggles for all requests, my requests, heatmap, categories, status, and date ranges",
+      "Clustering at low zoom, discrete points at higher zoom, and muted public markers in personal focus mode",
+      "Marker click opens a side panel preview and can transition into full request detail",
+      "Map and list views stay synchronized through a shared map state store"
+    ],
+    "analytics": [
+      {
+        "title": "Citizen-friendly analytics",
+        "description": "Summaries include total requests, active issues, average response time, top categories, and district comparisons in plain language."
+      },
+      {
+        "title": "Operational insight",
+        "description": "Operators and admins can switch to denser analytical panels showing urgency spikes, complaint density zones, and backlog concentration."
+      },
+      {
+        "title": "Future-ready map engine",
+        "description": "Keep map rendering isolated so clustering, heatmaps, district choropleths, and live event layers can evolve without touching feature screens."
+      }
+    ]
+  },
+  "profile": {
+    "kicker": "10. Saved addresses and profile settings",
+    "title": "Personal data management linked to the same user account as mobile",
+    "description": "Citizens manage personal details, language, saved addresses, notification preferences, and security settings in one settings area connected to the shared user and location entities.",
+    "cards": [
+      {
+        "title": "Saved addresses",
+        "description": "Each saved place stores label, category, address metadata, and geo coordinates using the existing SavedLocation model."
+      },
+      {
+        "title": "Profile and security",
+        "description": "Personal information, linked auth methods, password controls, and biometric references remain consistent with the underlying account."
+      },
+      {
+        "title": "Localization and notifications",
+        "description": "Language choice, alert preferences, and visual density settings support three languages and future accessibility enhancements."
+      }
+    ]
+  },
+  "operator": {
+    "kicker": "11. Operator dashboard",
+    "title": "High-density operational workspace for real-time triage",
+    "description": "The operator interface is optimized for sustained daily handling of large request volumes with fast filtering, detailed inspection, and coordinated assignment workflows.",
+    "panels": [
+      {
+        "title": "Live queue",
+        "description": "Real-time request stream with priority cues, district grouping, and quick actions for opening details, updating status, and replying."
+      },
+      {
+        "title": "Smart filtering",
+        "description": "Filter by category, status, district, urgency, date, address, and citizen while preserving keyboard-driven speed."
+      },
+      {
+        "title": "Execution controls",
+        "description": "Assign requests to departments, attach internal notes, review media, moderate content, and upload proof of completion."
+      }
+    ],
+    "workflowTitle": "Recommended operator workflow",
+    "workflow": [
+      "Prioritize by urgency, unresolved duration, and district spikes",
+      "Review full request context, photos, previous status history, and chat",
+      "Respond to citizen, assign department, and log internal operational notes",
+      "Track execution proof, validate completion, and close the issue with synchronized status updates"
+    ]
+  },
+  "admin": {
+    "kicker": "12. Admin dashboard",
+    "title": "City-level oversight, configuration, and analytics control",
+    "description": "Admins need one web environment for user management, taxonomies, communications, geographic analytics, and long-term service performance monitoring.",
+    "modules": [
+      {
+        "title": "System governance",
+        "description": "Manage users, roles, operators, departments, and access policies from the same shared role model used across the platform."
+      },
+      {
+        "title": "Taxonomy and content",
+        "description": "Maintain categories, predefined reasons, news, alerts, and platform configuration without duplicating structures for web."
+      },
+      {
+        "title": "Analytics and trends",
+        "description": "Monitor district patterns, request growth, resolution times, service quality, and geographic load through rich dashboards."
+      }
+    ],
+    "executorTitle": "Optional department or executor role",
+    "executorDescription": "Department users receive assigned requests, update progress, upload completion evidence, and close work orders through the same shared request lifecycle.",
+    "futureTitle": "Future scaling",
+    "futureDescription": "This architecture supports modular expansion into SLA dashboards, AI-assisted categorization, district scorecards, and dedicated departmental workspaces without splitting the data model."
+  },
+  "architecture": {
+    "kicker": "13. Production-ready frontend structure",
+    "title": "Separation of UI, domain, map logic, and backend integration",
+    "description": "The frontend is organized by feature boundaries and shared platform layers so it can scale from a public website into a full city operations interface without becoming brittle.",
+    "fileTreeTitle": "Project file tree",
+    "decisionsTitle": "Architecture decisions",
+    "decisions": [
+      "Feature modules own screen composition, while reusable UI primitives remain small and portable.",
+      "Localization lives in dedicated language files instead of hardcoded UI strings.",
+      "API access is abstracted behind services so components never call backend endpoints directly.",
+      "Map behavior is isolated and should evolve into a dedicated OpenLayers engine module.",
+      "Stores mirror shared backend entities rather than inventing web-only data structures.",
+      "The same requests, chat history, news, statuses, media, saved locations, and geo data must render consistently on both mobile and web."
+    ]
+  }
+}

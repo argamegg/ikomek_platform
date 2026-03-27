@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>iKomek Map</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v8.2.0/ol.css">
+    <script src="https://cdn.jsdelivr.net/npm/ol@v8.2.0/dist/ol.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        .marker {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            cursor: pointer;
+            border: 3px solid white;
+        }
+        .marker.mine {
+            border: 3px solid #FF6B00;
+            box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.3), 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .marker.pending { background: #FF9500; }
+        .marker.in_progress { background: #007AFF; }
+        .marker.closed { background: #34C759; }
+        
+        .cluster {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #FF6B00;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: 0 2px 8px rgba(255, 107, 0, 0.4);
+            border: 3px solid white;
+        }
+        
+        .popup {
+            position: absolute;
+            background: white;
+            border-radius: 16px;
+            padding: 16px;
+            min-width: 250px;
+            max-width: 300px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            transform: translate(-50%, -100%);
+            margin-top: -15px;
+            z-index: 1000;
+        }
+        .popup::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-top: 10px solid white;
+        }
+        .popup-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .popup-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+        .popup-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: #1C1C1E;
+            flex: 1;
+        }
+        .popup-badge {
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        .popup-badge.pending { background: rgba(255, 149, 0, 0.15); color: #FF9500; }
+        .popup-badge.in_progress { background: rgba(0, 122, 255, 0.15); color: #007AFF; }
+        .popup-badge.closed { background: rgba(52, 199, 89, 0.15); color: #34C759; }
+        .popup-address {
+            font-size: 12px;
+            color: #8E8E93;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .popup-date {
+            font-size: 11px;
+            color: #C7C7CC;
+        }
+        .popup-close {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 24px;
+            height: 24px;
+            border-radius: 12px;
+            background: #F2F2F7;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .controls {
+            position: absolute;
+            top: 60px;
+            right: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 100;
+        }
+        .control-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: white;
+            border: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .control-btn:active {
+            background: #F2F2F7;
+        }
+        .control-btn.active {
+            background: #FF6B00;
+            color: white;
+        }
+        
+        .filter-bar {
+            position: absolute;
+            top: 10px;
+            left: 16px;
+            right: 60px;
+            display: flex;
+            gap: 8px;
+            z-index: 100;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+        .filter-btn {
+            padding: 8px 14px;
+            border-radius: 20px;
+            background: white;
+            border: none;
+            font-size: 12px;
+            font-weight: 500;
+            color: #3C3C43;
+            white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            cursor: pointer;
+        }
+        .filter-btn.active {
+            background: #FF6B00;
+            color: white;
+        }
+        
+        .legend {
+            position: absolute;
+            bottom: 100px;
+            left: 16px;
+            background: white;
+            border-radius: 12px;
+            padding: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+            font-size: 11px;
+            color: #3C3C43;
+        }
+        .legend-item:last-child {
+            margin-bottom: 0;
+        }
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .legend-dot.pending { background: #FF9500; }
+        .legend-dot.in_progress { background: #007AFF; }
+        .legend-dot.closed { background: #34C759; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    
+    <div class="filter-bar" id="filterBar">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="my">My Requests</button>
+        <button class="filter-btn" data-filter="electricity">⚡ Electricity</button>
+        <button class="filter-btn" data-filter="water">💧 Water</button>
+        <button class="filter-btn" data-filter="roads">🚗 Roads</button>
+        <button class="filter-btn" data-filter="waste">🗑️ Waste</button>
+    </div>
+    
+    <div class="controls">
+        <button class="control-btn" id="zoomIn">+</button>
+        <button class="control-btn" id="zoomOut">−</button>
+        <button class="control-btn" id="locateMe">📍</button>
+        <button class="control-btn" id="toggleHeatmap">🔥</button>
+    </div>
+    
+    <div class="legend">
+        <div class="legend-item"><div class="legend-dot pending"></div> Pending</div>
+        <div class="legend-item"><div class="legend-dot in_progress"></div> In Progress</div>
+        <div class="legend-item"><div class="legend-dot closed"></div> Closed</div>
+    </div>
+    
+    <div id="popup" class="popup" style="display: none;"></div>
+    
+    <script>
+        // Category colors and icons
+        const CATEGORY_CONFIG = {
+            electricity: { color: '#FFB300', icon: '⚡', bg: 'rgba(255, 179, 0, 0.2)' },
+            water: { color: '#2196F3', icon: '💧', bg: 'rgba(33, 150, 243, 0.2)' },
+            roads: { color: '#607D8B', icon: '🚗', bg: 'rgba(96, 125, 139, 0.2)' },
+            public_order: { color: '#4CAF50', icon: '🛡️', bg: 'rgba(76, 175, 80, 0.2)' },
+            waste: { color: '#795548', icon: '🗑️', bg: 'rgba(121, 85, 72, 0.2)' },
+            heating: { color: '#FF5722', icon: '🔥', bg: 'rgba(255, 87, 34, 0.2)' },
+            street_lighting: { color: '#FFC107', icon: '💡', bg: 'rgba(255, 193, 7, 0.2)' },
+            other: { color: '#9E9E9E', icon: '❓', bg: 'rgba(158, 158, 158, 0.2)' }
+        };
+        
+        const STATUS_LABELS = {
+            pending: 'Pending',
+            in_progress: 'In Progress',
+            closed: 'Closed'
+        };
+        
+        // Astana center coordinates
+        const ASTANA_CENTER = [71.4306, 51.1282];
+        
+        // State
+        let points = [];
+        let currentFilter = 'all';
+        let showHeatmap = false;
+        let selectedPoint = null;
+        
+        // Initialize map
+        const map = new ol.Map({
+            target: 'map',
+            layers: [
+                new ol.layer.Tile({
+                    source: new ol.source.OSM()
+                })
+            ],
+            view: new ol.View({
+                center: ol.proj.fromLonLat(ASTANA_CENTER),
+                zoom: 13,
+                minZoom: 10,
+                maxZoom: 19
+            }),
+            controls: []
+        });
+        
+        // Vector source for markers
+        const vectorSource = new ol.source.Vector();
+        
+        // Cluster source
+        const clusterSource = new ol.source.Cluster({
+            distance: 40,
+            source: vectorSource
+        });
+        
+        // Style function for clusters
+        const styleFunction = (feature) => {
+            const features = feature.get('features');
+            const size = features ? features.length : 1;
+            
+            if (size > 1) {
+                // Cluster style
+                return new ol.style.Style({
+                    image: new ol.style.Circle({
+                        radius: 20,
+                        fill: new ol.style.Fill({ color: '#FF6B00' }),
+                        stroke: new ol.style.Stroke({ color: 'white', width: 3 })
+                    }),
+                    text: new ol.style.Text({
+                        text: size.toString(),
+                        fill: new ol.style.Fill({ color: 'white' }),
+                        font: 'bold 14px sans-serif'
+                    })
+                });
+            }
+            
+            // Single marker style
+            const point = features ? features[0].get('data') : feature.get('data');
+            if (!point) return null;
+            
+            let color = '#FF9500';
+            if (point.status === 'in_progress') color = '#007AFF';
+            else if (point.status === 'closed') color = '#34C759';
+            
+            const strokeWidth = point.is_mine ? 4 : 2;
+            const strokeColor = point.is_mine ? '#FF6B00' : 'white';
+            
+            return new ol.style.Style({
+                image: new ol.style.Circle({
+                    radius: 14,
+                    fill: new ol.style.Fill({ color: color }),
+                    stroke: new ol.style.Stroke({ color: strokeColor, width: strokeWidth })
+                })
+            });
+        };
+        
+        // Vector layer with clustering
+        const vectorLayer = new ol.layer.Vector({
+            source: clusterSource,
+            style: styleFunction
+        });
+        map.addLayer(vectorLayer);
+        
+        // Heatmap layer
+        const heatmapSource = new ol.source.Vector();
+        const heatmapLayer = new ol.layer.Heatmap({
+            source: heatmapSource,
+            blur: 15,
+            radius: 10,
+            weight: () => 0.5
+        });
+        heatmapLayer.setVisible(false);
+        map.addLayer(heatmapLayer);
+        
+        // Popup element
+        const popup = document.getElementById('popup');
+        
+        // Load points from React Native
+        function loadPoints(data) {
+            points = data;
+            updateMap();
+        }
+        
+        // Update map with current filter
+        function updateMap() {
+            vectorSource.clear();
+            heatmapSource.clear();
+            
+            let filtered = points;
+            
+            if (currentFilter === 'my') {
+                filtered = points.filter(p => p.is_mine);
+            } else if (currentFilter !== 'all') {
+                filtered = points.filter(p => p.category === currentFilter);
+            }
+            
+            filtered.forEach(point => {
+                const coords = ol.proj.fromLonLat([point.lng, point.lat]);
+                
+                // Add to vector source
+                const feature = new ol.Feature({
+                    geometry: new ol.geom.Point(coords),
+                    data: point
+                });
+                vectorSource.addFeature(feature);
+                
+                // Add to heatmap source
+                const heatFeature = new ol.Feature({
+                    geometry: new ol.geom.Point(coords)
+                });
+                heatmapSource.addFeature(heatFeature);
+            });
+        }
+        
+        // Handle map clicks
+        map.on('click', (evt) => {
+            const feature = map.forEachFeatureAtPixel(evt.pixel, f => f);
+            
+            if (feature) {
+                const features = feature.get('features');
+                
+                if (features && features.length === 1) {
+                    const point = features[0].get('data');
+                    showPopup(point, evt.coordinate);
+                } else if (features && features.length > 1) {
+                    // Zoom into cluster
+                    const extent = ol.extent.createEmpty();
+                    features.forEach(f => {
+                        ol.extent.extend(extent, f.getGeometry().getExtent());
+                    });
+                    map.getView().fit(extent, { padding: [50, 50, 50, 50], duration: 500 });
+                }
+            } else {
+                hidePopup();
+            }
+        });
+        
+        // Show popup
+        function showPopup(point, coordinate) {
+            selectedPoint = point;
+            const config = CATEGORY_CONFIG[point.category] || CATEGORY_CONFIG.other;
+            const statusLabel = STATUS_LABELS[point.status] || 'Unknown';
+            
+            const date = new Date(point.created_at).toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            popup.innerHTML = `
+                <button class="popup-close" onclick="hidePopup()">×</button>
+                <div class="popup-header">
+                    <div class="popup-icon" style="background: ${config.bg}">${config.icon}</div>
+                    <div class="popup-title">${point.title}</div>
+                    <span class="popup-badge ${point.status}">${statusLabel}</span>
+                </div>
+                <div class="popup-address">📍 ${point.address}</div>
+                <div class="popup-date">🕐 ${date}</div>
+                ${point.is_mine ? '<div style="margin-top: 8px; font-size: 11px; color: #FF6B00; font-weight: 600;">✓ Your request</div>' : ''}
+            `;
+            
+            const pixel = map.getPixelFromCoordinate(coordinate);
+            popup.style.left = pixel[0] + 'px';
+            popup.style.top = pixel[1] + 'px';
+            popup.style.display = 'block';
+            
+            // Send to React Native
+            if (window.ReactNativeWebView) {
+                window.ReactNativeWebView.postMessage(JSON.stringify({
+                    type: 'pointSelected',
+                    point: point
+                }));
+            }
+        }
+        
+        // Hide popup
+        function hidePopup() {
+            popup.style.display = 'none';
+            selectedPoint = null;
+        }
+        
+        // Filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.dataset.filter;
+                updateMap();
+                hidePopup();
+                
+                if (window.ReactNativeWebView) {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({
+                        type: 'filterChanged',
+                        filter: currentFilter
+                    }));
+                }
+            });
+        });
+        
+        // Zoom controls
+        document.getElementById('zoomIn').addEventListener('click', () => {
+            map.getView().animate({ zoom: map.getView().getZoom() + 1, duration: 250 });
+        });
+        
+        document.getElementById('zoomOut').addEventListener('click', () => {
+            map.getView().animate({ zoom: map.getView().getZoom() - 1, duration: 250 });
+        });
+        
+        // Locate me
+        document.getElementById('locateMe').addEventListener('click', () => {
+            if (window.ReactNativeWebView) {
+                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'requestLocation' }));
+            }
+        });
+        
+        // Toggle heatmap
+        document.getElementById('toggleHeatmap').addEventListener('click', () => {
+            showHeatmap = !showHeatmap;
+            heatmapLayer.setVisible(showHeatmap);
+            vectorLayer.setVisible(!showHeatmap);
+            document.getElementById('toggleHeatmap').classList.toggle('active', showHeatmap);
+        });
+        
+        // Center map on coordinates
+        function centerMap(lng, lat, zoom) {
+            map.getView().animate({
+                center: ol.proj.fromLonLat([lng, lat]),
+                zoom: zoom || 15,
+                duration: 500
+            });
+        }
+        
+        // Get current center
+        function getCenter() {
+            const center = ol.proj.toLonLat(map.getView().getCenter());
+            return { lng: center[0], lat: center[1] };
+        }
+        
+        // For location picker mode
+        let pickMode = false;
+        let pickMarker = null;
+        
+        function enablePickMode() {
+            pickMode = true;
+            document.getElementById('filterBar').style.display = 'none';
+            document.querySelector('.legend').style.display = 'none';
+            
+            // Add center marker
+            if (!pickMarker) {
+                const markerEl = document.createElement('div');
+                markerEl.innerHTML = '📍';
+                markerEl.style.cssText = 'position: absolute; left: 50%; top: 50%; transform: translate(-50%, -100%); font-size: 40px; z-index: 1000; pointer-events: none;';
+                document.body.appendChild(markerEl);
+                pickMarker = markerEl;
+            }
+        }
+        
+        function disablePickMode() {
+            pickMode = false;
+            document.getElementById('filterBar').style.display = 'flex';
+            document.querySelector('.legend').style.display = 'block';
+            if (pickMarker) {
+                pickMarker.remove();
+                pickMarker = null;
+            }
+        }
+        
+        // Listen for map move end in pick mode
+        map.on('moveend', () => {
+            if (pickMode && window.ReactNativeWebView) {
+                const center = getCenter();
+                window.ReactNativeWebView.postMessage(JSON.stringify({
+                    type: 'locationPicked',
+                    lat: center.lat,
+                    lng: center.lng
+                }));
+            }
+        });
+        
+        // Expose functions to React Native
+        window.mapFunctions = {
+            loadPoints,
+            centerMap,
+            getCenter,
+            enablePickMode,
+            disablePickMode,
+            updateMap
+        };
+        
+        // Signal ready
+        if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'mapReady' }));
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,206 @@
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
+
+const API_URL = Constants.expoConfig?.extra?.backendUrl || process.env.EXPO_PUBLIC_BACKEND_URL || '';
+
+const api = axios.create({
+  baseURL: `${API_URL}/api`,
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+api.interceptors.request.use(
+  async (config) => {
+    const token = await AsyncStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      await AsyncStorage.removeItem('token');
+      await AsyncStorage.removeItem('user');
+    }
+    return Promise.reject(error);
+  }
+);
+
+export interface Category {
+  id: string;
+  name: string;
+  name_ru: string;
+  name_kz: string;
+  icon: string;
+  color: string;
+}
+
+export interface Request {
+  id: string;
+  user_id: string;
+  category_id: string;
+  category_name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  place_type?: string;
+  problem_type: string;
+  reason: string;
+  description: string;
+  photos: string[];
+  status: 'pending' | 'in_progress' | 'closed';
+  priority?: string;
+  district?: string;
+  created_at: string;
+  updated_at: string;
+  closed_at?: string;
+  operator_id?: string;
+  operator_notes?: string;
+  assigned_department?: string;
+  resolution_notes?: string;
+  resolution_photos: string[];
+}
+
+export interface SavedLocation {
+  id: string;
+  user_id: string;
+  name: string;
+  label: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  created_at: string;
+}
+
+export interface NewsItem {
+  id: string;
+  title: string;
+  title_ru: string;
+  title_kz: string;
+  content: string;
+  content_ru: string;
+  content_kz: string;
+  category: 'critical' | 'warning' | 'info';
+  image?: string;
+  created_at: string;
+  is_active: boolean;
+}
+
+export interface Message {
+  id: string;
+  request_id: string;
+  sender_type: 'user' | 'operator';
+  sender_id: string;
+  sender_name?: string;
+  content: string;
+  created_at: string;
+  is_read: boolean;
+}
+
+export interface MapPoint {
+  id: string;
+  lat: number;
+  lng: number;
+  category: string;
+  status: string;
+  is_mine: boolean;
+  title: string;
+  address: string;
+  created_at: string;
+}
+
+export interface UserItem {
+  id: string;
+  email: string;
+  full_name: string;
+  role: string;
+  created_at: string;
+}
+
+export interface Analytics {
+  requests: { total: number; pending: number; in_progress: number; closed: number };
+  categories: Record<string, number>;
+  users: { total: number; citizens: number; operators: number; admins: number };
+}
+
+export const apiService = {
+  // Categories
+  getCategories: () => api.get<Category[]>('/categories'),
+
+  // Requests - Citizen
+  createRequest: (data: {
+    category_id: string;
+    address: string;
+    latitude: number;
+    longitude: number;
+    place_type?: string;
+    problem_type: string;
+    reason: string;
+    description: string;
+    photos?: string[];
+  }) => api.post<Request>('/requests', data),
+  getUserRequests: () => api.get<Request[]>('/requests'),
+  getAllRequests: (params?: { category?: string; status?: string }) =>
+    api.get<Request[]>('/requests/all', { params }),
+  getRequest: (id: string) => api.get<Request>(`/requests/${id}`),
+
+  // Requests - Operator
+  getOperatorRequests: (params?: { category?: string; status?: string; priority?: string; district?: string }) =>
+    api.get<Request[]>('/operator/requests', { params }),
+  updateRequestOperator: (id: string, data: {
+    status: string;
+    resolution_notes?: string;
+    operator_notes?: string;
+    assigned_department?: string;
+    priority?: string;
+  }) => api.put(`/operator/requests/${id}`, data),
+
+  // Locations
+  getSavedLocations: () => api.get<SavedLocation[]>('/locations'),
+  createSavedLocation: (data: {
+    name: string; label: string; address: string; latitude: number; longitude: number;
+  }) => api.post<SavedLocation>('/locations', data),
+  deleteSavedLocation: (id: string) => api.delete(`/locations/${id}`),
+
+  // Messages
+  getMessages: (requestId: string) => api.get<Message[]>(`/requests/${requestId}/messages`),
+  sendMessage: (requestId: string, content: string) =>
+    api.post<Message>(`/requests/${requestId}/messages`, { content }),
+
+  // News
+  getNews: (category?: string) => api.get<NewsItem[]>('/news', { params: { category } }),
+  getNewsItem: (id: string) => api.get<NewsItem>(`/news/${id}`),
+
+  // Admin - News
+  createNews: (data: {
+    title: string; title_ru: string; title_kz: string;
+    content: string; content_ru: string; content_kz: string;
+    category: string; image?: string;
+  }) => api.post<NewsItem>('/admin/news', data),
+  deleteNews: (id: string) => api.delete(`/admin/news/${id}`),
+
+  // Admin - Users
+  getAllUsers: () => api.get<UserItem[]>('/admin/users'),
+  updateUserRole: (userId: string, role: string) =>
+    api.put(`/admin/users/${userId}/role`, null, { params: { role } }),
+
+  // Admin - Analytics
+  getAnalytics: () => api.get<Analytics>('/admin/analytics'),
+
+  // Map
+  getMapPoints: (params?: { category?: string; status?: string; my_only?: boolean }) =>
+    api.get<MapPoint[]>('/map/points', { params }),
+
+  // Seed
+  seedData: () => api.post('/seed')
+};
+
+export default api;

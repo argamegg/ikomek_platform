@@ -1,0 +1,119 @@
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
+import type { RequestStatus } from "../../types/platform";
+import { PageHeader } from "../components/ui/PageHeader";
+import { Card } from "../components/ui/Card";
+import { Badge } from "../components/ui/Badge";
+import { Button } from "../components/ui/Button";
+import { Input, Select, Textarea } from "../components/ui/Input";
+import { Modal } from "../components/ui/Modal";
+import { formatDate, getPriorityTone, getStatusTone } from "../lib/format";
+import { getErrorMessage, platformApi, queryKeys } from "../services/platformApi";
+
+export function OperatorPage() {
+  const { t, i18n } = useTranslation();
+  const queryClient = useQueryClient();
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [status, setStatus] = useState<RequestStatus>("in_progress");
+  const [departmentName, setDepartmentName] = useState("");
+  const [internalNote, setInternalNote] = useState("");
+  const requestsQuery = useQuery({
+    queryKey: queryKeys.allRequests(),
+    queryFn: () => platformApi.getAllRequests(),
+  });
+  const metricsQuery = useQuery({ queryKey: queryKeys.metrics, queryFn: platformApi.getMetrics });
+
+  const selectedRequest = useMemo(
+    () => requestsQuery.data?.find((item) => item.id === selectedRequestId) ?? null,
+    [requestsQuery.data, selectedRequestId],
+  );
+
+  const statusMutation = useMutation({
+    mutationFn: () =>
+      platformApi.updateRequestStatus(selectedRequestId ?? "", {
+        status,
+        departmentName,
+        internalNote,
+      }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.allRequests() }),
+        selectedRequestId
+          ? queryClient.invalidateQueries({ queryKey: queryKeys.request(selectedRequestId) })
+          : Promise.resolve(),
+      ]);
+      setSelectedRequestId(null);
+      toast.success("Status updated");
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  });
+
+  return (
+    <div className="page-stack">
+      <PageHeader title={t("operator.title")} description={t("operator.description")} />
+      <div className="stats-grid">
+        {[
+          { label: "Total queue", value: metricsQuery.data?.totalRequests ?? 0 },
+          { label: "Active", value: metricsQuery.data?.activeRequests ?? 0 },
+          { label: "Pending", value: metricsQuery.data?.pendingRequests ?? 0 },
+          { label: "Avg response", value: metricsQuery.data?.averageResponseTime ?? "—" },
+        ].map((item) => (
+          <Card key={item.label}>
+            <span className="stat-tile__label">{item.label}</span>
+            <strong className="stat-tile__value">{item.value}</strong>
+          </Card>
+        ))}
+      </div>
+      <div className="request-card-grid">
+        {(requestsQuery.data ?? []).map((request) => (
+          <Card key={request.id} className="request-card">
+            <div className="request-card__top">
+              <div>
+                <Badge tone={getPriorityTone(request.priority)}>{request.priority}</Badge>
+                <h3>{request.title}</h3>
+              </div>
+              <Badge tone={getStatusTone(request.status)}>{request.statusLabel ?? request.status}</Badge>
+            </div>
+            <p>{request.description}</p>
+            <div className="request-card__meta">
+              <span>{request.address}</span>
+              <span>{formatDate(request.createdAt, i18n.language as "en" | "ru" | "kz")}</span>
+            </div>
+            <Button variant="secondary" onClick={() => setSelectedRequestId(request.id)}>
+              {t("operator.update")}
+            </Button>
+          </Card>
+        ))}
+      </div>
+
+      <Modal
+        open={Boolean(selectedRequest)}
+        onClose={() => setSelectedRequestId(null)}
+        title={selectedRequest?.title ?? t("operator.update")}
+        description={selectedRequest?.address}
+      >
+        <form
+          className="form-stack"
+          onSubmit={(event) => {
+            event.preventDefault();
+            statusMutation.mutate();
+          }}
+        >
+          <Select value={status} onChange={(event) => setStatus(event.target.value as RequestStatus)}>
+            <option value="pending">Pending</option>
+            <option value="in_progress">In progress</option>
+            <option value="closed">Closed</option>
+            <option value="resolved">Resolved</option>
+          </Select>
+          <Input value={departmentName} onChange={(event) => setDepartmentName(event.target.value)} placeholder="Department name" />
+          <Textarea rows={5} value={internalNote} onChange={(event) => setInternalNote(event.target.value)} placeholder="Internal note" />
+          <Button type="submit" isLoading={statusMutation.isPending}>
+            {t("common.update")}
+          </Button>
+        </form>
+      </Modal>
+    </div>
+  );
+}

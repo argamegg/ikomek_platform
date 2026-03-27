@@ -1,0 +1,349 @@
+{
+  "navigation": [
+    "Басты бет",
+    "Аутентификация",
+    "Тұрғын кабинеті",
+    "Өтінім жіберу",
+    "Менің өтінімдерім",
+    "Өтінім деректері",
+    "Өтінім чаты",
+    "Жаңалықтар мен хабарламалар",
+    "Карта және аналитика",
+    "Профиль және баптаулар",
+    "Оператор панелі",
+    "Әкімші панелі",
+    "Архитектура"
+  ],
+  "header": {
+    "kicker": "Біртұтас smart city экожүйесі",
+    "title": "Тұрғындар, операторлар және қала әкімшілігіне арналған iKomek 109 веб-платформасы",
+    "summary": "Бұл веб-интерфейс мобильді қосымшадағы iKomek экожүйесінің дәл жалғасы болып табылады және сол backend, сол entities, media, requests, statuses, saved locations, chats және news ағындарын пайдаланады, сондықтан барлық әрекет арналар арасында синхронды қалады.",
+    "languageLabel": "Тіл",
+    "primaryAction": "Өтінім жіберу",
+    "secondaryAction": "Картаны ашу"
+  },
+  "sharedSystem": {
+    "title": "Бір backend, бір data model",
+    "description": "Веб-сайт жеке өнім емес. Бұл бар iKomek экожүйесінің production-ready desktop кеңейтімі және ол мобильді қосымшадағыдай ортақ дерекқор мен API келісімдерін қолдануы тиіс.",
+    "sidebarNote": "Кез келген өтінім, чат хабарламасы, статус өзгерісі, профиль түзетуі, жаңалық немесе сақталған мекенжай веб пен мобильде бірдей қалуы керек."
+  },
+  "home": {
+    "kicker": "1. Басты бет",
+    "title": "Сенім, жеделдік және жылдам қолжетімділік бар ашық кіру нүктесі",
+    "description": "Басты бет iKomek не екенін, тұрғындардың мәселені қалай хабарлайтынын, қалалық жаңалықтарды қайдан қарайтынын және картамен аналитика арқылы қала ахуалын қалай бақылайтынын түсіндіреді.",
+    "heroTitle": "Мобильді концепциямен үйлескен government-grade civic-tech интерфейс",
+    "heroHighlights": [
+      "Брендтің қызғылт сары акценті",
+      "Мәселе жіберуге жылдам CTA",
+      "Шұғыл қалалық хабарламалар",
+      "Қоғамдық өтінім картасы"
+    ],
+    "quickAccessTitle": "Басты бет блоктары",
+    "quickAccessItems": [
+      "Мәселе жіберу CTA және сенім блогы бар hero секция",
+      "Ортақ таксономиядан алынған қызмет санаттары",
+      "Басымдылығы айқын шұғыл хабарландырулар",
+      "Санат тегтері мен өзектілік уақыты бар жаңалықтар таспасы",
+      "Астана бойынша өтінім белсенділігінің карта көрінісі",
+      "Ортақ request lifecycle-ке байланған қадамдық түсіндіру"
+    ],
+    "stats": [
+      {
+        "value": "109",
+        "label": "Қалалық байланыс идентификациясы",
+        "detail": "Қызметке сенім қалыптастыратын негізгі брендтік нүктені сақтаңыз."
+      },
+      {
+        "value": "3",
+        "label": "Платформа тілі",
+        "detail": "Орыс, қазақ және ағылшын тілдері бір UI қабығында қолжетімді."
+      },
+      {
+        "value": "1",
+        "label": "Ортақ дерек көзі",
+        "detail": "Веб пен мобиль бір backend және бір canonical entity жиынтығына сүйенеді."
+      }
+    ],
+    "sections": [
+      {
+        "title": "Ресми, бірақ жылы",
+        "description": "Ақ беттер, қызғылт сары әрекеттер, жұмсақ көлеңкелер және жоғары оқылым сервисті бюрократиялық емес, сенімді етеді."
+      },
+      {
+        "title": "Платформалар арасында таныс",
+        "description": "Веб-нұсқа мобильді қосымшадағы өтінім логикасын, статустарды, карталарды және контент құрылымын сол күйі жалғастырады."
+      },
+      {
+        "title": "Масштабталатын кіру нүктесі",
+        "description": "Қоғамдық сайт, тұрғын self-service, операциялық құралдар және әкімшілік бір тұтас ақпараттық архитектурада орналасады."
+      }
+    ]
+  },
+  "auth": {
+    "kicker": "2. Аутентификация",
+    "title": "Ортақ кіру сценарийлері және ұқыпты web transitions",
+    "description": "Аутентификация қолданыстағы backend әдістері мен session ережелерін сақтауы керек, бірақ үлкен экран мүмкіндіктерін, анық валидацияны және қолайлы қалпына келтіруді пайдалануы тиіс.",
+    "methodsTitle": "Қолдау көрсетілетін тәсілдер",
+    "methods": [
+      "Email арқылы кіру және тіркелу, inline validation-пен",
+      "Қолданыстағы backend recovery ағыны арқылы құпиясөзді қалпына келтіру",
+      "Backend қолдаса Google және Apple кіруі",
+      "Аутентификациядан кейін role-based redirect"
+    ],
+    "statesTitle": "Microinteraction күйлері",
+    "states": [
+      "Кіру, тіркелу және қалпына келтіру арасындағы анимациялық ауысулар",
+      "Өріс деңгейіндегі локализацияланған қате хабарламалары",
+      "Тіркелу немесе құпиясөз жаңартудан кейінгі жеңіл success күйі",
+      "Браузер жаңартылғанда session сақтау"
+    ]
+  },
+  "citizenDashboard": {
+    "kicker": "3. Тұрғын кабинеті",
+    "title": "Тұрғынға арналған басқару орталығы",
+    "description": "Тұрғын кабинеті пайдаланушының қала қызметтерімен ағымдағы байланысын жинақтап, өтінімдерге, хабарламаларға, картаға және сақталған орындарға жылдам қолжетімділік береді.",
+    "panels": [
+      {
+        "title": "Өтінім статустарының шолуы",
+        "description": "Жоғарғы summary карталар мобильді қосымшадағыдай shared request records негізінде белсенді, күтудегі және жуықта жабылған өтінімдерді көрсетеді."
+      },
+      {
+        "title": "Сақталған мекенжайлар",
+        "description": "Үй, жұмыс, оқу, жол нүктесі, қоғамдық аумақ және басқа орындар жаңа өтінімге тез бастапқы нүкте болады."
+      },
+      {
+        "title": "Қаланың пульсі",
+        "description": "Соңғы alerts пен news картаға өтетін жылдам сілтемемен бірге көрсетіліп, кабинетті тек транзакциялық емес, ақпараттық етеді."
+      }
+    ]
+  },
+  "requestFlow": {
+    "kicker": "4. Өтінім беру",
+    "title": "Бар mobile request creation logic-тің desktop-нұсқасы",
+    "description": "Өтінім формасы mobile-дегі backend taxonomy мен submit ережелерін сақтайды, бірақ тексеру, карта және media үшін кең desktop layout ұсынады.",
+    "steps": [
+      {
+        "title": "Мекенжайды таңдау",
+        "description": "Сақталған мекенжайлар, қолмен іздеу, картадан таңдау немесе браузер geolocation."
+      },
+      {
+        "title": "Орын мен мәселені таңдау",
+        "description": "Орын нұсқалары мен мәселе түрлері ортақ category және reason entities арқылы басқарылады."
+      },
+      {
+        "title": "Сипаттама және файлдар",
+        "description": "Құрылымдалған себеп, еркін мәтін және фото ортақ attachment pipeline арқылы жіберіледі."
+      },
+      {
+        "title": "Тексеру және жіберу",
+        "description": "Соңғы растау алдында мекенжай, себеп, сипаттама, карта preview және файлдар көрсетіледі."
+      }
+    ],
+    "inputs": [
+      {
+        "title": "Сақталған мекенжай логикасы",
+        "description": "Address chips Home, Work, Study, Road, Environment және Other типтерін көрсетеді және бар SavedLocation entity-ден ауытқымайды."
+      },
+      {
+        "title": "Reason құрылымы",
+        "description": "Reasons веб-компоненттерде hardcode болмайды, олар mobile пайдаланып жүрген shared RequestReason dataset-тен келеді."
+      },
+      {
+        "title": "Жылдам толтыру UX",
+        "description": "Sticky summary, drag-and-drop upload, address prediction және contextual hints desktop-та форманы толтыруды жеңілдетеді."
+      }
+    ]
+  },
+  "requestList": {
+    "kicker": "5. Менің өтінімдерім",
+    "title": "Тұрғын өтінімдерін card және table режимдерінде басқару",
+    "description": "Пайдаланушыға барлық өтінімдерінің түсінікті тарихы, мағыналы фильтрлері және әр мәселенің нақты кезеңі қажет.",
+    "statuses": ["Күтілуде", "Орындалуда", "Жабық"],
+    "features": [
+      "Card view және compact table view арасында ауысу",
+      "Статус, санат, мекенжай, күн, шұғылдық және сұрыптау фильтрлері",
+      "Түстік статус, progress line және соңғы жаңарту үзіндісі арқылы ағымдағы кезеңді көрсету",
+      "Тізім контекстін жоғалтпай request details бетіне өту"
+    ]
+  },
+  "requestDetails": {
+    "kicker": "6. Өтінім деректері",
+    "title": "Mobile және web үшін ортақ мәселе жазбасының толық көрінісі",
+    "description": "Detail page сол logical request object-ті көрсетеді, бірақ desktop layout-та карта, галерея, timeline және chat қатар көрінеді.",
+    "columns": [
+      {
+        "title": "Негізгі деректер",
+        "items": [
+          "Тақырып, мекенжай, орын, geo point, мәселе түрі, себеп, сипаттама",
+          "Жүктелген фото және attachments",
+          "Жасалған күні, ағымдағы статус және қажет болса тағайындалған department"
+        ]
+      },
+      {
+        "title": "Операциялық тарих",
+        "items": [
+          "RequestStatusHistory негізіндегі статус timeline",
+          "Оператор хабарламалары және completion evidence",
+          "Mobile-пен синхрондалатын shared chat thread және notifications"
+        ]
+      }
+    ]
+  },
+  "chat": {
+    "kicker": "7. Оператор чаты",
+    "title": "Арналар арасында синхрондалған өтінімге байланысты коммуникация",
+    "description": "Chat request entity-ге бекітіледі, сондықтан азамат та, оператор да web не mobile қолданса да бірдей conversation көреді.",
+    "roles": [
+      {
+        "title": "Тұрғын әрекеттері",
+        "items": [
+          "Timestamp-пен хабарлама жіберу",
+          "Ереже рұқсат етсе қосымша фото тіркеу",
+          "Қосымша нақтылау сұрауы мен status notice алу"
+        ]
+      },
+      {
+        "title": "Оператор әрекеттері",
+        "items": [
+          "Жетпейтін ақпаратты сұрау",
+          "Прогресс жаңартуы мен аяқталу растауын жіберу",
+          "Сол операциялық workspace ішінен статус өзгерту"
+        ]
+      }
+    ]
+  },
+  "news": {
+    "kicker": "8. Жаңалықтар мен хабарламалар",
+    "title": "Шұғылдық деңгейлері анық құрылымдалған қалалық ақпарат",
+    "description": "Веб-сайт mobile-дегі news және alerts ағынын көрсетеді, бірақ фильтрлеуге, терең оқуға және location-aware presentation үшін көбірек мүмкіндік береді.",
+    "priorities": [
+      {
+        "badge": "Сыни",
+        "title": "Апаттық жұмыстар мен қалалық инциденттер",
+        "description": "Шұғыл коммуналдық, қауіпсіздік және ауа райы бұзылыстары үшін контрастты alert cards, айқын уақыт және location scope қолданыңыз."
+      },
+      {
+        "badge": "Ескерту",
+        "title": "Жоспарланған шектеулер және маңызды өзгерістер",
+        "description": "Жол жабылуы, көлік өзгерісі және жергілікті қызмет үзілістерін карта байланысы және белсенді мерзіммен көрсетіңіз."
+      },
+      {
+        "badge": "Ақпарат",
+        "title": "Жаңалықтар, public service updates және қалалық контекст",
+        "description": "Қаланы кеңірек түсіндіретін categorized editorial cards және толық article pages қолданыңыз."
+      }
+    ]
+  },
+  "map": {
+    "kicker": "9. Карта және аналитика",
+    "title": "Қоғамдық мәселелер мен жеке өтінімдерге арналған OpenLayers картасы",
+    "description": "Карта Астанадан басталып, пайдаланушының өз өтінімдерін және қоғамдық мәселелерді қарапайым мәтіндік badge емес, layer, style, clustering және focus mode арқылы нақты ажыратуы тиіс.",
+    "legend": ["Менің өтінімдерім қабаты", "Қоғамдық өтінімдер қабаты", "Heatmap тығыздығы"],
+    "behaviorTitle": "OpenLayers мінез-құлқы",
+    "behaviors": [
+      "Астанаға орталықталған бастапқы city extent және district overlays",
+      "Жеке өтінімдер мен қоғамдық шағымдарға арналған бөлек marker style жүйесі",
+      "All requests, my requests, heatmap, categories, status және date ranges үшін layer toggles",
+      "Төмен zoom-де clustering, жақындағанда бөлек нүктелер және personal mode-та қоғамдық маркерлерді mute ету",
+      "Marker басылғанда side panel preview ашылып, full request detail-ге өте алады",
+      "Карта мен тізім shared map state store арқылы синхрондалады"
+    ],
+    "analytics": [
+      {
+        "title": "Тұрғынға түсінікті аналитика",
+        "description": "Жалпы өтінім саны, белсенді мәселелер, орташа жауап уақыты, ең жиі санаттар және аудандарды салыстыру қарапайым тілмен беріледі."
+      },
+      {
+        "title": "Операциялық insight",
+        "description": "Операторлар мен әкімшілер шұғылдық өсімі, тығыздық аймақтары және backlog шоғырлануы бар тығыз панельдерге ауыса алады."
+      },
+      {
+        "title": "Болашаққа дайын map engine",
+        "description": "Карта рендерін оқшау ұстаңыз, сонда clustering, heatmap, district choropleth және live event layers экрандарды бұзбай дамиды."
+      }
+    ]
+  },
+  "profile": {
+    "kicker": "10. Сақталған мекенжайлар және баптаулар",
+    "title": "Mobile-дегі сол аккаунтпен байланысқан жеке деректерді басқару",
+    "description": "Тұрғындар жеке деректерін, тілін, сақталған мекенжайларын, хабарламаларын және қауіпсіздік параметрлерін user және location entities-мен байланысқан бір settings аймағында басқарады.",
+    "cards": [
+      {
+        "title": "Сақталған мекенжайлар",
+        "description": "Әр орын атау, түр, мекенжай метадері және geo coordinates-ті бар SavedLocation моделі арқылы сақтайды."
+      },
+      {
+        "title": "Профиль және қауіпсіздік",
+        "description": "Жеке деректер, байланыстырылған auth methods, пароль басқаруы және biometric references негізгі аккаунтпен үйлесімді қалады."
+      },
+      {
+        "title": "Локализация және хабарламалар",
+        "description": "Тіл таңдауы, alert preferences және visual density settings үш тілді және болашақ accessibility жетілдірулерін қолдайды."
+      }
+    ]
+  },
+  "operator": {
+    "kicker": "11. Оператор панелі",
+    "title": "Нақты уақыттағы triage үшін тығыз операциялық workspace",
+    "description": "Оператор интерфейсі үлкен request көлемін күн сайын өңдеуге арналған: жылдам filters, толық inspection және coordinated assignment workflows.",
+    "panels": [
+      {
+        "title": "Тірі кезек",
+        "description": "Priority cue, district grouping және quick actions бар real-time request stream."
+      },
+      {
+        "title": "Ақылды фильтрлеу",
+        "description": "Category, status, district, urgency, date, address және citizen бойынша фильтрлер keyboard speed-ті сақтайды."
+      },
+      {
+        "title": "Орындауды басқару",
+        "description": "Departments-ке тағайындау, internal notes, media review, content moderation және proof of completion жүктеу."
+      }
+    ],
+    "workflowTitle": "Ұсынылатын оператор workflow",
+    "workflow": [
+      "Шұғылдық, шешілмеген уақыт және аудандық spikes бойынша басымдық беру",
+      "Өтінім контекстін, фотоны, алдыңғы status history және chat-ты тексеру",
+      "Азаматқа жауап беру, department тағайындау және ішкі ескертпе қосу",
+      "Орындау дәлелін тексеріп, нәтижені растау және synchronized status update-пен жабу"
+    ]
+  },
+  "admin": {
+    "kicker": "12. Әкімші панелі",
+    "title": "Қалалық деңгейдегі бақылау, конфигурация және аналитика",
+    "description": "Әкімшілерге users, taxonomies, communications, geographic analytics және long-term service performance monitoring үшін біртұтас веб-орта қажет.",
+    "modules": [
+      {
+        "title": "Жүйелік басқару",
+        "description": "Users, roles, operators, departments және access policies сол shared role model арқылы басқарылады."
+      },
+      {
+        "title": "Таксономия және контент",
+        "description": "Categories, predefined reasons, news, alerts және platform configuration веб үшін бөлек құрылым жасамай жүргізіледі."
+      },
+      {
+        "title": "Аналитика және трендтер",
+        "description": "District patterns, request growth, resolution times және service quality rich dashboards арқылы бақыланады."
+      }
+    ],
+    "executorTitle": "Опционалды department немесе executor рөлі",
+    "executorDescription": "Department users assigned requests қабылдап, progress жаңартып, completion evidence жүктеп және сол shared request lifecycle арқылы жұмыс тапсырысын жабады.",
+    "futureTitle": "Болашақ масштабтау",
+    "futureDescription": "Бұл архитектура SLA dashboards, AI-assisted categorization, district scorecards және бөлек departmental workspaces бағытында data model-ді бөлмей кеңеюге мүмкіндік береді."
+  },
+  "architecture": {
+    "kicker": "13. Production-ready frontend құрылымы",
+    "title": "UI, domain, map logic және backend integration қабаттарын бөлу",
+    "description": "Frontend feature boundaries және shared platform layers бойынша ұйымдастырылған, сондықтан public website-тен толық city operations interface-ке дейін тұрақты түрде өсе алады.",
+    "fileTreeTitle": "Жоба файлдар ағашы",
+    "decisionsTitle": "Архитектуралық шешімдер",
+    "decisions": [
+      "Feature modules экран композициясына жауап береді, ал reusable UI primitives шағын әрі portable болып қалады.",
+      "Локализация компоненттер ішіндегі hardcoded мәтін емес, бөлек language files ішінде сақталады.",
+      "API access services арқылы абстракцияланған, сондықтан UI components backend-ке тікелей жүгінбейді.",
+      "Map behavior оқшауланған және жеке OpenLayers engine module-ге айналуы керек.",
+      "Stores shared backend entities-ті қайталайды және web-only data model жасамайды.",
+      "Сол requests, chats, news, statuses, media, saved locations және geo data mobile мен web-та бірдей көрсетілуі тиіс."
+    ]
+  }
+}
