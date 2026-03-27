@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
+import axios, { isAxiosError } from 'axios';
 import Constants from 'expo-constants';
 import i18n from '../i18n';
 
 const API_URL = Constants.expoConfig?.extra?.backendUrl || process.env.EXPO_PUBLIC_BACKEND_URL || '';
+const PENDING_VERIFICATION_KEY = 'pendingVerification';
 
 interface User {
   id: string;
@@ -16,13 +17,28 @@ interface User {
   created_at: string;
 }
 
+export interface PendingVerification {
+  registrationId: string;
+  email: string;
+  expiresInSeconds: number;
+  resendAvailableInSeconds: number;
+}
+
+type LoginResult =
+  | { status: 'authenticated' }
+  | { status: 'verification_required'; pendingVerification: PendingVerification };
+
 interface AuthContextType {
   user: User | null;
   token: string | null;
+  pendingVerification: PendingVerification | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, fullName: string, phone?: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<LoginResult>;
+  register: (email: string, password: string, fullName: string, phone?: string) => Promise<PendingVerification>;
+  verifyEmailCode: (code: string) => Promise<void>;
+  resendVerificationCode: () => Promise<PendingVerification>;
+  clearPendingVerification: () => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (fullName?: string, phone?: string) => Promise<void>;
   updateLanguage: (language: string) => Promise<void>;
@@ -44,6 +60,7 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [pendingVerification, setPendingVerification] = useState<PendingVerification | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -62,9 +79,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const storedToken = await AsyncStorage.getItem('token');
       const storedUser = await AsyncStorage.getItem('user');
       const storedLanguage = await AsyncStorage.getItem('language');
+      const storedPendingVerification = await AsyncStorage.getItem(PENDING_VERIFICATION_KEY);
       
       if (storedLanguage) {
         i18n.changeLanguage(storedLanguage);
+      }
+
+      if (storedPendingVerification) {
+        setPendingVerification(JSON.parse(storedPendingVerification));
       }
       
       if (storedToken && storedUser) {
@@ -88,21 +110,55 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const normalizePendingVerification = (data: any): PendingVerification => ({
+    registrationId: data.registration_id,
+    email: data.email,
+    expiresInSeconds: Number(data.expires_in_seconds ?? 0),
+    resendAvailableInSeconds: Number(data.resend_available_in_seconds ?? 0),
+  });
+
+  const persistPendingVerification = async (value: PendingVerification | null) => {
+    if (value) {
+      setPendingVerification(value);
+      await AsyncStorage.setItem(PENDING_VERIFICATION_KEY, JSON.stringify(value));
+      return;
+    }
+
+    setPendingVerification(null);
+    await AsyncStorage.removeItem(PENDING_VERIFICATION_KEY);
+  };
+
   const login = async (email: string, password: string) => {
-    const response = await axios.post(`${API_URL}/api/auth/login`, {
-      email,
-      password
-    });
-    
-    const { access_token, user: userData } = response.data;
-    
-    await AsyncStorage.setItem('token', access_token);
-    await AsyncStorage.setItem('user', JSON.stringify(userData));
-    await AsyncStorage.setItem('language', userData.language || 'ru');
-    
-    setToken(access_token);
-    setUser(userData);
-    i18n.changeLanguage(userData.language || 'ru');
+    try {
+      const response = await axios.post(`${API_URL}/api/auth/login`, {
+        email,
+        password
+      });
+
+      const { access_token, user: userData } = response.data;
+
+      await AsyncStorage.setItem('token', access_token);
+      await AsyncStorage.setItem('user', JSON.stringify(userData));
+      await AsyncStorage.setItem('language', userData.language || 'ru');
+      await persistPendingVerification(null);
+
+      setToken(access_token);
+      setUser(userData);
+      i18n.changeLanguage(userData.language || 'ru');
+
+      return { status: 'authenticated' as const };
+    } catch (error) {
+      if (isAxiosError(error) && error.response?.data?.code === 'email_not_verified') {
+        const nextPendingVerification = normalizePendingVerification(error.response.data);
+        await persistPendingVerification(nextPendingVerification);
+        return {
+          status: 'verification_required' as const,
+          pendingVerification: nextPendingVerification,
+        };
+      }
+
+      throw error;
+    }
   };
 
   const register = async (email: string, password: string, fullName: string, phone?: string) => {
@@ -110,29 +166,62 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       email,
       password,
       full_name: fullName,
-      phone
+      phone,
+      language: i18n.language || 'ru',
     });
 
-    if (response.data?.status === 'verification_required') {
-      throw new Error('A verification code was sent to your email. Verify your account before signing in.');
+    const nextPendingVerification = normalizePendingVerification(response.data);
+    await persistPendingVerification(nextPendingVerification);
+    return nextPendingVerification;
+  };
+
+  const verifyEmailCode = async (code: string) => {
+    if (!pendingVerification) {
+      throw new Error('No pending verification');
     }
-    
+
+    const response = await axios.post(`${API_URL}/api/auth/verify-email`, {
+      registration_id: pendingVerification.registrationId,
+      code,
+    });
+
     const { access_token, user: userData } = response.data;
-    
+
     await AsyncStorage.setItem('token', access_token);
     await AsyncStorage.setItem('user', JSON.stringify(userData));
     await AsyncStorage.setItem('language', userData.language || 'ru');
-    
+    await persistPendingVerification(null);
+
     setToken(access_token);
     setUser(userData);
     i18n.changeLanguage(userData.language || 'ru');
   };
 
+  const resendVerificationCode = async () => {
+    if (!pendingVerification) {
+      throw new Error('No pending verification');
+    }
+
+    const response = await axios.post(`${API_URL}/api/auth/resend-verification`, {
+      registration_id: pendingVerification.registrationId,
+    });
+
+    const nextPendingVerification = normalizePendingVerification(response.data);
+    await persistPendingVerification(nextPendingVerification);
+    return nextPendingVerification;
+  };
+
+  const clearPendingVerification = async () => {
+    await persistPendingVerification(null);
+  };
+
   const logout = async () => {
     await AsyncStorage.removeItem('token');
     await AsyncStorage.removeItem('user');
+    await AsyncStorage.removeItem(PENDING_VERIFICATION_KEY);
     setToken(null);
     setUser(null);
+    setPendingVerification(null);
   };
 
   const updateProfile = async (fullName?: string, phone?: string) => {
@@ -186,10 +275,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       value={{
         user,
         token,
+        pendingVerification,
         isLoading,
         isAuthenticated: !!token && !!user,
         login,
         register,
+        verifyEmailCode,
+        resendVerificationCode,
+        clearPendingVerification,
         logout,
         updateProfile,
         updateLanguage,

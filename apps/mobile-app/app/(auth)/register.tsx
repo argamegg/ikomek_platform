@@ -14,7 +14,9 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/context/AuthContext';
+import { getAuthErrorMessage } from '../../src/utils/authErrors';
 
 const ORANGE = '#FF6B00';
 
@@ -29,28 +31,29 @@ export default function RegisterScreen() {
   
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const { register } = useAuth();
 
   const handleRegister = async () => {
     if (!fullName.trim() || !email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      Alert.alert(t('common.error'), t('auth.enterRequiredRegistrationFields'));
       return;
     }
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      Alert.alert(t('common.error'), t('errors.passwordMismatch'));
       return;
     }
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      Alert.alert(t('common.error'), t('auth.passwordTooShort'));
       return;
     }
 
     setIsLoading(true);
     try {
       await register(email.trim(), password, fullName.trim(), phone.trim() || undefined);
-      router.replace('/(tabs)/map');
+      router.replace('/(auth)/verify');
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.detail || 'Registration failed');
+      Alert.alert(t('common.error'), getAuthErrorMessage(error, t));
     } finally {
       setIsLoading(false);
     }
@@ -70,8 +73,8 @@ export default function RegisterScreen() {
         </TouchableOpacity>
 
         <View style={styles.header}>
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Join iKomek to report city issues</Text>
+          <Text style={styles.title}>{t('auth.registerTitle')}</Text>
+          <Text style={styles.subtitle}>{t('auth.registerSubtitle')}</Text>
         </View>
 
         <View style={styles.form}>
@@ -79,7 +82,7 @@ export default function RegisterScreen() {
             <Ionicons name="person-outline" size={20} color="#8E8E93" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
-              placeholder="Full Name *"
+              placeholder={`${t('auth.fullName')} *`}
               placeholderTextColor="#C7C7CC"
               value={fullName}
               onChangeText={setFullName}
@@ -91,7 +94,7 @@ export default function RegisterScreen() {
             <Ionicons name="mail-outline" size={20} color="#8E8E93" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
-              placeholder="Email *"
+              placeholder={`${t('auth.email')} *`}
               placeholderTextColor="#C7C7CC"
               value={email}
               onChangeText={setEmail}
@@ -105,7 +108,7 @@ export default function RegisterScreen() {
             <Ionicons name="call-outline" size={20} color="#8E8E93" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
-              placeholder="Phone (optional)"
+              placeholder={t('auth.phoneOptional')}
               placeholderTextColor="#C7C7CC"
               value={phone}
               onChangeText={setPhone}
@@ -117,7 +120,7 @@ export default function RegisterScreen() {
             <Ionicons name="lock-closed-outline" size={20} color="#8E8E93" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
-              placeholder="Password *"
+              placeholder={`${t('auth.password')} *`}
               placeholderTextColor="#C7C7CC"
               value={password}
               onChangeText={setPassword}
@@ -136,7 +139,7 @@ export default function RegisterScreen() {
             <Ionicons name="lock-closed-outline" size={20} color="#8E8E93" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
-              placeholder="Confirm Password *"
+              placeholder={`${t('auth.confirmPassword')} *`}
               placeholderTextColor="#C7C7CC"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
@@ -152,14 +155,14 @@ export default function RegisterScreen() {
             {isLoading ? (
               <ActivityIndicator color="#FFF" />
             ) : (
-              <Text style={styles.buttonText}>Create Account</Text>
+              <Text style={styles.buttonText}>{t('auth.createAccount')}</Text>
             )}
           </TouchableOpacity>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Already have an account? </Text>
+            <Text style={styles.footerText}>{t('auth.hasAccount')} </Text>
             <TouchableOpacity onPress={() => router.back()}>
-              <Text style={styles.footerLink}>Sign In</Text>
+              <Text style={styles.footerLink}>{t('auth.signIn')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -184,17 +187,20 @@ const styles = StyleSheet.create({
     marginBottom: 16
   },
   header: {
+    alignItems: 'center',
     marginBottom: 32
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#1C1C1E',
-    marginBottom: 8
+    marginBottom: 8,
+    textAlign: 'center'
   },
   subtitle: {
     fontSize: 16,
-    color: '#8E8E93'
+    color: '#8E8E93',
+    textAlign: 'center'
   },
   form: {
     flex: 1

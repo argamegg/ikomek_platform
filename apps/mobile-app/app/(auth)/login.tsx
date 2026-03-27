@@ -6,7 +6,9 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/context/AuthContext';
+import { getAuthErrorMessage } from '../../src/utils/authErrors';
 
 const ORANGE = '#FF6B00';
 
@@ -25,24 +27,30 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const { login, user, isAuthenticated } = useAuth();
 
   useEffect(() => {
     if (isAuthenticated && user?.role) {
       router.replace(getRedirectPath(user.role) as any);
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, router, user]);
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert(t('common.error'), t('auth.enterAllFields'));
       return;
     }
     setIsLoading(true);
     try {
-      await login(email.trim(), password);
+      const result = await login(email.trim(), password);
+      if (result.status === 'verification_required') {
+        router.replace('/(auth)/verify');
+        return;
+      }
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.detail || 'Invalid credentials');
+      Alert.alert(t('common.error'), getAuthErrorMessage(error, t));
+    } finally {
       setIsLoading(false);
     }
   };
@@ -52,48 +60,48 @@ export default function LoginScreen() {
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 40 }]} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <View style={styles.logo}><Text style={styles.logoText}>109</Text></View>
-          <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>Sign in to continue to iKomek</Text>
+          <Text style={styles.title}>{t('auth.signInTitle')}</Text>
+          <Text style={styles.subtitle}>{t('auth.signInSubtitle')}</Text>
         </View>
         <View style={styles.form}>
           <View style={styles.inputContainer}>
             <Ionicons name="mail-outline" size={20} color="#8E8E93" style={styles.inputIcon} />
-            <TextInput style={styles.input} placeholder="Email" placeholderTextColor="#C7C7CC" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} data-testid="login-email-input" />
+            <TextInput style={styles.input} placeholder={t('auth.email')} placeholderTextColor="#C7C7CC" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} data-testid="login-email-input" />
           </View>
           <View style={styles.inputContainer}>
             <Ionicons name="lock-closed-outline" size={20} color="#8E8E93" style={styles.inputIcon} />
-            <TextInput style={styles.input} placeholder="Password" placeholderTextColor="#C7C7CC" value={password} onChangeText={setPassword} secureTextEntry={!showPassword} data-testid="login-password-input" />
+            <TextInput style={styles.input} placeholder={t('auth.password')} placeholderTextColor="#C7C7CC" value={password} onChangeText={setPassword} secureTextEntry={!showPassword} data-testid="login-password-input" />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
               <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#8E8E93" />
             </TouchableOpacity>
           </View>
           <TouchableOpacity style={[styles.button, isLoading && styles.buttonDisabled]} onPress={handleLogin} disabled={isLoading} data-testid="login-submit-btn">
-            {isLoading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.buttonText}>Sign In</Text>}
+            {isLoading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.buttonText}>{t('auth.signIn')}</Text>}
           </TouchableOpacity>
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => router.push('/(auth)/register')}><Text style={styles.footerLink}>Sign Up</Text></TouchableOpacity>
+            <Text style={styles.footerText}>{t('auth.noAccount')} </Text>
+            <TouchableOpacity onPress={() => router.push('/(auth)/register')}><Text style={styles.footerLink}>{t('auth.signUp')}</Text></TouchableOpacity>
           </View>
           <View style={styles.demoSection}>
-            <Text style={styles.demoSectionTitle}>Demo Accounts</Text>
+            <Text style={styles.demoSectionTitle}>{t('auth.demoAccounts')}</Text>
             <TouchableOpacity style={styles.demoCard} onPress={() => { setEmail('demo@ikomek.kz'); setPassword('demo123'); }}>
               <View style={[styles.roleDot, { backgroundColor: '#34C759' }]} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.demoRole}>Citizen</Text>
+                <Text style={styles.demoRole}>{t('auth.citizen')}</Text>
                 <Text style={styles.demoEmail}>demo@ikomek.kz</Text>
               </View>
             </TouchableOpacity>
             <TouchableOpacity style={styles.demoCard} onPress={() => { setEmail('operator@ikomek.kz'); setPassword('operator123'); }}>
               <View style={[styles.roleDot, { backgroundColor: '#007AFF' }]} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.demoRole}>Operator</Text>
+                <Text style={styles.demoRole}>{t('auth.operator')}</Text>
                 <Text style={styles.demoEmail}>operator@ikomek.kz</Text>
               </View>
             </TouchableOpacity>
             <TouchableOpacity style={styles.demoCard} onPress={() => { setEmail('admin@ikomek.kz'); setPassword('admin123'); }}>
               <View style={[styles.roleDot, { backgroundColor: '#FF3B30' }]} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.demoRole}>Admin</Text>
+                <Text style={styles.demoRole}>{t('auth.admin')}</Text>
                 <Text style={styles.demoEmail}>admin@ikomek.kz</Text>
               </View>
             </TouchableOpacity>
