@@ -1,12 +1,12 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
 
 const ORANGE = '#FF6B00';
 const GRAY = '#8E8E93';
-const LIGHT_GRAY = '#F5F5F5';
+const TAB_BAR_BG = 'rgba(255, 255, 255, 0.96)';
+const CENTER_SLOT_WIDTH = 94;
 
 interface TabBarProps {
   state: any;
@@ -16,6 +16,10 @@ interface TabBarProps {
 
 export const CustomTabBar = ({ state, descriptors, navigation }: TabBarProps) => {
   const insets = useSafeAreaInsets();
+  const createRouteIndex = state.routes.findIndex((route: any) => route.name === 'create');
+  const createRoute = createRouteIndex >= 0 ? state.routes[createRouteIndex] : null;
+  const leftRoutes = createRouteIndex >= 0 ? state.routes.slice(0, createRouteIndex) : state.routes;
+  const rightRoutes = createRouteIndex >= 0 ? state.routes.slice(createRouteIndex + 1) : [];
 
   const getIconName = (routeName: string, focused: boolean): keyof typeof Ionicons.glyphMap => {
     switch (routeName) {
@@ -34,58 +38,70 @@ export const CustomTabBar = ({ state, descriptors, navigation }: TabBarProps) =>
     }
   };
 
+  const onTabPress = (route: any, isFocused: boolean) => {
+    const event = navigation.emit({
+      type: 'tabPress',
+      target: route.key,
+      canPreventDefault: true,
+    });
+
+    if (!isFocused && !event.defaultPrevented) {
+      navigation.navigate(route.name);
+    }
+  };
+
+  const renderTab = (route: any) => {
+    const options = descriptors[route.key]?.options ?? {};
+    const isFocused = state.routes[state.index]?.key === route.key;
+
+    return (
+      <TouchableOpacity
+        key={route.key}
+        accessibilityRole="button"
+        accessibilityState={isFocused ? { selected: true } : {}}
+        accessibilityLabel={options.tabBarAccessibilityLabel}
+        testID={options.tabBarButtonTestID}
+        onPress={() => onTabPress(route, isFocused)}
+        style={styles.tab}
+        activeOpacity={0.7}
+      >
+        <Ionicons
+          name={getIconName(route.name, isFocused)}
+          size={24}
+          color={isFocused ? ORANGE : GRAY}
+        />
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 10) }]}>
-      <View style={styles.tabBar}>
-        {state.routes.map((route: any, index: number) => {
-          const { options } = descriptors[route.key];
-          const isFocused = state.index === index;
-          const isCreate = route.name === 'create';
+      <View style={styles.shell}>
+        <View style={styles.barBackground} />
 
-          const onPress = () => {
-            const event = navigation.emit({
-              type: 'tabPress',
-              target: route.key,
-              canPreventDefault: true,
-            });
+        <View style={styles.tabRow}>
+          <View style={styles.tabGroup}>{leftRoutes.map(renderTab)}</View>
+          <View style={styles.centerSlot} />
+          <View style={styles.tabGroup}>{rightRoutes.map(renderTab)}</View>
+        </View>
 
-            if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
-            }
-          };
-
-          if (isCreate) {
-            return (
-              <TouchableOpacity
-                key={route.key}
-                onPress={onPress}
-                style={styles.createButtonContainer}
-                activeOpacity={0.8}
-              >
-                <View style={styles.createButtonOuter}>
-                  <View style={styles.createButton}>
-                    <Ionicons name="add" size={32} color="#FFF" />
-                  </View>
-                </View>
-              </TouchableOpacity>
-            );
-          }
-
-          return (
-            <TouchableOpacity
-              key={route.key}
-              onPress={onPress}
-              style={styles.tab}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name={getIconName(route.name, isFocused)}
-                size={24}
-                color={isFocused ? ORANGE : GRAY}
-              />
-            </TouchableOpacity>
-          );
-        })}
+        {createRoute ? (
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityState={state.index === createRouteIndex ? { selected: true } : {}}
+            accessibilityLabel={descriptors[createRoute.key]?.options?.tabBarAccessibilityLabel}
+            testID={descriptors[createRoute.key]?.options?.tabBarButtonTestID}
+            onPress={() => onTabPress(createRoute, state.index === createRouteIndex)}
+            style={styles.createButtonContainer}
+            activeOpacity={0.85}
+          >
+            <View style={styles.createButtonAura}>
+              <View style={styles.createButton}>
+                <Ionicons name="add" size={34} color="#FFF" />
+              </View>
+            </View>
+          </TouchableOpacity>
+        ) : null}
       </View>
     </View>
   );
@@ -100,19 +116,44 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     paddingHorizontal: 16,
   },
-  tabBar: {
+  shell: {
+    position: 'relative',
+    height: 96,
+    justifyContent: 'flex-end',
+  },
+  barBackground: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: TAB_BAR_BG,
+    shadowColor: '#111827',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  tabRow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 72,
     flexDirection: 'row',
-    backgroundColor: 'rgba(245, 245, 245, 0.95)',
-    borderRadius: 30,
-    height: 70,
     alignItems: 'center',
-    justifyContent: 'space-around',
-    paddingHorizontal: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 10,
+    paddingHorizontal: 16,
+  },
+  tabGroup: {
+    flex: 1,
+    height: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  centerSlot: {
+    width: CENTER_SLOT_WIDTH,
+    height: '100%',
   },
   tab: {
     flex: 1,
@@ -121,21 +162,24 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   createButtonContainer: {
-    position: 'relative',
-    top: -20,
+    position: 'absolute',
+    top: -14,
+    left: '50%',
+    transform: [{ translateX: -41 }],
+    zIndex: 4,
   },
-  createButtonOuter: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: 'rgba(255, 107, 0, 0.2)',
+  createButtonAura: {
+    width: 74,
+    height: 74,
+    borderRadius: 37,
+    backgroundColor: 'rgba(255, 107, 0, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   createButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     backgroundColor: ORANGE,
     alignItems: 'center',
     justifyContent: 'center',
