@@ -1,4 +1,4 @@
-# iKOMEK 109 123
+# iKOMEK 109 
 
 Full-stack smart city service platform for Astana that lets citizens report city issues, track progress, and communicate with operators across mobile and web clients backed by one shared FastAPI API and MongoDB database.
 
