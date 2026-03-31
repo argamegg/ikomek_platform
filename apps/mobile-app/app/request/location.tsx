@@ -183,7 +183,7 @@ export default function LocationScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF'
+    backgroundColor: 'transparent'
   },
   header: {
     backgroundColor: '#FFF',

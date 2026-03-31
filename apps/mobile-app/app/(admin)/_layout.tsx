@@ -11,6 +11,7 @@ export default function AdminLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        sceneStyle: { backgroundColor: 'transparent' },
         tabBarActiveTintColor: ORANGE,
         tabBarInactiveTintColor: '#8E8E93',
         tabBarStyle: {

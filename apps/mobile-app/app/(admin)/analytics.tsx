@@ -111,7 +111,7 @@ export default function AnalyticsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F2F2F7' },
+  container: { flex: 1, backgroundColor: 'transparent' },
   centered: { justifyContent: 'center', alignItems: 'center' },
   scroll: { padding: 16 },
   headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#1C1C1E' },

@@ -48,7 +48,7 @@ export default function AdminProfile() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F2F2F7' },
+  container: { flex: 1, backgroundColor: 'transparent' },
   scroll: { padding: 16 },
   headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#1C1C1E', marginBottom: 16 },
   profileCard: { backgroundColor: '#FFF', borderRadius: 16, padding: 20, flexDirection: 'row', alignItems: 'center', marginBottom: 24 },

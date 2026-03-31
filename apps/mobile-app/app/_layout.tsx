@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from '../src/context/AuthContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { AppBackground } from '../src/components/AppBackground';
 import '../src/i18n';
 
 const ORANGE = '#FF6B00';
@@ -54,7 +55,7 @@ function RootLayoutContent() {
   return (
     <>
       <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="(operator)" options={{ headerShown: false }} />
@@ -70,7 +71,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <AuthProvider>
-          <RootLayoutContent />
+          <AppBackground>
+            <RootLayoutContent />
+          </AppBackground>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
@@ -82,6 +85,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFF'
+    backgroundColor: 'transparent'
   }
 });

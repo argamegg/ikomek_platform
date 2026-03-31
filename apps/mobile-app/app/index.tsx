@@ -50,7 +50,7 @@ export default function Index() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF' },
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent' },
   logoContainer: { alignItems: 'center' },
   logo: { width: 100, height: 100, borderRadius: 25, backgroundColor: ORANGE, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
   logoText: { color: '#FFF', fontSize: 36, fontWeight: 'bold' },
