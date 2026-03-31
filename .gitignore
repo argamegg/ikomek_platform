@@ -95,3 +95,6 @@ android-sdk/ -e
 *.env.*
 !*.env.example
 !**/.env.example
+
+.metro-cache/
+
