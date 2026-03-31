@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
-  ScrollView, Modal, FlatList, Platform
+  ScrollView, Modal, FlatList
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
 import { apiService, MapPoint } from '../../src/utils/api';
-import { useAuth } from '../../src/context/AuthContext';
+import { RequestsMap } from '../../src/components/RequestsMap';
 import { StatusBadge } from '../../src/components/StatusBadge';
 
 const ORANGE = '#FF6B00';
@@ -23,81 +23,14 @@ const STATUS_COLORS: Record<string, string> = {
   pending: '#FF9500', in_progress: '#007AFF', closed: '#34C759'
 };
 
-function generateMapHTML(points: MapPoint[]) {
-  const pointsJSON = JSON.stringify(points);
-  return `<!DOCTYPE html>
-<html><head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
-<style>*{margin:0;padding:0}html,body,#map{width:100%;height:100%}</style>
-</head><body>
-<div id="map"></div>
-<script>
-var CATEGORY_COLORS = ${JSON.stringify(CATEGORY_COLORS)};
-var STATUS_COLORS = ${JSON.stringify(STATUS_COLORS)};
-var points = ${pointsJSON};
-var map = L.map('map',{zoomControl:false}).setView([51.1282,71.4306],12);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM',maxZoom:19}).addTo(map);
-L.control.zoom({position:'topright'}).addTo(map);
-points.forEach(function(p){
-  var color = STATUS_COLORS[p.status] || '#FF9500';
-  var catColor = CATEGORY_COLORS[p.category] || '#9E9E9E';
-  var marker = L.circleMarker([p.lat,p.lng],{
-    radius:8, fillColor:catColor, color:color, weight:3, fillOpacity:0.85, opacity:1
-  }).addTo(map);
-  marker.bindPopup('<div style="font-family:sans-serif"><b>'+p.title+'</b><br><span style="color:#666">'+p.address+'</span></div>');
-  marker.on('click',function(){
-    try { window.parent.postMessage(JSON.stringify({type:'markerClick',point:p}),'*'); } catch(e){}
-  });
-});
-<\/script>
-</body></html>`;
-}
-
-function WebMapView({ html, onMessage }: { html: string; onMessage?: (data: any) => void }) {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-
-  useEffect(() => {
-    const handler = (event: MessageEvent) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (onMessage) onMessage(data);
-      } catch {}
-    };
-    window.addEventListener('message', handler);
-    return () => window.removeEventListener('message', handler);
-  }, [onMessage]);
-
-  const blobUrl = useMemo(() => {
-    const blob = new Blob([html], { type: 'text/html' });
-    return URL.createObjectURL(blob);
-  }, [html]);
-
-  useEffect(() => {
-    return () => URL.revokeObjectURL(blobUrl);
-  }, [blobUrl]);
-
-  return (
-    <iframe
-      ref={iframeRef}
-      src={blobUrl}
-      style={{ width: '100%', height: '100%', border: 'none' }}
-    />
-  );
-}
-
 export default function MapScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
 
   const [points, setPoints] = useState<MapPoint[]>([]);
   const [filteredPoints, setFilteredPoints] = useState<MapPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'my'>('all');
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [selectedPoint, setSelectedPoint] = useState<MapPoint | null>(null);
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
@@ -118,16 +51,9 @@ export default function MapScreen() {
   useEffect(() => {
     let filtered = points;
     if (filter === 'my') filtered = filtered.filter(p => p.is_mine);
-    if (categoryFilter) filtered = filtered.filter(p => p.category === categoryFilter);
     if (statusFilter) filtered = filtered.filter(p => p.status === statusFilter);
     setFilteredPoints(filtered);
-  }, [points, filter, categoryFilter, statusFilter]);
-
-  const mapHTML = useMemo(() => generateMapHTML(filteredPoints), [filteredPoints]);
-
-  const handleMapMessage = useCallback((data: any) => {
-    if (data.type === 'markerClick') setSelectedPoint(data.point);
-  }, []);
+  }, [points, filter, statusFilter]);
 
   const counts = {
     pending: points.filter(p => p.status === 'pending').length,
@@ -207,13 +133,12 @@ export default function MapScreen() {
       {/* Map or List */}
       {viewMode === 'map' ? (
         <View style={styles.mapContainer}>
-          {Platform.OS === 'web' ? (
-            <WebMapView html={mapHTML} onMessage={handleMapMessage} />
-          ) : (
-            <View style={styles.mapContainer}>
-              <Text style={{ padding: 20, color: '#8E8E93' }}>Map available on web</Text>
-            </View>
-          )}
+          <RequestsMap
+            points={filteredPoints}
+            categoryColors={CATEGORY_COLORS}
+            statusColors={STATUS_COLORS}
+            onPointPress={setSelectedPoint}
+          />
           {/* Legend */}
           <View style={styles.legend}>
             {Object.entries(STATUS_COLORS).map(([key, color]) => (
@@ -295,7 +220,6 @@ const styles = StyleSheet.create({
   toggleTextActive: { color: '#1C1C1E' },
   refreshBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center' },
   mapContainer: { flex: 1, position: 'relative' },
-  webview: { flex: 1 },
   mapLoading: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.9)', justifyContent: 'center', alignItems: 'center' },
   mapLoadingText: { marginTop: 8, fontSize: 14, color: '#8E8E93' },
   legend: { position: 'absolute', bottom: 100, left: 12, backgroundColor: '#FFF', borderRadius: 10, padding: 8, gap: 4, elevation: 4 },
