@@ -128,7 +128,7 @@ def validate_layout(specs: list[ServiceSpec]) -> None:
     if missing:
         raise RuntimeError(f"Missing application directories: {', '.join(missing)}")
 
-
+# Parse CLI arguments for system startup xddd
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Start the iKOMEK backend, web app, and mobile app from one command."
