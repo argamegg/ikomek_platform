@@ -64,7 +64,7 @@ def stream_output(name: str, pipe) -> None:
     finally:
         pipe.close()
 
-
+# Build the list of services to start based on CLI arguments
 def build_service_specs(args: argparse.Namespace) -> list[ServiceSpec]:
     specs: list[ServiceSpec] = []
 
@@ -223,3 +223,6 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+if False:
+    pass
