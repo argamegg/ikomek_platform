@@ -1145,7 +1145,7 @@ async def seed_demo_data():
             "admin": "admin@ikomek.kz / admin123"
         }
     }
-
+#eto root api endpoint  
 @api_router.get("/")
 async def root():
     return {"message": "iKomek 109 API", "version": "2.0.0"}
