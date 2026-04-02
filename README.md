@@ -197,3 +197,4 @@ curl -X POST http://localhost:8001/api/seed
 - [web app](/Users/argame/Documents/ikomek-project/apps/web-app/package.json)
 - [startup guide](/Users/argame/Documents/ikomek-project/docs/RUNNING.md)
 - [launcher script](/Users/argame/Documents/ikomek-project/scripts/start_system.py)
+
