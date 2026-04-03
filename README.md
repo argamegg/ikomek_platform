@@ -182,7 +182,7 @@ When the backend is running:
 ```bash
 curl -X POST http://localhost:8001/api/seed
 ```
-test comit
+test commiit 
 
 ## Notes
 
