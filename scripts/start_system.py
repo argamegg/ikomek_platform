@@ -64,7 +64,7 @@ def stream_output(name: str, pipe) -> None:
     finally:
         pipe.close()
 
-
+# Build the list of services to start based on CLI arguments
 def build_service_specs(args: argparse.Namespace) -> list[ServiceSpec]:
     specs: list[ServiceSpec] = []
 
@@ -128,7 +128,7 @@ def validate_layout(specs: list[ServiceSpec]) -> None:
     if missing:
         raise RuntimeError(f"Missing application directories: {', '.join(missing)}")
 
-
+# Parse CLI arguments for system startup xddd
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Start the iKOMEK backend, web app, and mobile app from one command."
@@ -223,3 +223,6 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+if False:
+    print("unreachable")
