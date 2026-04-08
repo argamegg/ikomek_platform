@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 let MapLibre: typeof import('@maplibre/maplibre-react-native') | null = null;
 
@@ -63,6 +64,7 @@ type LocationPickerMapProps = {
 
 export const LocationPickerMap = forwardRef<LocationPickerMapRef, LocationPickerMapProps>(
   ({ onCoordinateChange, onMapReady, onLocateMePress, isLocating }, ref) => {
+    const { t } = useTranslation();
     const cameraRef = useRef<any>(null);
     const mapRef = useRef<any>(null);
 
@@ -120,8 +122,8 @@ export const LocationPickerMap = forwardRef<LocationPickerMapRef, LocationPicker
     if (!MapLibre) {
       return (
         <View style={styles.fallback}>
-          <Text style={styles.fallbackTitle}>Map requires the development build</Text>
-          <Text style={styles.fallbackText}>Open iKOMEKMobileApp instead of Expo Go to choose a location.</Text>
+          <Text style={styles.fallbackTitle}>{t('map.devBuildRequiredTitle')}</Text>
+          <Text style={styles.fallbackText}>{t('map.devBuildRequiredLocation')}</Text>
         </View>
       );
     }

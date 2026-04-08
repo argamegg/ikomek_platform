@@ -2,10 +2,12 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 const ORANGE = '#FF6B00';
 
 export default function AdminLayout() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   return (
     <Tabs
@@ -24,19 +26,19 @@ export default function AdminLayout() {
       }}
     >
       <Tabs.Screen name="analytics" options={{
-        title: 'Analytics',
+        title: t('admin.analytics'),
         tabBarIcon: ({ color, size }) => <Ionicons name="bar-chart" size={size} color={color} />
       }} />
       <Tabs.Screen name="users" options={{
-        title: 'Users',
+        title: t('admin.users'),
         tabBarIcon: ({ color, size }) => <Ionicons name="people" size={size} color={color} />
       }} />
       <Tabs.Screen name="news-manage" options={{
-        title: 'News',
+        title: t('nav.news'),
         tabBarIcon: ({ color, size }) => <Ionicons name="newspaper" size={size} color={color} />
       }} />
       <Tabs.Screen name="profile" options={{
-        title: 'Profile',
+        title: t('profile.title'),
         tabBarIcon: ({ color, size }) => <Ionicons name="person" size={size} color={color} />
       }} />
     </Tabs>

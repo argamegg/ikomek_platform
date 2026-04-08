@@ -33,7 +33,7 @@ export default function NewsManageScreen() {
   useEffect(() => { fetchNews(); }, [fetchNews]);
 
   const handleCreate = async () => {
-    if (!form.title.trim() || !form.content.trim()) { Alert.alert('Error', 'Title and content are required'); return; }
+    if (!form.title.trim() || !form.content.trim()) { Alert.alert(t('common.error'), t('admin.titleContentRequired')); return; }
     setIsSubmitting(true);
     try {
       await apiService.createNews({
@@ -43,19 +43,19 @@ export default function NewsManageScreen() {
         content_ru: form.content_ru || form.content,
         content_kz: form.content_kz || form.content
       });
-      Alert.alert('Success', 'News created');
+      Alert.alert(t('common.success'), t('admin.newsCreated'));
       setShowCreate(false);
       setForm({ title: '', title_ru: '', title_kz: '', content: '', content_ru: '', content_kz: '', category: 'info' });
       fetchNews();
-    } catch { Alert.alert('Error', 'Failed to create news'); }
+    } catch { Alert.alert(t('common.error'), t('admin.newsCreateFailed')); }
     finally { setIsSubmitting(false); }
   };
 
   const handleDelete = (id: string) => {
-    Alert.alert('Delete News', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => {
-        try { await apiService.deleteNews(id); fetchNews(); } catch { Alert.alert('Error', 'Failed to delete'); }
+    Alert.alert(t('admin.deleteNews'), t('admin.deleteNewsConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.delete'), style: 'destructive', onPress: async () => {
+        try { await apiService.deleteNews(id); fetchNews(); } catch { Alert.alert(t('common.error'), t('admin.newsDeleteFailed')); }
       }}
     ]);
   };
@@ -68,7 +68,7 @@ export default function NewsManageScreen() {
         <View style={styles.newsBody}>
           <View style={styles.newsTop}>
             <View style={[styles.catBadge, { backgroundColor: `${catColor}15` }]}>
-              <Text style={[styles.catText, { color: catColor }]}>{item.category}</Text>
+              <Text style={[styles.catText, { color: catColor }]}>{t(`news.${item.category}`)}</Text>
             </View>
             <Text style={styles.newsDate}>{format(new Date(item.created_at), 'dd.MM.yy')}</Text>
           </View>
@@ -76,7 +76,7 @@ export default function NewsManageScreen() {
           <Text style={styles.newsContent} numberOfLines={2}>{item.content}</Text>
           <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item.id)}>
             <Ionicons name="trash-outline" size={16} color="#FF3B30" />
-            <Text style={styles.deleteText}>Delete</Text>
+            <Text style={styles.deleteText}>{t('common.delete')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -90,7 +90,7 @@ export default function NewsManageScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.headerTitle} data-testid="admin-news-title">{t('admin.manageNews')}</Text>
-          <Text style={styles.headerSub}>{news.length} articles</Text>
+          <Text style={styles.headerSub}>{t('admin.articlesCount', { count: news.length })}</Text>
         </View>
         <TouchableOpacity style={styles.addBtn} onPress={() => setShowCreate(true)} data-testid="create-news-btn">
           <Ionicons name="add" size={24} color="#FFF" />
@@ -106,32 +106,32 @@ export default function NewsManageScreen() {
       <Modal visible={showCreate} animationType="slide" presentationStyle="pageSheet">
         <View style={[styles.modalContainer, { paddingTop: insets.top || 16 }]}>
           <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setShowCreate(false)}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
-            <Text style={styles.modalTitle}>Create News</Text>
+            <TouchableOpacity onPress={() => setShowCreate(false)}><Text style={styles.cancelText}>{t('common.cancel')}</Text></TouchableOpacity>
+            <Text style={styles.modalTitle}>{t('admin.createNews')}</Text>
             <TouchableOpacity onPress={handleCreate} disabled={isSubmitting}>
-              <Text style={[styles.saveText, isSubmitting && { opacity: 0.5 }]}>Save</Text>
+              <Text style={[styles.saveText, isSubmitting && { opacity: 0.5 }]}>{t('common.save')}</Text>
             </TouchableOpacity>
           </View>
           <ScrollView style={styles.modalBody}>
-            <Text style={styles.inputLabel}>Category</Text>
+            <Text style={styles.inputLabel}>{t('admin.category')}</Text>
             <View style={styles.catPicker}>
               {NEWS_CATEGORIES.map(c => (
                 <TouchableOpacity key={c} style={[styles.catOption, form.category === c && { backgroundColor: `${CAT_COLORS[c]}20`, borderColor: CAT_COLORS[c] }]} onPress={() => setForm({ ...form, category: c })}>
-                  <Text style={[styles.catOptionText, form.category === c && { color: CAT_COLORS[c], fontWeight: '600' }]}>{c}</Text>
+                  <Text style={[styles.catOptionText, form.category === c && { color: CAT_COLORS[c], fontWeight: '600' }]}>{t(`news.${c}`)}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-            <Text style={styles.inputLabel}>Title (English)</Text>
-            <TextInput style={styles.input} value={form.title} onChangeText={v => setForm({ ...form, title: v })} placeholder="News title" placeholderTextColor="#C7C7CC" />
-            <Text style={styles.inputLabel}>Title (Russian)</Text>
+            <Text style={styles.inputLabel}>{t('admin.titleEnglish')}</Text>
+            <TextInput style={styles.input} value={form.title} onChangeText={v => setForm({ ...form, title: v })} placeholder={t('admin.newsTitlePlaceholder')} placeholderTextColor="#C7C7CC" />
+            <Text style={styles.inputLabel}>{t('admin.titleRussian')}</Text>
             <TextInput style={styles.input} value={form.title_ru} onChangeText={v => setForm({ ...form, title_ru: v })} placeholder="Заголовок" placeholderTextColor="#C7C7CC" />
-            <Text style={styles.inputLabel}>Title (Kazakh)</Text>
+            <Text style={styles.inputLabel}>{t('admin.titleKazakh')}</Text>
             <TextInput style={styles.input} value={form.title_kz} onChangeText={v => setForm({ ...form, title_kz: v })} placeholder="Тақырып" placeholderTextColor="#C7C7CC" />
-            <Text style={styles.inputLabel}>Content (English)</Text>
-            <TextInput style={[styles.input, styles.textArea]} value={form.content} onChangeText={v => setForm({ ...form, content: v })} placeholder="News content" placeholderTextColor="#C7C7CC" multiline numberOfLines={4} textAlignVertical="top" />
-            <Text style={styles.inputLabel}>Content (Russian)</Text>
+            <Text style={styles.inputLabel}>{t('admin.contentEnglish')}</Text>
+            <TextInput style={[styles.input, styles.textArea]} value={form.content} onChangeText={v => setForm({ ...form, content: v })} placeholder={t('admin.newsContentPlaceholder')} placeholderTextColor="#C7C7CC" multiline numberOfLines={4} textAlignVertical="top" />
+            <Text style={styles.inputLabel}>{t('admin.contentRussian')}</Text>
             <TextInput style={[styles.input, styles.textArea]} value={form.content_ru} onChangeText={v => setForm({ ...form, content_ru: v })} placeholder="Содержание" placeholderTextColor="#C7C7CC" multiline numberOfLines={4} textAlignVertical="top" />
-            <Text style={styles.inputLabel}>Content (Kazakh)</Text>
+            <Text style={styles.inputLabel}>{t('admin.contentKazakh')}</Text>
             <TextInput style={[styles.input, styles.textArea]} value={form.content_kz} onChangeText={v => setForm({ ...form, content_kz: v })} placeholder="Мазмұны" placeholderTextColor="#C7C7CC" multiline numberOfLines={4} textAlignVertical="top" />
           </ScrollView>
         </View>

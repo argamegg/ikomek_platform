@@ -1,5 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { getStatusTranslationKey } from '../utils/requestLocalization';
 
 interface StatusBadgeProps {
   status: 'pending' | 'in_progress' | 'closed';
@@ -8,23 +10,21 @@ interface StatusBadgeProps {
 
 const STATUS_CONFIG = {
   pending: {
-    label: 'Pending',
     color: '#FF9500',
     bgColor: 'rgba(255, 149, 0, 0.1)'
   },
   in_progress: {
-    label: 'In Progress',
     color: '#007AFF',
     bgColor: 'rgba(0, 122, 255, 0.1)'
   },
   closed: {
-    label: 'Closed',
     color: '#34C759',
     bgColor: 'rgba(52, 199, 89, 0.1)'
   }
 };
 
 export const StatusBadge = ({ status, size = 'medium' }: StatusBadgeProps) => {
+  const { t } = useTranslation();
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
   
   const sizeStyles = {
@@ -41,7 +41,7 @@ export const StatusBadge = ({ status, size = 'medium' }: StatusBadgeProps) => {
     ]}>
       <View style={[styles.dot, { backgroundColor: config.color }]} />
       <Text style={[styles.text, { color: config.color, fontSize: sizeStyles[size].fontSize }]}>
-        {config.label}
+        {t(getStatusTranslationKey(status))}
       </Text>
     </View>
   );

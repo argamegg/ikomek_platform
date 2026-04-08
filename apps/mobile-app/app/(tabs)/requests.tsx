@@ -16,9 +16,16 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 import { apiService, Request, Message } from '../../src/utils/api';
 import { RequestCard } from '../../src/components/RequestCard';
 import { StatusBadge } from '../../src/components/StatusBadge';
+import {
+  localizeCategory,
+  localizeProblemType,
+  localizeReason,
+  localizeRequestDescription,
+} from '../../src/utils/requestLocalization';
 
 const ORANGE = '#FF6B00';
 
@@ -34,6 +41,7 @@ const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
 };
 
 export default function RequestsScreen() {
+  const { t } = useTranslation();
   const [requests, setRequests] = useState<Request[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -98,16 +106,26 @@ export default function RequestsScreen() {
   };
 
   const filters = [
-    { key: null, label: 'All' },
-    { key: 'pending', label: 'Pending', color: '#FF9500' },
-    { key: 'in_progress', label: 'In Progress', color: '#007AFF' },
-    { key: 'closed', label: 'Closed', color: '#34C759' }
+    { key: null, label: t('common.all') },
+    { key: 'pending', label: t('status.pending'), color: '#FF9500' },
+    { key: 'in_progress', label: t('status.inProgress'), color: '#007AFF' },
+    { key: 'closed', label: t('status.closed'), color: '#34C759' }
   ];
 
   const renderRequestDetail = () => {
     if (!selectedRequest) return null;
 
     const categoryIcon = CATEGORY_ICONS[selectedRequest.category_id] || 'ellipsis-horizontal';
+    const detailProblem = localizeProblemType(selectedRequest.category_id, selectedRequest.problem_type, t);
+    const detailCategory = localizeCategory(selectedRequest.category_id || selectedRequest.category_name, t);
+    const detailReason = localizeReason(selectedRequest.category_id, selectedRequest.reason, t);
+    const detailDescription = localizeRequestDescription(
+      selectedRequest.description,
+      selectedRequest.category_id,
+      selectedRequest.problem_type,
+      selectedRequest.reason,
+      t,
+    );
 
     return (
       <Modal visible={!!selectedRequest} animationType="slide" presentationStyle="pageSheet">
@@ -119,7 +137,7 @@ export default function RequestsScreen() {
             <TouchableOpacity onPress={() => setSelectedRequest(null)} style={styles.closeButton}>
               <Ionicons name="close" size={24} color="#1C1C1E" />
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Request Details</Text>
+            <Text style={styles.modalTitle}>{t('myRequests.details')}</Text>
             <View style={{ width: 44 }} />
           </View>
           
@@ -129,14 +147,14 @@ export default function RequestsScreen() {
                 <Ionicons name={categoryIcon} size={24} color={ORANGE} />
               </View>
               <View style={styles.detailHeaderText}>
-                <Text style={styles.detailTitle}>{selectedRequest.problem_type}</Text>
-                <Text style={styles.detailCategory}>{selectedRequest.category_name}</Text>
+                <Text style={styles.detailTitle}>{detailProblem}</Text>
+                <Text style={styles.detailCategory}>{detailCategory}</Text>
               </View>
               <StatusBadge status={selectedRequest.status} />
             </View>
 
             <View style={styles.detailSection}>
-              <Text style={styles.sectionTitle}>Location</Text>
+              <Text style={styles.sectionTitle}>{t('myRequests.location')}</Text>
               <View style={styles.infoRow}>
                 <Ionicons name="location-outline" size={18} color="#8E8E93" />
                 <Text style={styles.infoText}>{selectedRequest.address}</Text>
@@ -144,21 +162,21 @@ export default function RequestsScreen() {
             </View>
 
             <View style={styles.detailSection}>
-              <Text style={styles.sectionTitle}>Details</Text>
+              <Text style={styles.sectionTitle}>{t('myRequests.detailsSection')}</Text>
               <View style={styles.infoRow}>
                 <Ionicons name="document-text-outline" size={18} color="#8E8E93" />
-                <Text style={styles.infoText}>{selectedRequest.reason}</Text>
+                <Text style={styles.infoText}>{detailReason}</Text>
               </View>
-              <Text style={styles.description}>{selectedRequest.description}</Text>
+              <Text style={styles.description}>{detailDescription}</Text>
             </View>
 
             <View style={styles.detailSection}>
-              <Text style={styles.sectionTitle}>Timeline</Text>
+              <Text style={styles.sectionTitle}>{t('myRequests.timeline')}</Text>
               <View style={styles.timeline}>
                 <View style={styles.timelineItem}>
                   <View style={[styles.timelineDot, { backgroundColor: '#34C759' }]} />
                   <View style={styles.timelineContent}>
-                    <Text style={styles.timelineTitle}>Request Created</Text>
+                    <Text style={styles.timelineTitle}>{t('myRequests.created')}</Text>
                     <Text style={styles.timelineDate}>
                       {format(new Date(selectedRequest.created_at), 'dd.MM.yyyy HH:mm')}
                     </Text>
@@ -168,7 +186,7 @@ export default function RequestsScreen() {
                   <View style={styles.timelineItem}>
                     <View style={[styles.timelineDot, { backgroundColor: '#007AFF' }]} />
                     <View style={styles.timelineContent}>
-                      <Text style={styles.timelineTitle}>Processing Started</Text>
+                      <Text style={styles.timelineTitle}>{t('myRequests.processing')}</Text>
                       <Text style={styles.timelineDate}>
                         {format(new Date(selectedRequest.updated_at), 'dd.MM.yyyy HH:mm')}
                       </Text>
@@ -179,7 +197,7 @@ export default function RequestsScreen() {
                   <View style={styles.timelineItem}>
                     <View style={[styles.timelineDot, { backgroundColor: '#34C759' }]} />
                     <View style={styles.timelineContent}>
-                      <Text style={styles.timelineTitle}>Request Closed</Text>
+                      <Text style={styles.timelineTitle}>{t('myRequests.resolved')}</Text>
                       <Text style={styles.timelineDate}>
                         {format(new Date(selectedRequest.closed_at), 'dd.MM.yyyy HH:mm')}
                       </Text>
@@ -191,15 +209,15 @@ export default function RequestsScreen() {
 
             {selectedRequest.resolution_notes && (
               <View style={styles.detailSection}>
-                <Text style={styles.sectionTitle}>Resolution</Text>
+                <Text style={styles.sectionTitle}>{t('myRequests.resolution')}</Text>
                 <Text style={styles.description}>{selectedRequest.resolution_notes}</Text>
               </View>
             )}
 
             <View style={styles.detailSection}>
-              <Text style={styles.sectionTitle}>Messages</Text>
+              <Text style={styles.sectionTitle}>{t('myRequests.chat')}</Text>
               {messages.length === 0 ? (
-                <Text style={styles.noMessages}>No messages yet. Start a conversation with the operator.</Text>
+                <Text style={styles.noMessages}>{t('myRequests.noMessages')}</Text>
               ) : (
                 messages.map((msg) => (
                   <View
@@ -230,7 +248,7 @@ export default function RequestsScreen() {
           <View style={[styles.messageInputContainer, { paddingBottom: insets.bottom || 16 }]}>
             <TextInput
               style={styles.messageInput}
-              placeholder="Type a message..."
+              placeholder={t('myRequests.typeMessage')}
               placeholderTextColor="#C7C7CC"
               value={newMessage}
               onChangeText={setNewMessage}
@@ -260,8 +278,8 @@ export default function RequestsScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Requests</Text>
-        <Text style={styles.headerSubtitle}>{requests.length} total requests</Text>
+        <Text style={styles.headerTitle}>{t('myRequests.title')}</Text>
+        <Text style={styles.headerSubtitle}>{t('myRequests.totalRequestsCount', { count: requests.length })}</Text>
       </View>
 
       <View style={styles.filterContainer}>
@@ -292,8 +310,8 @@ export default function RequestsScreen() {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="document-text-outline" size={48} color="#C7C7CC" />
-            <Text style={styles.emptyText}>No requests yet</Text>
-            <Text style={styles.emptySubtext}>Create your first request using the + button</Text>
+            <Text style={styles.emptyText}>{t('myRequests.noRequestsYet')}</Text>
+            <Text style={styles.emptySubtext}>{t('myRequests.createFirst')}</Text>
           </View>
         }
       />

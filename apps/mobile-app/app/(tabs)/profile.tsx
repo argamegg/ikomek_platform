@@ -112,8 +112,8 @@ export default function ProfileScreen() {
   };
 
   const getRoleBadge = () => {
-    if (isAdmin) return { label: 'Admin', color: '#FF3B30' };
-    if (isOperator) return { label: 'Operator', color: '#007AFF' };
+    if (isAdmin) return { label: t('roles.admin'), color: '#FF3B30' };
+    if (isOperator) return { label: t('roles.operator'), color: '#007AFF' };
     return null;
   };
 
@@ -246,7 +246,7 @@ export default function ProfileScreen() {
           <Text style={styles.logoutText}>{t('profile.logout')}</Text>
         </TouchableOpacity>
 
-        <Text style={styles.version}>iKomek 109 v2.0.0</Text>
+        <Text style={styles.version}>iKomek 109 v1.0.0</Text>
       </ScrollView>
 
       {/* Edit Profile Modal */}

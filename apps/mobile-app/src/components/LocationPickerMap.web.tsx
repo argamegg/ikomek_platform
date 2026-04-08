@@ -4,6 +4,7 @@ import React, {
   useImperativeHandle,
 } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 export type LocationPickerCoordinate = {
   lat: number;
@@ -23,6 +24,8 @@ type LocationPickerMapProps = {
 
 export const LocationPickerMap = forwardRef<LocationPickerMapRef, LocationPickerMapProps>(
   ({ onMapReady }, ref) => {
+    const { t } = useTranslation();
+
     useImperativeHandle(
       ref,
       () => ({
@@ -37,7 +40,7 @@ export const LocationPickerMap = forwardRef<LocationPickerMapRef, LocationPicker
 
     return (
       <View style={styles.container}>
-        <Text style={styles.text}>Location picker is available in native builds.</Text>
+        <Text style={styles.text}>{t('map.nativeLocationOnly')}</Text>
       </View>
     );
   },

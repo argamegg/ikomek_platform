@@ -2,26 +2,24 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 import { NewsItem } from '../utils/api';
 
 const CATEGORY_CONFIG = {
   critical: {
     icon: 'alert-circle' as const,
     color: '#FF3B30',
-    bgColor: 'rgba(255, 59, 48, 0.1)',
-    label: 'Critical'
+    bgColor: 'rgba(255, 59, 48, 0.1)'
   },
   warning: {
     icon: 'warning' as const,
     color: '#FF9500',
-    bgColor: 'rgba(255, 149, 0, 0.1)',
-    label: 'Warning'
+    bgColor: 'rgba(255, 149, 0, 0.1)'
   },
   info: {
     icon: 'information-circle' as const,
     color: '#007AFF',
-    bgColor: 'rgba(0, 122, 255, 0.1)',
-    label: 'Info'
+    bgColor: 'rgba(0, 122, 255, 0.1)'
   }
 };
 
@@ -31,6 +29,7 @@ interface NewsCardProps {
 }
 
 export const NewsCard = ({ news, onPress }: NewsCardProps) => {
+  const { t } = useTranslation();
   const config = CATEGORY_CONFIG[news.category] || CATEGORY_CONFIG.info;
 
   return (
@@ -40,7 +39,7 @@ export const NewsCard = ({ news, onPress }: NewsCardProps) => {
         <View style={styles.header}>
           <View style={[styles.badge, { backgroundColor: config.bgColor }]}>
             <Ionicons name={config.icon} size={14} color={config.color} />
-            <Text style={[styles.badgeText, { color: config.color }]}>{config.label}</Text>
+            <Text style={[styles.badgeText, { color: config.color }]}>{t(`news.${news.category}`)}</Text>
           </View>
           <Text style={styles.date}>
             {format(new Date(news.created_at), 'dd.MM.yyyy')}

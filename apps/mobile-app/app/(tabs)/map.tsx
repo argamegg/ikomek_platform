@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 import { apiService, MapPoint } from '../../src/utils/api';
 import { RequestsMap } from '../../src/components/RequestsMap';
 import { StatusBadge } from '../../src/components/StatusBadge';
+import { localizeProblemType } from '../../src/utils/requestLocalization';
 
 const ORANGE = '#FF6B00';
 
@@ -64,6 +65,7 @@ export default function MapScreen() {
   const renderPointCard = ({ item }: { item: MapPoint }) => {
     const catColor = CATEGORY_COLORS[item.category] || '#9E9E9E';
     const statusColor = STATUS_COLORS[item.status] || '#FF9500';
+    const title = localizeProblemType(item.category, item.title, t);
     return (
       <TouchableOpacity style={styles.pointCard} onPress={() => setSelectedPoint(item)} activeOpacity={0.8} data-testid={`point-card-${item.id}`}>
         <View style={[styles.statusIndicator, { backgroundColor: statusColor }]} />
@@ -72,7 +74,7 @@ export default function MapScreen() {
             <View style={styles.pointMeta}>
               <View style={[styles.categoryDot, { backgroundColor: catColor }]} />
               <View style={styles.pointInfo}>
-                <Text style={styles.pointTitle} numberOfLines={1} ellipsizeMode="tail">{item.title}</Text>
+                <Text style={styles.pointTitle} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
                 <Text style={styles.pointAddress} numberOfLines={1} ellipsizeMode="tail">{item.address}</Text>
               </View>
             </View>
@@ -185,7 +187,7 @@ export default function MapScreen() {
                   <Ionicons name="location" size={24} color={CATEGORY_COLORS[selectedPoint.category] || '#9E9E9E'} />
                 </View>
                 <View style={{ flex: 1, marginLeft: 14, gap: 6 }}>
-                  <Text style={styles.modalTitle}>{selectedPoint.title}</Text>
+                  <Text style={styles.modalTitle}>{localizeProblemType(selectedPoint.category, selectedPoint.title, t)}</Text>
                   <StatusBadge status={selectedPoint.status as any} />
                 </View>
                 <TouchableOpacity style={styles.modalClose} onPress={() => setSelectedPoint(null)}>

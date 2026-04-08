@@ -2,8 +2,14 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 import { StatusBadge } from './StatusBadge';
 import { Request } from '../utils/api';
+import {
+  localizeCategory,
+  localizeProblemType,
+  localizeRequestDescription,
+} from '../utils/requestLocalization';
 
 const CATEGORY_COLORS: Record<string, string> = {
   electricity: '#FFB300',
@@ -33,8 +39,18 @@ interface RequestCardProps {
 }
 
 export const RequestCard = ({ request, onPress }: RequestCardProps) => {
+  const { t } = useTranslation();
   const categoryColor = CATEGORY_COLORS[request.category_id] || '#9E9E9E';
   const categoryIcon = CATEGORY_ICONS[request.category_id] || 'ellipsis-horizontal';
+  const problem = localizeProblemType(request.category_id, request.problem_type, t);
+  const category = localizeCategory(request.category_id || request.category_name, t);
+  const description = localizeRequestDescription(
+    request.description,
+    request.category_id,
+    request.problem_type,
+    request.reason,
+    t,
+  );
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
@@ -43,8 +59,8 @@ export const RequestCard = ({ request, onPress }: RequestCardProps) => {
           <Ionicons name={categoryIcon} size={20} color={categoryColor} />
         </View>
         <View style={styles.headerText}>
-          <Text style={styles.problemType} numberOfLines={1}>{request.problem_type}</Text>
-          <Text style={styles.category}>{request.category_name}</Text>
+          <Text style={styles.problemType} numberOfLines={1}>{problem}</Text>
+          <Text style={styles.category}>{category}</Text>
         </View>
         <StatusBadge status={request.status} size="small" />
       </View>
@@ -63,7 +79,7 @@ export const RequestCard = ({ request, onPress }: RequestCardProps) => {
       </View>
       
       <View style={styles.footer}>
-        <Text style={styles.description} numberOfLines={2}>{request.description}</Text>
+        <Text style={styles.description} numberOfLines={2}>{description}</Text>
       </View>
     </TouchableOpacity>
   );

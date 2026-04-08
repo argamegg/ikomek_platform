@@ -13,22 +13,20 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useTranslation } from 'react-i18next';
 import { apiService } from '../../src/utils/api';
+import {
+  getCategoryConfig,
+  localizeCategory,
+  localizePlaceType,
+  localizeProblemType,
+  localizeReason,
+} from '../../src/utils/requestLocalization';
 
 const ORANGE = '#FF6B00';
 
-const CATEGORY_CONFIG: Record<string, { name: string; icon: keyof typeof Ionicons.glyphMap; color: string }> = {
-  electricity: { name: 'Electricity', icon: 'flash', color: '#FFB300' },
-  water: { name: 'Water Supply', icon: 'water', color: '#2196F3' },
-  roads: { name: 'Roads', icon: 'car', color: '#607D8B' },
-  public_order: { name: 'Public Order', icon: 'shield-checkmark', color: '#4CAF50' },
-  waste: { name: 'Waste', icon: 'trash', color: '#795548' },
-  heating: { name: 'Heating', icon: 'flame', color: '#FF5722' },
-  street_lighting: { name: 'Street Lighting', icon: 'bulb', color: '#FFC107' },
-  other: { name: 'Other', icon: 'ellipsis-horizontal', color: '#9E9E9E' }
-};
-
 export default function ConfirmScreen() {
+  const { t } = useTranslation();
   const params = useLocalSearchParams();
   const { categoryId, address, latitude, longitude, placeType, problemType, reason, description } = params;
   
@@ -38,12 +36,15 @@ export default function ConfirmScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   
-  const category = CATEGORY_CONFIG[categoryId as string] || CATEGORY_CONFIG.other;
+  const category = getCategoryConfig(categoryId as string);
+  const problemLabel = localizeProblemType(category.id, problemType as string, t);
+  const reasonLabel = localizeReason(category.id, reason as string, t);
+  const placeTypeLabel = localizePlaceType(placeType as string, t);
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please grant permission to access photos');
+      Alert.alert(t('request.permissionNeeded'), t('request.photoPermissionMessage'));
       return;
     }
 
@@ -62,7 +63,7 @@ export default function ConfirmScreen() {
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please grant permission to use camera');
+      Alert.alert(t('request.permissionNeeded'), t('request.cameraPermissionMessage'));
       return;
     }
 
@@ -97,17 +98,17 @@ export default function ConfirmScreen() {
       });
       
       Alert.alert(
-        'Success!',
-        'Your request has been submitted successfully. We will process it as soon as possible.',
+        t('request.submittedTitle'),
+        t('request.submittedMessage'),
         [
           {
-            text: 'View My Requests',
+            text: t('request.viewMyRequests'),
             onPress: () => router.replace('/(tabs)/requests')
           }
         ]
       );
-    } catch (error) {
-      Alert.alert('Error', 'Failed to submit request. Please try again.');
+    } catch {
+      Alert.alert(t('common.error'), t('request.submitFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -121,26 +122,26 @@ export default function ConfirmScreen() {
           <Ionicons name="arrow-back" size={24} color="#1C1C1E" />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Review & Submit</Text>
-          <Text style={styles.headerSubtitle}>Please verify your request details</Text>
+          <Text style={styles.headerTitle}>{t('request.reviewSubmit')}</Text>
+          <Text style={styles.headerSubtitle}>{t('request.verifyDetails')}</Text>
         </View>
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 120 }}>
         {/* Category */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Category</Text>
+          <Text style={styles.sectionTitle}>{t('request.category')}</Text>
           <View style={styles.categoryCard}>
             <View style={[styles.categoryIcon, { backgroundColor: `${category.color}20` }]}>
               <Ionicons name={category.icon} size={24} color={category.color} />
             </View>
-            <Text style={styles.categoryName}>{category.name}</Text>
+            <Text style={styles.categoryName}>{localizeCategory(category.id, t)}</Text>
           </View>
         </View>
 
         {/* Location */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Location</Text>
+          <Text style={styles.sectionTitle}>{t('request.location')}</Text>
           <View style={styles.infoCard}>
             <Ionicons name="location" size={20} color={ORANGE} />
             <Text style={styles.infoText}>{address}</Text>
@@ -149,26 +150,26 @@ export default function ConfirmScreen() {
 
         {/* Details */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Details</Text>
+          <Text style={styles.sectionTitle}>{t('request.details')}</Text>
           
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Place Type</Text>
-            <Text style={styles.detailValue}>{placeType}</Text>
+            <Text style={styles.detailLabel}>{t('request.placeType')}</Text>
+            <Text style={styles.detailValue}>{placeTypeLabel}</Text>
           </View>
           
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Problem</Text>
-            <Text style={styles.detailValue}>{problemType}</Text>
+            <Text style={styles.detailLabel}>{t('request.problem')}</Text>
+            <Text style={styles.detailValue}>{problemLabel}</Text>
           </View>
           
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Reason</Text>
-            <Text style={styles.detailValue}>{reason}</Text>
+            <Text style={styles.detailLabel}>{t('request.reason')}</Text>
+            <Text style={styles.detailValue}>{reasonLabel}</Text>
           </View>
           
           {description && (
             <View style={styles.descriptionBox}>
-              <Text style={styles.detailLabel}>Additional Details</Text>
+              <Text style={styles.detailLabel}>{t('request.additionalDetails')}</Text>
               <Text style={styles.descriptionText}>{description}</Text>
             </View>
           )}
@@ -176,8 +177,8 @@ export default function ConfirmScreen() {
 
         {/* Photos */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Photos (Optional)</Text>
-          <Text style={styles.sectionSubtitle}>Add photos to help us understand the issue better</Text>
+          <Text style={styles.sectionTitle}>{t('request.photosOptional')}</Text>
+          <Text style={styles.sectionSubtitle}>{t('request.photosHelp')}</Text>
           
           <View style={styles.photosContainer}>
             {photos.map((photo, index) => (
@@ -196,12 +197,12 @@ export default function ConfirmScreen() {
               <View style={styles.addPhotoButtons}>
                 <TouchableOpacity style={styles.addPhotoBtn} onPress={takePhoto}>
                   <Ionicons name="camera" size={24} color={ORANGE} />
-                  <Text style={styles.addPhotoText}>Camera</Text>
+                  <Text style={styles.addPhotoText}>{t('request.camera')}</Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity style={styles.addPhotoBtn} onPress={pickImage}>
                   <Ionicons name="images" size={24} color={ORANGE} />
-                  <Text style={styles.addPhotoText}>Gallery</Text>
+                  <Text style={styles.addPhotoText}>{t('request.gallery')}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -221,7 +222,7 @@ export default function ConfirmScreen() {
           ) : (
             <>
               <Ionicons name="checkmark-circle" size={24} color="#FFF" />
-              <Text style={styles.submitText}>Submit Request</Text>
+              <Text style={styles.submitText}>{t('request.submitRequest')}</Text>
             </>
           )}
         </TouchableOpacity>

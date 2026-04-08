@@ -3,21 +3,11 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-
-const ORANGE = '#FF6B00';
-
-const CATEGORIES = [
-  { id: 'electricity', name: 'Electricity', icon: 'flash', color: '#FFB300' },
-  { id: 'water', name: 'Water Supply', icon: 'water', color: '#2196F3' },
-  { id: 'roads', name: 'Roads', icon: 'car', color: '#607D8B' },
-  { id: 'public_order', name: 'Public Order', icon: 'shield-checkmark', color: '#4CAF50' },
-  { id: 'waste', name: 'Waste', icon: 'trash', color: '#795548' },
-  { id: 'heating', name: 'Heating', icon: 'flame', color: '#FF5722' },
-  { id: 'street_lighting', name: 'Street Lighting', icon: 'bulb', color: '#FFC107' },
-  { id: 'other', name: 'Other', icon: 'ellipsis-horizontal', color: '#9E9E9E' },
-];
+import { useTranslation } from 'react-i18next';
+import { REQUEST_CATEGORIES, localizeCategory } from '../../src/utils/requestLocalization';
 
 export default function CreateScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -31,15 +21,15 @@ export default function CreateScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>New Request</Text>
-        <Text style={styles.headerSubtitle}>Select the issue category</Text>
+        <Text style={styles.headerTitle}>{t('request.newRequest')}</Text>
+        <Text style={styles.headerSubtitle}>{t('request.selectCategory')}</Text>
       </View>
 
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={[styles.categoriesContainer, { paddingBottom: insets.bottom + 100 }]}
       >
-        {CATEGORIES.map((category) => (
+        {REQUEST_CATEGORIES.map((category) => (
           <TouchableOpacity
             key={category.id}
             style={styles.categoryCard}
@@ -49,7 +39,7 @@ export default function CreateScreen() {
             <View style={[styles.iconContainer, { backgroundColor: `${category.color}20` }]}>
               <Ionicons name={category.icon as any} size={28} color={category.color} />
             </View>
-            <Text style={styles.categoryName}>{category.name}</Text>
+            <Text style={styles.categoryName}>{localizeCategory(category.id, t)}</Text>
             <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
           </TouchableOpacity>
         ))}

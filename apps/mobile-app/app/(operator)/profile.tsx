@@ -6,8 +6,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/context/AuthContext';
 
-const ORANGE = '#FF6B00';
-
 export default function OperatorProfile() {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
@@ -32,7 +30,7 @@ export default function OperatorProfile() {
           <View style={styles.profileInfo}>
             <View style={styles.nameRow}>
               <Text style={styles.profileName}>{user?.full_name}</Text>
-              <View style={styles.roleBadge}><Text style={styles.roleText}>Operator</Text></View>
+              <View style={styles.roleBadge}><Text style={styles.roleText}>{t('roles.operator')}</Text></View>
             </View>
             <Text style={styles.profileEmail}>{user?.email}</Text>
           </View>
@@ -41,7 +39,7 @@ export default function OperatorProfile() {
           <Ionicons name="log-out-outline" size={20} color="#FF3B30" />
           <Text style={styles.logoutText}>{t('profile.logout')}</Text>
         </TouchableOpacity>
-        <Text style={styles.version}>iKomek 109 v2.0.0 - Operator Panel</Text>
+        <Text style={styles.version}>iKomek 109 v2.0.0 - {t('app.operatorPanel')}</Text>
       </ScrollView>
     </View>
   );

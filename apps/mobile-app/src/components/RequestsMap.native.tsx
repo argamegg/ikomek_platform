@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import type { MapPoint } from '../utils/api';
 
 let MapLibre: typeof import('@maplibre/maplibre-react-native') | null = null;
@@ -50,6 +51,7 @@ export function RequestsMap({
   statusColors: _statusColors,
   onPointPress,
 }: RequestsMapProps) {
+  const { t } = useTranslation();
   const cameraRef = useRef<any>(null);
   const shapeSourceRef = useRef<any>(null);
 
@@ -186,8 +188,8 @@ export function RequestsMap({
   if (!MapLibre) {
     return (
       <View style={styles.fallback}>
-        <Text style={styles.fallbackTitle}>Map requires the development build</Text>
-        <Text style={styles.fallbackText}>Open iKOMEKMobileApp instead of Expo Go to use the live map.</Text>
+        <Text style={styles.fallbackTitle}>{t('map.devBuildRequiredTitle')}</Text>
+        <Text style={styles.fallbackText}>{t('map.devBuildRequiredRequests')}</Text>
       </View>
     );
   }

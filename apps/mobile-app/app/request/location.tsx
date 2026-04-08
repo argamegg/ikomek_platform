@@ -12,6 +12,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import { useTranslation } from 'react-i18next';
 import {
   LocationPickerMap,
   type LocationPickerCoordinate,
@@ -21,6 +22,7 @@ import {
 const ORANGE = '#FF6B00';
 
 export default function LocationScreen() {
+  const { t } = useTranslation();
   const params = useLocalSearchParams();
   const categoryId = params.categoryId as string;
   
@@ -105,7 +107,7 @@ export default function LocationScreen() {
 
   const handleContinue = () => {
     if (!address) {
-      Alert.alert('Error', 'Please select a location on the map');
+      Alert.alert(t('common.error'), t('request.locationRequired'));
       return;
     }
     
@@ -128,8 +130,8 @@ export default function LocationScreen() {
           <Ionicons name="arrow-back" size={24} color="#1C1C1E" />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Select Location</Text>
-          <Text style={styles.headerSubtitle}>Drag the map to set the location</Text>
+          <Text style={styles.headerTitle}>{t('request.selectLocationTitle')}</Text>
+          <Text style={styles.headerSubtitle}>{t('request.dragMap')}</Text>
         </View>
       </View>
 
@@ -155,12 +157,12 @@ export default function LocationScreen() {
         <View style={styles.addressContainer}>
           <Ionicons name="location" size={24} color={ORANGE} />
           <View style={styles.addressContent}>
-            <Text style={styles.addressLabel}>Selected Address</Text>
+            <Text style={styles.addressLabel}>{t('request.selectedAddress')}</Text>
             <TextInput
               style={styles.addressInput}
               value={address}
               onChangeText={setAddress}
-              placeholder="Address will appear here..."
+              placeholder={t('request.addressPlaceholder')}
               placeholderTextColor="#C7C7CC"
               multiline
             />
@@ -172,7 +174,7 @@ export default function LocationScreen() {
           onPress={handleContinue}
           disabled={!address}
         >
-          <Text style={styles.continueText}>Continue</Text>
+          <Text style={styles.continueText}>{t('common.continue')}</Text>
           <Ionicons name="arrow-forward" size={20} color="#FFF" />
         </TouchableOpacity>
       </View>

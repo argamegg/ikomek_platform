@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../src/context/AuthContext';
 import { apiService } from '../src/utils/api';
 
@@ -15,6 +16,7 @@ function getRedirectPath(role?: string) {
 }
 
 export default function Index() {
+  const { t } = useTranslation();
   const { isAuthenticated, isLoading, user } = useAuth();
   const router = useRouter();
 
@@ -42,7 +44,7 @@ export default function Index() {
           <Text style={styles.logoText}>109</Text>
         </View>
         <Text style={styles.title}>iKomek</Text>
-        <Text style={styles.subtitle}>Smart City Service</Text>
+        <Text style={styles.subtitle}>{t('app.tagline')}</Text>
       </View>
       <ActivityIndicator size="large" color={ORANGE} style={styles.loader} />
     </View>

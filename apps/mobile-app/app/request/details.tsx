@@ -10,149 +10,20 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
+import {
+  PLACE_TYPES,
+  getProblemOptions,
+  getReasonOptions,
+  localizePlaceType,
+  localizeProblemType,
+  localizeReason,
+} from '../../src/utils/requestLocalization';
 
 const ORANGE = '#FF6B00';
 
-const PLACE_TYPES = [
-  { id: 'apartment', label: 'Apartment', icon: 'business' },
-  { id: 'house', label: 'Private House', icon: 'home' },
-  { id: 'office', label: 'Office', icon: 'briefcase' },
-  { id: 'street', label: 'Street', icon: 'navigate' },
-  { id: 'park', label: 'Park/Square', icon: 'leaf' },
-  { id: 'other', label: 'Other', icon: 'ellipsis-horizontal' }
-];
-
-const PROBLEM_TYPES: Record<string, { id: string; label: string }[]> = {
-  electricity: [
-    { id: 'power_outage', label: 'Power outage' },
-    { id: 'voltage_issue', label: 'Voltage fluctuation' },
-    { id: 'damaged_cables', label: 'Damaged cables' },
-    { id: 'street_light', label: 'Street light not working' },
-    { id: 'sparks', label: 'Sparks/Fire hazard' },
-    { id: 'other', label: 'Other electrical issue' }
-  ],
-  water: [
-    { id: 'no_water', label: 'No water supply' },
-    { id: 'low_pressure', label: 'Low water pressure' },
-    { id: 'pipe_leak', label: 'Pipe leak' },
-    { id: 'dirty_water', label: 'Dirty/discolored water' },
-    { id: 'sewage', label: 'Sewage problem' },
-    { id: 'other', label: 'Other water issue' }
-  ],
-  roads: [
-    { id: 'pothole', label: 'Pothole' },
-    { id: 'damaged_pavement', label: 'Damaged pavement' },
-    { id: 'road_sign', label: 'Missing/damaged road sign' },
-    { id: 'traffic_light', label: 'Traffic light issue' },
-    { id: 'road_marking', label: 'Road marking needed' },
-    { id: 'other', label: 'Other road issue' }
-  ],
-  public_order: [
-    { id: 'noise', label: 'Noise complaint' },
-    { id: 'illegal_parking', label: 'Illegal parking' },
-    { id: 'vandalism', label: 'Vandalism' },
-    { id: 'abandoned_vehicle', label: 'Abandoned vehicle' },
-    { id: 'stray_animals', label: 'Stray animals' },
-    { id: 'other', label: 'Other public order issue' }
-  ],
-  waste: [
-    { id: 'overflowing', label: 'Overflowing trash bin' },
-    { id: 'illegal_dump', label: 'Illegal dump site' },
-    { id: 'missed_collection', label: 'Missed garbage collection' },
-    { id: 'hazardous', label: 'Hazardous waste' },
-    { id: 'bulk_waste', label: 'Bulk waste removal needed' },
-    { id: 'other', label: 'Other waste issue' }
-  ],
-  heating: [
-    { id: 'no_heating', label: 'No heating' },
-    { id: 'radiator_leak', label: 'Radiator leak' },
-    { id: 'cold_apartment', label: 'Cold apartment' },
-    { id: 'overheating', label: 'Overheating' },
-    { id: 'noise', label: 'Heating system noise' },
-    { id: 'other', label: 'Other heating issue' }
-  ],
-  street_lighting: [
-    { id: 'lamp_out', label: 'Lamp not working' },
-    { id: 'flickering', label: 'Flickering light' },
-    { id: 'damaged_pole', label: 'Damaged pole' },
-    { id: 'dark_area', label: 'Dark area needs lighting' },
-    { id: 'timer', label: 'Timer malfunction' },
-    { id: 'other', label: 'Other lighting issue' }
-  ],
-  other: [
-    { id: 'general', label: 'General complaint' },
-    { id: 'suggestion', label: 'Suggestion' },
-    { id: 'question', label: 'Question' },
-    { id: 'other', label: 'Other' }
-  ]
-};
-
-const REASONS: Record<string, { id: string; label: string }[]> = {
-  electricity: [
-    { id: 'infrastructure', label: 'Infrastructure failure' },
-    { id: 'weather', label: 'Weather damage' },
-    { id: 'overload', label: 'System overload' },
-    { id: 'maintenance', label: 'Needs maintenance' },
-    { id: 'accident', label: 'Accident/External damage' },
-    { id: 'unknown', label: 'Unknown cause' }
-  ],
-  water: [
-    { id: 'pipe_burst', label: 'Pipe burst' },
-    { id: 'maintenance', label: 'Scheduled maintenance' },
-    { id: 'infrastructure', label: 'Old infrastructure' },
-    { id: 'external', label: 'External damage' },
-    { id: 'pressure', label: 'Pressure issue' },
-    { id: 'unknown', label: 'Unknown cause' }
-  ],
-  roads: [
-    { id: 'weather', label: 'Weather wear' },
-    { id: 'traffic', label: 'Heavy traffic damage' },
-    { id: 'construction', label: 'Construction damage' },
-    { id: 'age', label: 'Age deterioration' },
-    { id: 'accident', label: 'Accident damage' },
-    { id: 'unknown', label: 'Unknown cause' }
-  ],
-  public_order: [
-    { id: 'resident', label: 'Resident complaint' },
-    { id: 'safety', label: 'Public safety concern' },
-    { id: 'community', label: 'Community concern' },
-    { id: 'legal', label: 'Legal violation' },
-    { id: 'recurring', label: 'Recurring issue' },
-    { id: 'other', label: 'Other reason' }
-  ],
-  waste: [
-    { id: 'schedule', label: 'Schedule issue' },
-    { id: 'container', label: 'Container damage' },
-    { id: 'illegal', label: 'Illegal dumping' },
-    { id: 'volume', label: 'Volume increase' },
-    { id: 'access', label: 'Access problem' },
-    { id: 'other', label: 'Other reason' }
-  ],
-  heating: [
-    { id: 'boiler', label: 'Boiler issue' },
-    { id: 'pipe', label: 'Pipe problem' },
-    { id: 'system', label: 'System failure' },
-    { id: 'regulation', label: 'Temperature regulation' },
-    { id: 'maintenance', label: 'Needs maintenance' },
-    { id: 'unknown', label: 'Unknown cause' }
-  ],
-  street_lighting: [
-    { id: 'bulb', label: 'Bulb failure' },
-    { id: 'electrical', label: 'Electrical issue' },
-    { id: 'vandalism', label: 'Vandalism' },
-    { id: 'timer', label: 'Timer malfunction' },
-    { id: 'age', label: 'Age/Wear' },
-    { id: 'unknown', label: 'Unknown cause' }
-  ],
-  other: [
-    { id: 'quality', label: 'Quality of service' },
-    { id: 'safety', label: 'Safety concern' },
-    { id: 'environment', label: 'Environmental issue' },
-    { id: 'other', label: 'Other' }
-  ]
-};
-
 export default function DetailsScreen() {
+  const { t } = useTranslation();
   const params = useLocalSearchParams();
   const { categoryId, address, latitude, longitude } = params;
   
@@ -165,15 +36,16 @@ export default function DetailsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const problems = PROBLEM_TYPES[categoryId as string] || PROBLEM_TYPES.other;
-  const reasons = REASONS[categoryId as string] || REASONS.other;
+  const category = categoryId as string;
+  const problems = getProblemOptions(category);
+  const reasons = getReasonOptions(category);
 
   const getStepTitle = () => {
     switch (step) {
-      case 1: return 'Where is the issue?';
-      case 2: return 'What is the problem?';
-      case 3: return 'What might be the cause?';
-      default: return 'Details';
+      case 1: return t('request.whereIsIssue');
+      case 2: return t('request.whatIsProblem');
+      case 3: return t('request.whatMightBeCause');
+      default: return t('request.details');
     }
   };
 
@@ -226,7 +98,7 @@ export default function DetailsScreen() {
                   />
                 </View>
                 <Text style={[styles.optionLabel, placeType === type.id && styles.optionLabelSelected]}>
-                  {type.label}
+                  {localizePlaceType(type.id, t)}
                 </Text>
                 {placeType === type.id && (
                   <Ionicons name="checkmark-circle" size={24} color={ORANGE} />
@@ -243,12 +115,12 @@ export default function DetailsScreen() {
               <TouchableOpacity
                 key={problem.id}
                 style={[styles.optionRow, problemType === problem.id && styles.optionRowSelected]}
-                onPress={() => setProblemType(problem.label)}
+                onPress={() => setProblemType(problem.id)}
               >
-                <Text style={[styles.optionText, problemType === problem.label && styles.optionTextSelected]}>
-                  {problem.label}
+                <Text style={[styles.optionText, problemType === problem.id && styles.optionTextSelected]}>
+                  {localizeProblemType(category, problem.id, t)}
                 </Text>
-                {problemType === problem.label && (
+                {problemType === problem.id && (
                   <Ionicons name="checkmark-circle" size={22} color={ORANGE} />
                 )}
               </TouchableOpacity>
@@ -262,23 +134,23 @@ export default function DetailsScreen() {
             {reasons.map((r) => (
               <TouchableOpacity
                 key={r.id}
-                style={[styles.optionRow, reason === r.label && styles.optionRowSelected]}
-                onPress={() => setReason(r.label)}
+                style={[styles.optionRow, reason === r.id && styles.optionRowSelected]}
+                onPress={() => setReason(r.id)}
               >
-                <Text style={[styles.optionText, reason === r.label && styles.optionTextSelected]}>
-                  {r.label}
+                <Text style={[styles.optionText, reason === r.id && styles.optionTextSelected]}>
+                  {localizeReason(category, r.id, t)}
                 </Text>
-                {reason === r.label && (
+                {reason === r.id && (
                   <Ionicons name="checkmark-circle" size={22} color={ORANGE} />
                 )}
               </TouchableOpacity>
             ))}
             
             <View style={styles.descriptionSection}>
-              <Text style={styles.descriptionLabel}>Additional details (optional)</Text>
+              <Text style={styles.descriptionLabel}>{t('request.additionalDetailsOptional')}</Text>
               <TextInput
                 style={styles.descriptionInput}
-                placeholder="Describe the issue in more detail..."
+                placeholder={t('request.descriptionPlaceholder')}
                 placeholderTextColor="#C7C7CC"
                 value={description}
                 onChangeText={setDescription}
@@ -309,7 +181,7 @@ export default function DetailsScreen() {
           <Ionicons name="arrow-back" size={24} color="#1C1C1E" />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.stepIndicator}>Step {step} of 3</Text>
+          <Text style={styles.stepIndicator}>{t('request.step', { step, total: 3 })}</Text>
           <Text style={styles.headerTitle}>{getStepTitle()}</Text>
         </View>
       </View>
@@ -331,7 +203,7 @@ export default function DetailsScreen() {
           onPress={handleNext}
           disabled={isNextDisabled()}
         >
-          <Text style={styles.nextText}>{step === 3 ? 'Review' : 'Continue'}</Text>
+          <Text style={styles.nextText}>{step === 3 ? t('request.review') : t('common.continue')}</Text>
           <Ionicons name="arrow-forward" size={20} color="#FFF" />
         </TouchableOpacity>
       </View>
