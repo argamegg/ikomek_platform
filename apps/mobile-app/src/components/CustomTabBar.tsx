@@ -7,6 +7,7 @@ const ORANGE = '#FF6B00';
 const GRAY = '#8E8E93';
 const TAB_BAR_BG = 'rgba(255, 255, 255, 0.96)';
 const CENTER_SLOT_WIDTH = 94;
+const CREATE_BUTTON_AURA_SIZE = 74;
 
 interface TabBarProps {
   state: any;
@@ -163,15 +164,15 @@ const styles = StyleSheet.create({
   },
   createButtonContainer: {
     position: 'absolute',
-    top: -14,
+    top: 10,
     left: '50%',
-    transform: [{ translateX: -41 }],
+    transform: [{ translateX: -CREATE_BUTTON_AURA_SIZE / 2 }],
     zIndex: 4,
   },
   createButtonAura: {
-    width: 74,
-    height: 74,
-    borderRadius: 37,
+    width: CREATE_BUTTON_AURA_SIZE,
+    height: CREATE_BUTTON_AURA_SIZE,
+    borderRadius: CREATE_BUTTON_AURA_SIZE / 2,
     backgroundColor: 'rgba(255, 107, 0, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',

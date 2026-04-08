@@ -69,12 +69,16 @@ export default function MapScreen() {
         <View style={[styles.statusIndicator, { backgroundColor: statusColor }]} />
         <View style={styles.pointContent}>
           <View style={styles.pointHeader}>
-            <View style={[styles.categoryDot, { backgroundColor: catColor }]} />
-            <View style={styles.pointInfo}>
-              <Text style={styles.pointTitle} numberOfLines={1}>{item.title}</Text>
-              <Text style={styles.pointAddress} numberOfLines={1}>{item.address}</Text>
+            <View style={styles.pointMeta}>
+              <View style={[styles.categoryDot, { backgroundColor: catColor }]} />
+              <View style={styles.pointInfo}>
+                <Text style={styles.pointTitle} numberOfLines={1} ellipsizeMode="tail">{item.title}</Text>
+                <Text style={styles.pointAddress} numberOfLines={1} ellipsizeMode="tail">{item.address}</Text>
+              </View>
             </View>
-            <StatusBadge status={item.status as any} size="small" />
+            <View style={styles.pointBadge}>
+              <StatusBadge status={item.status as any} size="small" />
+            </View>
           </View>
           <Text style={styles.pointDate}>{format(new Date(item.created_at), 'dd.MM.yy')}</Text>
         </View>
@@ -88,7 +92,7 @@ export default function MapScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
+      <View style={[styles.header, viewMode === 'list' && styles.listModeSurface]}>
         <Text style={styles.headerTitle} data-testid="map-title">{t('nav.map')}</Text>
         <View style={styles.headerRight}>
           <TouchableOpacity style={[styles.viewToggle, viewMode === 'map' && styles.viewToggleActive]} onPress={() => setViewMode('map')} data-testid="map-view-toggle">
@@ -101,7 +105,12 @@ export default function MapScreen() {
       </View>
 
       {/* Stats */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.statsRow}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={[styles.statsScroll, viewMode === 'list' && styles.listModeSurface]}
+        contentContainerStyle={styles.statsContent}
+      >
         <TouchableOpacity style={[styles.statChip, !statusFilter && styles.statChipActive]} onPress={() => setStatusFilter(null)}>
           <Text style={[styles.statNum, !statusFilter && { color: ORANGE }]}>{points.length}</Text>
           <Text style={styles.statLabel}>{t('common.all')}</Text>
@@ -116,7 +125,7 @@ export default function MapScreen() {
       </ScrollView>
 
       {/* Filter bar */}
-      <View style={styles.filterBar}>
+      <View style={[styles.filterBar, viewMode === 'list' && styles.listModeSurface]}>
         <View style={styles.filterToggle}>
           <TouchableOpacity style={[styles.toggleBtn, filter === 'all' && styles.toggleBtnActive]} onPress={() => setFilter('all')}>
             <Text style={[styles.toggleText, filter === 'all' && styles.toggleTextActive]}>{t('map.allRequests')}</Text>
@@ -151,6 +160,7 @@ export default function MapScreen() {
         </View>
       ) : (
         <FlatList
+          style={styles.list}
           data={filteredPoints}
           keyExtractor={(item) => item.id}
           renderItem={renderPointCard}
@@ -201,38 +211,43 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   centered: { justifyContent: 'center', alignItems: 'center' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8 },
+  header: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8, zIndex: 2, elevation: 2, backgroundColor: 'rgba(255, 255, 255, 0.92)' },
   headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#1C1C1E' },
   headerRight: { flexDirection: 'row', backgroundColor: '#E5E5EA', borderRadius: 10, padding: 3 },
   viewToggle: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
   viewToggleActive: { backgroundColor: ORANGE },
-  statsRow: { paddingHorizontal: 16, marginBottom: 8, flexGrow: 0 },
-  statChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, marginRight: 8, gap: 6 },
+  statsScroll: { width: '100%', marginBottom: 8, flexGrow: 0, zIndex: 2, elevation: 2, backgroundColor: 'rgba(255, 255, 255, 0.92)' },
+  statsContent: { paddingHorizontal: 16, gap: 8 },
+  statChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, gap: 6, minWidth: 92, flexShrink: 0 },
   statChipActive: { backgroundColor: `${ORANGE}10`, borderWidth: 1, borderColor: ORANGE },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
-  statNum: { fontSize: 16, fontWeight: 'bold', color: '#1C1C1E' },
-  statLabel: { fontSize: 11, color: '#8E8E93' },
-  filterBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 8, gap: 12 },
-  filterToggle: { flex: 1, flexDirection: 'row', backgroundColor: '#E5E5EA', borderRadius: 10, padding: 3 },
+  statNum: { minWidth: 18, fontSize: 16, fontWeight: 'bold', color: '#1C1C1E', textAlign: 'center' },
+  statLabel: { flexShrink: 1, fontSize: 11, color: '#8E8E93' },
+  filterBar: { width: '100%', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 8, zIndex: 2, elevation: 2, backgroundColor: 'rgba(255, 255, 255, 0.92)' },
+  filterToggle: { flex: 1, minWidth: 0, flexDirection: 'row', backgroundColor: '#E5E5EA', borderRadius: 10, padding: 3 },
   toggleBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
   toggleBtnActive: { backgroundColor: '#FFF' },
   toggleText: { fontSize: 13, fontWeight: '500', color: '#8E8E93' },
   toggleTextActive: { color: '#1C1C1E' },
-  refreshBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center' },
-  mapContainer: { flex: 1, position: 'relative' },
+  refreshBtn: { width: 40, height: 40, flexShrink: 0, marginLeft: 12, borderRadius: 10, backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center' },
+  mapContainer: { flex: 1, position: 'relative', overflow: 'hidden', backgroundColor: '#F8FAFC' },
+  listModeSurface: { backgroundColor: '#FFF' },
   mapLoading: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.9)', justifyContent: 'center', alignItems: 'center' },
   mapLoadingText: { marginTop: 8, fontSize: 14, color: '#8E8E93' },
   legend: { position: 'absolute', bottom: 100, left: 12, backgroundColor: '#FFF', borderRadius: 10, padding: 8, gap: 4, elevation: 4 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
   legendText: { fontSize: 11, color: '#3C3C43' },
+  list: { flex: 1, width: '100%', backgroundColor: '#FFF' },
   listContent: { paddingHorizontal: 16 },
   pointCard: { backgroundColor: '#FFF', borderRadius: 14, marginBottom: 10, flexDirection: 'row', overflow: 'hidden' },
   statusIndicator: { width: 4 },
-  pointContent: { flex: 1, padding: 14 },
-  pointHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  pointContent: { flex: 1, minWidth: 0, padding: 14 },
+  pointHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6, gap: 10 },
+  pointMeta: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center' },
   categoryDot: { width: 12, height: 12, borderRadius: 6 },
-  pointInfo: { flex: 1, marginLeft: 10 },
+  pointInfo: { flex: 1, minWidth: 0, marginLeft: 10 },
+  pointBadge: { flexShrink: 0, alignItems: 'flex-end' },
   pointTitle: { fontSize: 15, fontWeight: '600', color: '#1C1C1E' },
   pointAddress: { fontSize: 12, color: '#8E8E93', marginTop: 2 },
   pointDate: { fontSize: 12, color: '#C7C7CC' },
