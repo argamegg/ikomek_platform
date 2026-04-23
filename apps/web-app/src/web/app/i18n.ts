@@ -345,6 +345,10 @@ const resources = {
         attachments: "Attachments",
         geolocate: "Use my location",
         summary: "Submission summary",
+        locationRequired: "Choose coordinates inside Astana before submitting.",
+        invalidCoordinates: "Enter valid latitude and longitude.",
+        outOfZone: "Requests can only be created in Astana and within 60 km of the city.",
+        zoneHint: "Distance to Astana center: {{distance}} km. Allowed radius: 60 km.",
       },
       requestDetails: {
         overview: "Overview",
@@ -729,6 +733,10 @@ const resources = {
         attachments: "Вложения",
         geolocate: "Использовать мою локацию",
         summary: "Сводка перед отправкой",
+        locationRequired: "Укажите координаты внутри Астаны перед отправкой.",
+        invalidCoordinates: "Введите корректные значения широты и долготы.",
+        outOfZone: "Обращения можно создавать только в Астане и в радиусе до 60 км от города.",
+        zoneHint: "Расстояние до центра Астаны: {{distance}} км. Допустимый радиус: 60 км.",
       },
       requestDetails: {
         overview: "Обзор",
@@ -1114,6 +1122,10 @@ const resources = {
         attachments: "Тіркемелер",
         geolocate: "Менің орнымды пайдалану",
         summary: "Жіберу алдындағы шолу",
+        locationRequired: "Жіберер алдында Астана ішіндегі координаттарды таңдаңыз.",
+        invalidCoordinates: "Енгізілген ендік пен бойлық мәндері қате.",
+        outOfZone: "Өтініштерді тек Астана ішінде және қаладан 60 км радиуста ғана жасауға болады.",
+        zoneHint: "Астана орталығына дейінгі қашықтық: {{distance}} км. Рұқсат етілген радиус: 60 км.",
       },
       requestDetails: {
         overview: "Шолу",

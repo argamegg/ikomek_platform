@@ -132,6 +132,8 @@ export const kz = {
     selectedAddress: 'Таңдалған мекенжай',
     addressPlaceholder: 'Мекенжай осында пайда болады...',
     locationRequired: 'Картадан орынды таңдаңыз',
+    outOfZone: 'Өтініштерді тек Астана ішінде және қаладан 60 км радиуста ғана жасауға болады.',
+    zoneHint: 'Астана орталығына дейінгі қашықтық: {{distance}} км. Рұқсат етілген радиус: 60 км.',
     selectPlace: 'Орын',
     selectProblemType: 'Мәселе түрі',
     selectReason: 'Себеп',

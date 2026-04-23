@@ -20,6 +20,14 @@ source venv/bin/activate
 python -m uvicorn server:app --host 0.0.0.0 --port 8001 --reload
 ```
 
+Cleanup out-of-zone requests:
+
+```bash
+cd apps/backend
+source venv/bin/activate
+PYTHONPATH=. python scripts/cleanup_out_of_zone_requests.py
+```
+
 Shared with:
 
 - mobile app in `apps/mobile-app`

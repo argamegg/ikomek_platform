@@ -132,6 +132,8 @@ export const en = {
     selectedAddress: 'Selected Address',
     addressPlaceholder: 'Address will appear here...',
     locationRequired: 'Please select a location on the map',
+    outOfZone: 'Requests can only be created in Astana and within 60 km of the city.',
+    zoneHint: 'Distance to Astana center: {{distance}} km. Allowed radius: 60 km.',
     selectPlace: 'Place',
     selectProblemType: 'Problem type',
     selectReason: 'Reason',

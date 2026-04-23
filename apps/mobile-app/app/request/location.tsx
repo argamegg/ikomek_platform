@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,12 @@ import {
   type LocationPickerCoordinate,
   type LocationPickerMapRef,
 } from '../../src/components/LocationPickerMap';
+import {
+  ASTANA_CENTER_LAT,
+  ASTANA_CENTER_LNG,
+  getDistanceToAstanaKm,
+  isWithinAstanaRequestZone,
+} from '../../src/utils/geoFence';
 
 const ORANGE = '#FF6B00';
 
@@ -27,7 +33,7 @@ export default function LocationScreen() {
   const categoryId = params.categoryId as string;
   
   const [address, setAddress] = useState('');
-  const [coordinates, setCoordinates] = useState({ lat: 51.1282, lng: 71.4306 });
+  const [coordinates, setCoordinates] = useState({ lat: ASTANA_CENTER_LAT, lng: ASTANA_CENTER_LNG });
   const [isLoading, setIsLoading] = useState(true);
   const [isLocating, setIsLocating] = useState(false);
   
@@ -35,6 +41,14 @@ export default function LocationScreen() {
   const reverseGeocodeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const isWithinAllowedZone = useMemo(
+    () => isWithinAstanaRequestZone(coordinates.lat, coordinates.lng),
+    [coordinates.lat, coordinates.lng],
+  );
+  const distanceToAstanaKm = useMemo(
+    () => getDistanceToAstanaKm(coordinates.lat, coordinates.lng),
+    [coordinates.lat, coordinates.lng],
+  );
 
   const reverseGeocode = useCallback(async (lat: number, lng: number) => {
     try {
@@ -74,11 +88,6 @@ export default function LocationScreen() {
   }, [reverseGeocode]);
 
   useEffect(() => {
-    // Try to get user's current location on mount
-    void getCurrentLocation();
-  }, [getCurrentLocation]);
-
-  useEffect(() => {
     return () => {
       if (reverseGeocodeTimeoutRef.current) {
         clearTimeout(reverseGeocodeTimeoutRef.current);
@@ -89,7 +98,8 @@ export default function LocationScreen() {
   const handleMapReady = useCallback(() => {
     setIsLoading(false);
     mapRef.current?.centerOnCoordinate(coordinates.lng, coordinates.lat, 16);
-  }, [coordinates.lat, coordinates.lng]);
+    void reverseGeocode(coordinates.lat, coordinates.lng);
+  }, [coordinates.lat, coordinates.lng, reverseGeocode]);
 
   const handleCoordinateChange = useCallback(
     ({ lat, lng }: LocationPickerCoordinate) => {
@@ -108,6 +118,11 @@ export default function LocationScreen() {
   const handleContinue = () => {
     if (!address) {
       Alert.alert(t('common.error'), t('request.locationRequired'));
+      return;
+    }
+
+    if (!isWithinAllowedZone) {
+      Alert.alert(t('common.error'), t('request.outOfZone'));
       return;
     }
     
@@ -168,11 +183,18 @@ export default function LocationScreen() {
             />
           </View>
         </View>
+        {!isWithinAllowedZone ? (
+          <Text style={styles.zoneWarning}>{t('request.outOfZone')}</Text>
+        ) : (
+          <Text style={styles.zoneHint}>
+            {t('request.zoneHint', { distance: Math.round(distanceToAstanaKm) })}
+          </Text>
+        )}
         
         <TouchableOpacity
-          style={[styles.continueButton, !address && styles.buttonDisabled]}
+          style={[styles.continueButton, (!address || !isWithinAllowedZone) && styles.buttonDisabled]}
           onPress={handleContinue}
-          disabled={!address}
+          disabled={!address || !isWithinAllowedZone}
         >
           <Text style={styles.continueText}>{t('common.continue')}</Text>
           <Ionicons name="arrow-forward" size={20} color="#FFF" />
@@ -256,6 +278,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1C1C1E',
     lineHeight: 22
+  },
+  zoneHint: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#8E8E93',
+    marginBottom: 14
+  },
+  zoneWarning: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#FF3B30',
+    fontWeight: '600',
+    marginBottom: 14
   },
   continueButton: {
     backgroundColor: ORANGE,

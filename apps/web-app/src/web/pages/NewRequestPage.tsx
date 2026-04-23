@@ -10,6 +10,7 @@ import { Input, Select, Textarea } from "../components/ui/Input";
 import { PageHeader } from "../components/ui/PageHeader";
 import { Badge } from "../components/ui/Badge";
 import { getErrorMessage, platformApi, queryKeys } from "../services/platformApi";
+import { getDistanceToAstanaKm, isWithinAstanaRequestZone } from "../lib/geoFence";
 
 export function NewRequestPage() {
   const { t } = useTranslation();
@@ -42,6 +43,26 @@ export function NewRequestPage() {
     () => (reasonsQuery.data ?? []).filter((reason) => reason.categoryId === form.categoryId),
     [form.categoryId, reasonsQuery.data],
   );
+  const latitude = form.lat.trim() ? Number(form.lat) : null;
+  const longitude = form.lng.trim() ? Number(form.lng) : null;
+  const hasCoordinates = form.lat.trim().length > 0 && form.lng.trim().length > 0;
+  const coordinatesAreValid =
+    latitude !== null &&
+    longitude !== null &&
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude);
+  const isOutsideAstanaZone = coordinatesAreValid
+    ? !isWithinAstanaRequestZone(latitude, longitude)
+    : false;
+  const distanceToAstanaKm = coordinatesAreValid ? getDistanceToAstanaKm(latitude, longitude) : null;
+  const locationError = !hasCoordinates
+    ? t("newRequest.locationRequired")
+    : !coordinatesAreValid
+      ? t("newRequest.invalidCoordinates")
+      : isOutsideAstanaZone
+        ? t("newRequest.outOfZone")
+        : null;
+  const canSubmit = coordinatesAreValid && !isOutsideAstanaZone;
 
   const createMutation = useMutation({
     mutationFn: platformApi.createRequest,
@@ -77,11 +98,14 @@ export function NewRequestPage() {
             className="form-grid"
             onSubmit={(event) => {
               event.preventDefault();
+              if (!canSubmit) {
+                return;
+              }
               createMutation.mutate({
                 address: form.address,
                 savedLocationId: form.savedLocationId || undefined,
-                lat: form.lat ? Number(form.lat) : undefined,
-                lng: form.lng ? Number(form.lng) : undefined,
+                lat: latitude ?? undefined,
+                lng: longitude ?? undefined,
                 place: form.place,
                 categoryId: form.categoryId,
                 reasonId: form.reasonId,
@@ -112,15 +136,26 @@ export function NewRequestPage() {
             <div className="inline-grid">
               <Input
                 label="Latitude"
+                type="number"
+                step="any"
                 value={form.lat}
                 onChange={(event) => setForm((value) => ({ ...value, lat: event.target.value }))}
               />
               <Input
                 label="Longitude"
+                type="number"
+                step="any"
                 value={form.lng}
                 onChange={(event) => setForm((value) => ({ ...value, lng: event.target.value }))}
               />
             </div>
+            {locationError ? (
+              <p className="field__message field__message--error">{locationError}</p>
+            ) : distanceToAstanaKm !== null ? (
+              <p className="field__message">
+                {t("newRequest.zoneHint", { distance: Math.round(distanceToAstanaKm) })}
+              </p>
+            ) : null}
             <Button
               type="button"
               variant="ghost"
@@ -205,7 +240,7 @@ export function NewRequestPage() {
               />
               <span>{form.isPublic ? t("common.public") : t("common.private")}</span>
             </label>
-            <Button type="submit" isLoading={createMutation.isPending}>
+            <Button type="submit" isLoading={createMutation.isPending} disabled={!canSubmit}>
               {t("common.create")}
             </Button>
           </form>

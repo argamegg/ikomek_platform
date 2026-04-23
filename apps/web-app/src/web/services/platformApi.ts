@@ -460,8 +460,8 @@ export const platformApi = {
     const response = await platformClient.post(apiConfig.endpoints.requests, {
       category_id: payload.categoryId,
       address: payload.address,
-      latitude: payload.lat ?? 51.1282,
-      longitude: payload.lng ?? 71.4306,
+      latitude: payload.lat,
+      longitude: payload.lng,
       place_type: payload.place,
       problem_type: problemType,
       reason: reasonLabel || "Submitted from web",

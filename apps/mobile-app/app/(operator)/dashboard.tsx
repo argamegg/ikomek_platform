@@ -90,9 +90,7 @@ export default function OperatorDashboard() {
   };
   const statsColumns = viewportWidth >= 340 ? 4 : 2;
   const availableStatsWidth = Math.max(viewportWidth - (STATS_HORIZONTAL_PADDING * 2), 0);
-  const statCardWidth = statsColumns === 1
-    ? availableStatsWidth
-    : (availableStatsWidth - STATS_GAP * (statsColumns - 1)) / statsColumns;
+  const statCardWidth = (availableStatsWidth - STATS_GAP * (statsColumns - 1)) / statsColumns;
 
   const renderCard = ({ item }: { item: Request }) => (
     <TouchableOpacity style={styles.card} onPress={() => openDetail(item)} activeOpacity={0.8} data-testid={`op-req-${item.id}`}>

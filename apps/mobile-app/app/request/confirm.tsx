@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
-import { apiService } from '../../src/utils/api';
+import { apiService, getApiErrorMessage } from '../../src/utils/api';
 import {
   getCategoryConfig,
   localizeCategory,
@@ -22,6 +22,7 @@ import {
   localizeProblemType,
   localizeReason,
 } from '../../src/utils/requestLocalization';
+import { getDistanceToAstanaKm, isWithinAstanaRequestZone } from '../../src/utils/geoFence';
 
 const ORANGE = '#FF6B00';
 
@@ -35,11 +36,21 @@ export default function ConfirmScreen() {
   
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const latitudeValue = Number(latitude);
+  const longitudeValue = Number(longitude);
   
   const category = getCategoryConfig(categoryId as string);
   const problemLabel = localizeProblemType(category.id, problemType as string, t);
   const reasonLabel = localizeReason(category.id, reason as string, t);
   const placeTypeLabel = localizePlaceType(placeType as string, t);
+  const isWithinAllowedZone = useMemo(
+    () => isWithinAstanaRequestZone(latitudeValue, longitudeValue),
+    [latitudeValue, longitudeValue],
+  );
+  const distanceToAstanaKm = useMemo(
+    () => getDistanceToAstanaKm(latitudeValue, longitudeValue),
+    [latitudeValue, longitudeValue],
+  );
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -83,13 +94,18 @@ export default function ConfirmScreen() {
   };
 
   const handleSubmit = async () => {
+    if (!isWithinAllowedZone) {
+      Alert.alert(t('common.error'), t('request.outOfZone'));
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await apiService.createRequest({
         category_id: categoryId as string,
         address: address as string,
-        latitude: parseFloat(latitude as string),
-        longitude: parseFloat(longitude as string),
+        latitude: latitudeValue,
+        longitude: longitudeValue,
         place_type: placeType as string,
         problem_type: problemType as string,
         reason: reason as string,
@@ -107,8 +123,8 @@ export default function ConfirmScreen() {
           }
         ]
       );
-    } catch {
-      Alert.alert(t('common.error'), t('request.submitFailed'));
+    } catch (error) {
+      Alert.alert(t('common.error'), getApiErrorMessage(error, t('request.submitFailed')));
     } finally {
       setIsSubmitting(false);
     }
@@ -146,6 +162,13 @@ export default function ConfirmScreen() {
             <Ionicons name="location" size={20} color={ORANGE} />
             <Text style={styles.infoText}>{address}</Text>
           </View>
+          {!isWithinAllowedZone ? (
+            <Text style={styles.zoneWarning}>{t('request.outOfZone')}</Text>
+          ) : (
+            <Text style={styles.zoneHint}>
+              {t('request.zoneHint', { distance: Math.round(distanceToAstanaKm) })}
+            </Text>
+          )}
         </View>
 
         {/* Details */}
@@ -213,9 +236,9 @@ export default function ConfirmScreen() {
       {/* Submit Button */}
       <View style={[styles.bottomPanel, { paddingBottom: insets.bottom + 16 }]}>
         <TouchableOpacity
-          style={[styles.submitButton, isSubmitting && styles.buttonDisabled]}
+          style={[styles.submitButton, (isSubmitting || !isWithinAllowedZone) && styles.buttonDisabled]}
           onPress={handleSubmit}
-          disabled={isSubmitting}
+          disabled={isSubmitting || !isWithinAllowedZone}
         >
           {isSubmitting ? (
             <ActivityIndicator color="#FFF" />
@@ -319,6 +342,19 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#1C1C1E',
     lineHeight: 22
+  },
+  zoneHint: {
+    marginTop: 10,
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#8E8E93'
+  },
+  zoneWarning: {
+    marginTop: 10,
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#FF3B30',
+    fontWeight: '600'
   },
   detailRow: {
     backgroundColor: '#FFF',

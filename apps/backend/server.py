@@ -23,6 +23,8 @@ import ssl
 from email.message import EmailMessage
 from email.utils import formataddr
 
+from geo import REQUEST_OUT_OF_ZONE_ERROR, is_within_astana_request_zone
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
@@ -672,6 +674,12 @@ async def delete_saved_location(location_id: str, current_user: dict = Depends(g
 
 @api_router.post("/requests", response_model=RequestModel)
 async def create_request(request_data: RequestCreate, current_user: dict = Depends(get_current_user)):
+    if not is_within_astana_request_zone(request_data.latitude, request_data.longitude):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=REQUEST_OUT_OF_ZONE_ERROR,
+        )
+
     category = next((c for c in CATEGORIES if c["id"] == request_data.category_id), None)
     category_name = category["name_ru"] if category else "Другое"
     

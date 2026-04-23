@@ -132,6 +132,8 @@ export const ru = {
     selectedAddress: 'Выбранный адрес',
     addressPlaceholder: 'Адрес появится здесь...',
     locationRequired: 'Пожалуйста, выберите место на карте',
+    outOfZone: 'Обращения можно создавать только в Астане и в радиусе до 60 км от города.',
+    zoneHint: 'Расстояние до центра Астаны: {{distance}} км. Допустимый радиус: 60 км.',
     selectPlace: 'Место',
     selectProblemType: 'Тип проблемы',
     selectReason: 'Причина',

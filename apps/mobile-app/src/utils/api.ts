@@ -34,6 +34,23 @@ api.interceptors.response.use(
   }
 );
 
+export function getApiErrorMessage(error: unknown, fallbackMessage: string): string {
+  if (axios.isAxiosError(error)) {
+    const detail = error.response?.data?.detail;
+    const message = error.response?.data?.message;
+
+    if (typeof detail === 'string' && detail.trim()) {
+      return detail;
+    }
+
+    if (typeof message === 'string' && message.trim()) {
+      return message;
+    }
+  }
+
+  return fallbackMessage;
+}
+
 export interface Category {
   id: string;
   name: string;
