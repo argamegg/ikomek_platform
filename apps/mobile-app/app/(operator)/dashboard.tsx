@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity,
-  ActivityIndicator, Modal, ScrollView, TextInput, Alert
+  ActivityIndicator, Modal, ScrollView, TextInput, Alert, useWindowDimensions
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,11 +18,14 @@ import {
 
 const ORANGE = '#FF6B00';
 const STATUSES = ['pending', 'in_progress', 'closed'];
+const STATS_HORIZONTAL_PADDING = 16;
+const STATS_GAP = 8;
 
 export default function OperatorDashboard() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const [requests, setRequests] = useState<Request[]>([]);
+  const { width: viewportWidth } = useWindowDimensions();
+  const [allRequests, setAllRequests] = useState<Request[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
@@ -35,15 +38,18 @@ export default function OperatorDashboard() {
 
   const fetchRequests = useCallback(async () => {
     try {
-      const params: any = {};
-      if (statusFilter) params.status = statusFilter;
-      const res = await apiService.getOperatorRequests(params);
-      setRequests(res.data);
+      const res = await apiService.getOperatorRequests();
+      setAllRequests(res.data);
     } catch (e) { console.error(e); }
     finally { setIsLoading(false); setIsRefreshing(false); }
-  }, [statusFilter]);
+  }, []);
 
   useEffect(() => { fetchRequests(); }, [fetchRequests]);
+
+  const filteredRequests = useMemo(
+    () => allRequests.filter((request) => !statusFilter || request.status === statusFilter),
+    [allRequests, statusFilter],
+  );
 
   const openDetail = async (req: Request) => {
     setSelected(req);
@@ -77,11 +83,16 @@ export default function OperatorDashboard() {
   };
 
   const counts = {
-    total: requests.length,
-    pending: requests.filter(r => r.status === 'pending').length,
-    in_progress: requests.filter(r => r.status === 'in_progress').length,
-    closed: requests.filter(r => r.status === 'closed').length
+    total: allRequests.length,
+    pending: allRequests.filter(r => r.status === 'pending').length,
+    in_progress: allRequests.filter(r => r.status === 'in_progress').length,
+    closed: allRequests.filter(r => r.status === 'closed').length
   };
+  const statsColumns = viewportWidth >= 340 ? 4 : 2;
+  const availableStatsWidth = Math.max(viewportWidth - (STATS_HORIZONTAL_PADDING * 2), 0);
+  const statCardWidth = statsColumns === 1
+    ? availableStatsWidth
+    : (availableStatsWidth - STATS_GAP * (statsColumns - 1)) / statsColumns;
 
   const renderCard = ({ item }: { item: Request }) => (
     <TouchableOpacity style={styles.card} onPress={() => openDetail(item)} activeOpacity={0.8} data-testid={`op-req-${item.id}`}>
@@ -110,20 +121,28 @@ export default function OperatorDashboard() {
       </View>
 
       {/* Stats */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.statsRow}>
+      <View style={styles.statsRow}>
         {[{ key: null, label: t('common.all'), count: counts.total, color: ORANGE },
           { key: 'pending', label: t('status.pending'), count: counts.pending, color: '#FF9500' },
           { key: 'in_progress', label: t('status.inProgress'), count: counts.in_progress, color: '#007AFF' },
           { key: 'closed', label: t('status.closed'), count: counts.closed, color: '#34C759' }
         ].map(s => (
-          <TouchableOpacity key={s.key || 'all'} style={[styles.statCard, statusFilter === s.key && styles.statCardActive]} onPress={() => setStatusFilter(s.key)}>
+          <TouchableOpacity
+            key={s.key || 'all'}
+            style={[
+              styles.statCard,
+              { width: statCardWidth },
+              statusFilter === s.key && styles.statCardActive,
+            ]}
+            onPress={() => setStatusFilter(s.key)}
+          >
             <Text style={[styles.statNum, { color: s.color }]}>{s.count}</Text>
             <Text style={styles.statLabel}>{s.label}</Text>
           </TouchableOpacity>
         ))}
-      </ScrollView>
+      </View>
 
-      <FlatList data={requests.filter(r => !statusFilter || r.status === statusFilter)} keyExtractor={i => i.id} renderItem={renderCard}
+      <FlatList data={filteredRequests} keyExtractor={i => i.id} renderItem={renderCard}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => { setIsRefreshing(true); fetchRequests(); }} tintColor={ORANGE} />}
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
         ListEmptyComponent={<View style={styles.emptyBox}><Ionicons name="checkbox-outline" size={48} color="#C7C7CC" /><Text style={styles.emptyText}>{t('operator.noRequests')}</Text></View>}
@@ -205,11 +224,28 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
   headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#1C1C1E' },
   headerSub: { fontSize: 15, color: '#8E8E93', marginTop: 4 },
-  statsRow: { paddingHorizontal: 16, marginBottom: 12, flexGrow: 0 },
-  statCard: { backgroundColor: '#FFF', borderRadius: 12, padding: 12, marginRight: 10, minWidth: 80, alignItems: 'center' },
-  statCardActive: { backgroundColor: `${ORANGE}10`, borderWidth: 1, borderColor: ORANGE },
-  statNum: { fontSize: 20, fontWeight: 'bold' },
-  statLabel: { fontSize: 11, color: '#8E8E93', marginTop: 2 },
+  statsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'stretch',
+    paddingHorizontal: STATS_HORIZONTAL_PADDING,
+    marginBottom: 12,
+    gap: STATS_GAP,
+  },
+  statCard: {
+    minHeight: 68,
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statCardActive: { backgroundColor: `${ORANGE}10`, borderColor: ORANGE },
+  statNum: { fontSize: 18, lineHeight: 20, fontWeight: '700' },
+  statLabel: { marginTop: 4, fontSize: 10, lineHeight: 12, color: '#8E8E93', textAlign: 'center' },
   list: { paddingHorizontal: 16 },
   card: { backgroundColor: '#FFF', borderRadius: 14, marginBottom: 10, flexDirection: 'row', overflow: 'hidden' },
   cardStrip: { width: 4 },
