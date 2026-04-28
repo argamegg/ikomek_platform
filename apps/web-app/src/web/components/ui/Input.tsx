@@ -18,7 +18,10 @@ export function Input({ label, helper, error, icon, className, ...props }: Input
       {label ? <span className="field__label">{label}</span> : null}
       <span className={cn("field__control", error && "field__control--error", className)}>
         {icon ? <span className="field__icon">{icon}</span> : null}
-        <input className="field__input" {...props} />
+        <input className="field__input" {...props}
+        placeholder="Enter value..."
+  {...props} />
+        
       </span>
       {error ? <span className="field__message field__message--error">{error}</span> : null}
       {!error && helper ? <span className="field__message">{helper}</span> : null}
