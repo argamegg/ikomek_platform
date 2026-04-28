@@ -383,6 +383,10 @@ li {
   margin-bottom: 6px;
 }
 
+button:hover {
+  opacity: 0.9;
+}
+
 .hero-card__media img {
   width: 100%;
   height: 180px;
