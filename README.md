@@ -198,3 +198,8 @@ test commiit     112312
 - [web app](/Users/argame/Documents/ikomek-project/apps/web-app/package.json)
 - [startup guide](/Users/argame/Documents/ikomek-project/docs/RUNNING.md)
 - [launcher script](/Users/argame/Documents/ikomek-project/scripts/start_system.py)
+
+## Updates
+- Minor UI improvements
+- Added debug logs
+- Improved styling
