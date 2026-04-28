@@ -2,12 +2,14 @@ import { Globe2, Menu, Plus, Search, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import type { User } from "../../../types/platform";
+import { cn } from "../../lib/cn";
 import { session } from "../../lib/session";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 
 type HeaderProps = {
   currentUser: User | null;
+  isCompact: boolean;
   onToggleSidebar: () => void;
   onToggleMobileSidebar: () => void;
   mobileSidebarOpen: boolean;
@@ -16,6 +18,7 @@ type HeaderProps = {
 
 export function Header({
   currentUser,
+  isCompact,
   onToggleSidebar,
   onToggleMobileSidebar,
   mobileSidebarOpen,
@@ -28,7 +31,7 @@ export function Header({
   const accountPath = isAdmin ? "/admin" : isOperator ? "/operator" : "/profile";
 
   return (
-    <header className="topbar">
+    <header className={cn("topbar", isCompact && "topbar--compact")}>
       <div className="topbar__left">
         <Button
           type="button"
@@ -50,13 +53,13 @@ export function Header({
         >
           <Menu size={18} />
         </Button>
-        <div className="topbar__search">
-          <Input
-            aria-label={t("common.search")}
-            placeholder={t("common.searchPlaceholder")}
-            icon={<Search size={16} />}
-          />
-        </div>
+      </div>
+      <div className="topbar__search">
+        <Input
+          aria-label={t("common.search")}
+          placeholder={t("common.searchPlaceholder")}
+          icon={<Search size={16} />}
+        />
       </div>
       <div className="topbar__right">
         <label className="language-switcher">
@@ -78,28 +81,33 @@ export function Header({
         {currentUser ? (
           <>
             {showCitizenActions ? (
-              <Link to="/requests/new" className="topbar__cta">
-                <Button iconLeft={<Plus size={16} />}>{t("common.submitRequest")}</Button>
+              <Link to="/requests/new" className="topbar__cta topbar__cta--citizen">
+                <Button iconLeft={<Plus size={16} />} className="topbar__submit">
+                  <span className="topbar__submit-label topbar__submit-label--full">
+                    {t("common.submitRequest")}
+                  </span>
+                  <span className="topbar__submit-label topbar__submit-label--short">
+                    {t("common.submitRequestShort")}
+                  </span>
+                </Button>
               </Link>
             ) : null}
-            <div className="topbar__account">
-              <Link to={accountPath} className="topbar__profile">
-                <span className="topbar__avatar">
-                  {currentUser.name
-                    .split(" ")
-                    .map((part) => part[0])
-                    .join("")
-                    .slice(0, 2)}
-                </span>
-                <span>
-                  <strong>{currentUser.name}</strong>
-                  <small>{currentUser.primaryRole}</small>
-                </span>
-              </Link>
-              <Button type="button" variant="ghost" size="sm" className="topbar__logout" onClick={onLogout}>
-                {t("common.logout")}
-              </Button>
-            </div>
+            <Link to={accountPath} className="topbar__profile">
+              <span className="topbar__avatar">
+                {currentUser.name
+                  .split(" ")
+                  .map((part) => part[0])
+                  .join("")
+                  .slice(0, 2)}
+              </span>
+              <span className="topbar__profile-copy">
+                <strong>{currentUser.name}</strong>
+                <small>{currentUser.primaryRole}</small>
+              </span>
+            </Link>
+            <Button type="button" variant="ghost" size="sm" className="topbar__logout" onClick={onLogout}>
+              {t("common.logout")}
+            </Button>
           </>
         ) : (
           <Link to="/auth" className="topbar__cta">

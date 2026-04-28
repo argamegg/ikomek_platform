@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import type { PropsWithChildren } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Outlet, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -12,6 +12,9 @@ import { Sidebar } from "./Sidebar";
 export function AppShell({ children }: PropsWithChildren) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [isCompactShell, setIsCompactShell] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 1199px)").matches : false,
+  );
   const location = useLocation();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
@@ -37,17 +40,53 @@ export function AppShell({ children }: PropsWithChildren) {
     }
   }
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const mediaQuery = window.matchMedia("(max-width: 1199px)");
+    const handleMediaChange = (event: MediaQueryListEvent) => {
+      setIsCompactShell(event.matches);
+    };
+
+    setIsCompactShell(mediaQuery.matches);
+    mediaQuery.addEventListener("change", handleMediaChange);
+
+    return () => mediaQuery.removeEventListener("change", handleMediaChange);
+  }, []);
+
+  useEffect(() => {
+    setMobileSidebarOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!isCompactShell) {
+      return undefined;
+    }
+
+    setCollapsed(false);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = mobileSidebarOpen ? "hidden" : "";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isCompactShell, mobileSidebarOpen]);
+
   return (
     <div className="app-frame">
       <Sidebar
         currentUser={shellState.currentUser}
         collapsed={collapsed}
+        isCompact={isCompactShell}
         mobileOpen={mobileSidebarOpen}
         onCloseMobile={() => setMobileSidebarOpen(false)}
       />
       <div className="app-frame__content">
         <Header
           currentUser={shellState.currentUser}
+          isCompact={isCompactShell}
           onToggleSidebar={() => setCollapsed((value) => !value)}
           onToggleMobileSidebar={() => setMobileSidebarOpen((value) => !value)}
           mobileSidebarOpen={mobileSidebarOpen}

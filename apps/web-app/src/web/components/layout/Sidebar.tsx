@@ -12,7 +12,6 @@ import {
   Workflow,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
-import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import type { User } from "../../../types/platform";
 import { cn } from "../../lib/cn";
@@ -20,6 +19,7 @@ import { cn } from "../../lib/cn";
 type SidebarProps = {
   currentUser: User | null;
   collapsed: boolean;
+  isCompact: boolean;
   mobileOpen: boolean;
   onCloseMobile: () => void;
 };
@@ -33,7 +33,7 @@ type NavItem = {
   hiddenForRoles?: string[];
 };
 
-export function Sidebar({ currentUser, collapsed, mobileOpen, onCloseMobile }: SidebarProps) {
+export function Sidebar({ currentUser, collapsed, isCompact, mobileOpen, onCloseMobile }: SidebarProps) {
   const { t } = useTranslation();
 
   const items: NavItem[] = [
@@ -108,19 +108,23 @@ export function Sidebar({ currentUser, collapsed, mobileOpen, onCloseMobile }: S
   return (
     <>
       <div
-        className={cn("sidebar-overlay", mobileOpen && "sidebar-overlay--visible")}
-        onClick={onCloseMobile}
+        className={cn("sidebar-overlay", isCompact && mobileOpen && "sidebar-overlay--visible")}
+        onClick={isCompact ? onCloseMobile : undefined}
       />
-      <motion.aside
-        animate={{ width: collapsed ? 94 : 280, x: mobileOpen ? 0 : undefined }}
-        transition={{ duration: 0.24 }}
-        className={cn("sidebar", collapsed && "sidebar--collapsed", mobileOpen && "sidebar--mobile-open")}
+      <aside
+        className={cn(
+          "sidebar",
+          collapsed && !isCompact && "sidebar--collapsed",
+          isCompact && "sidebar--compact",
+          isCompact && mobileOpen && "sidebar--mobile-open",
+        )}
+        style={!isCompact ? { width: collapsed ? 94 : 280 } : undefined}
       >
         <div className="sidebar__brand">
           <div className="sidebar__brand-mark">
             <Compass size={18} />
           </div>
-          {!collapsed ? (
+          {!collapsed || isCompact ? (
             <div>
               <strong>{t("brand.name")}</strong>
               <span>{t("brand.tagline")}</span>
@@ -139,19 +143,19 @@ export function Sidebar({ currentUser, collapsed, mobileOpen, onCloseMobile }: S
                 className={({ isActive }) =>
                   cn("sidebar__link", isActive && "sidebar__link--active")
                 }
-                onClick={onCloseMobile}
+                onClick={isCompact ? onCloseMobile : undefined}
               >
                 <Icon size={18} />
-                {!collapsed ? <span>{item.label}</span> : null}
+                {!collapsed || isCompact ? <span>{item.label}</span> : null}
               </NavLink>
             );
           })}
         </nav>
         <div className="sidebar__footer">
           <span className="sidebar__footer-label">{t("shell.status")}</span>
-          {!collapsed ? <p>{currentUser ? t("shell.connected") : t("shell.guest")}</p> : null}
+          {!collapsed || isCompact ? <p>{currentUser ? t("shell.connected") : t("shell.guest")}</p> : null}
         </div>
-      </motion.aside>
+      </aside>
     </>
   );
 }
