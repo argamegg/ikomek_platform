@@ -32,6 +32,7 @@ export function CitizenDashboardSection({
         <Card>
           <h3>Request health</h3>
           <strong className="section-metric">{summary.total}</strong>
+          <p>Welcome to your dashboard</p>
           <p>{summary.active} active, {summary.pending} pending, {summary.closed} closed.</p>
         </Card>
         <Card>
