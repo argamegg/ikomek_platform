@@ -36,6 +36,9 @@ export function HomePageSection({
           <p className="eyebrow">{copy.sharedSystem.title}</p>
           <h3>{copy.home.heroTitle}</h3>
           <p>{copy.sharedSystem.description}</p>
+          <p style={{ fontSize: "14px", color: "#64748b" }}>
+  Platform prototype for smart city interaction.
+</p>
           <div className="hero-card__pills">
             <RouterLink to={currentUser ? "/requests/new" : "/auth"} className="button button--primary">
               Submit a city issue
