@@ -762,6 +762,7 @@ export function HomePage() {
           <span>{t("home.mapPreview.eyebrow")}</span>
           <h2>{t("home.mapPreview.title")}</h2>
           <p>{t("home.mapPreview.description")}</p>
+          <p>Smart city digital ecosystem</p>
         </div>
 
         <div className="home-map-preview__shell">
