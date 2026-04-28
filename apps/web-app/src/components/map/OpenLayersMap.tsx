@@ -108,6 +108,7 @@ export function OpenLayersMap({
         }
       });
     });
+    console.log("Map initialized");
 
     mapInstanceRef.current = map;
 
