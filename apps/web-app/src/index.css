@@ -2296,3 +2296,6 @@ button {
     scroll-behavior: auto !important;
   }
 }
+body {
+  background-color: #f8fafc;
+}
