@@ -526,7 +526,7 @@ const styles = StyleSheet.create({
   version: {
     textAlign: 'center',
     fontSize: 13,
-    color: '#C7C7CC',
+    color: '#8E8E93',
     marginTop: 24
   },
   modalContainer: {
