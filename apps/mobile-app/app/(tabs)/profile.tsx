@@ -201,7 +201,7 @@ export default function ProfileScreen() {
 
         {/* Settings */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('profile.settings')}</Text>
+          <Text style={[styles.sectionTitle, styles.sectionTitleStandalone]}>{t('profile.settings')}</Text>
           
           <TouchableOpacity style={styles.settingItem}>
             <View style={[styles.settingIcon, { backgroundColor: '#007AFF20' }]}>
@@ -422,9 +422,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#8E8E93',
+    color: '#475569',
     textTransform: 'uppercase',
     letterSpacing: 0.5
+  },
+  sectionTitleStandalone: {
+    marginBottom: 12
   },
   emptyLocations: {
     backgroundColor: '#FFF',

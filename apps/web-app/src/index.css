@@ -43,6 +43,8 @@ html {
 body {
   --app-background-image: url("./assets/background-fhd.webp");
   --app-background-position: center center;
+  --app-background-blur: 3px;
+  --app-background-scale: 1.015;
   position: relative;
   margin: 0;
   min-height: 100vh;
@@ -64,22 +66,21 @@ body::before {
   background-repeat: no-repeat;
   background-position: var(--app-background-position);
   background-size: cover;
-  opacity: 0.92;
+  opacity: 0.98;
+  filter: blur(var(--app-background-blur));
+  transform: scale(var(--app-background-scale));
+  transform-origin: center;
 }
 
 body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background: rgba(255, 255, 255, 0.45);
+  content: none;
 }
 
 @media (max-width: 1440px) {
   body {
     --app-background-image: url("./assets/background-laptop.webp");
     --app-background-position: center center;
+    --app-background-blur: 2px;
   }
 }
 
@@ -87,6 +88,7 @@ body::after {
   body {
     --app-background-image: url("./assets/background-tablet.webp");
     --app-background-position: center 14%;
+    --app-background-blur: 2px;
   }
 }
 
@@ -94,6 +96,7 @@ body::after {
   body {
     --app-background-image: url("./assets/background-mobile.webp");
     --app-background-position: center 8%;
+    --app-background-blur: 2px;
   }
 }
 
@@ -101,6 +104,7 @@ body::after {
   body {
     --app-background-image: url("./assets/background-2k.webp");
     --app-background-position: center center;
+    --app-background-blur: 4px;
   }
 }
 
@@ -108,6 +112,7 @@ body::after {
   body {
     --app-background-image: url("./assets/background-ultrawide.webp");
     --app-background-position: center 42%;
+    --app-background-blur: 4px;
   }
 }
 
@@ -115,6 +120,7 @@ body::after {
   body {
     --app-background-image: url("./assets/background-4k.webp");
     --app-background-position: center center;
+    --app-background-blur: 4px;
   }
 }
 
@@ -421,8 +427,9 @@ button {
 .page-header p {
   max-width: 760px;
   margin: 0;
-  color: var(--text-soft);
+  color: #475569;
   font-size: 1.02rem;
+  font-weight: 500;
   line-height: 1.7;
 }
 
@@ -821,8 +828,9 @@ button {
 .auth-header p {
   max-width: 620px;
   margin: 0;
-  color: var(--text-soft);
+  color: #475569;
   font-size: 1.02rem;
+  font-weight: 500;
   line-height: 1.65;
 }
 
@@ -2104,8 +2112,9 @@ button {
 
 .home-section-heading p {
   margin: 0;
-  color: var(--text-soft);
+  color: #475569;
   font-size: 1.02rem;
+  font-weight: 500;
   line-height: 1.65;
 }
 

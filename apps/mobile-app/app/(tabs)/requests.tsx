@@ -341,7 +341,8 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: 15,
-    color: '#8E8E93',
+    color: '#475569',
+    fontWeight: '500',
     marginTop: 4
   },
   filterContainer: {

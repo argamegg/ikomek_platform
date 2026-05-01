@@ -199,7 +199,8 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: '#8E8E93',
+    color: '#475569',
+    fontWeight: '500',
     textAlign: 'center'
   },
   form: {

@@ -13,9 +13,9 @@ try {
 }
 
 const ASTANA_CENTER: [number, number] = [71.4306, 51.1282];
-const CLUSTER_COLOR = 'rgba(255, 107, 0, 0.88)';
-const MARKER_COLOR = 'rgba(15, 23, 42, 0.75)';
-const MY_MARKER_COLOR = 'rgba(255, 107, 0, 0.92)';
+const CLUSTER_COLOR = 'rgba(255, 107, 0, 0.9)';
+const MARKER_COLOR = 'rgba(51, 65, 85, 0.86)';
+const MY_MARKER_COLOR = 'rgba(255, 107, 0, 0.94)';
 const MARKER_STROKE = 'rgba(255,255,255,0.92)';
 const NATIVE_MAP_STYLE = {
   version: 8,
@@ -65,7 +65,7 @@ export function RequestsMap({
           pointId: point.id,
           is_mine: point.is_mine ? 1 : 0,
           color: point.is_mine ? MY_MARKER_COLOR : MARKER_COLOR,
-          radius: 10,
+          radius: point.is_mine ? 9 : 8,
         },
         geometry: {
           type: 'Point',
@@ -85,14 +85,14 @@ export function RequestsMap({
           ['linear'],
           ['get', 'point_count'],
           1,
-          16,
+          14,
           10,
-          20,
+          18,
           25,
-          24,
+          22,
         ],
         circleStrokeColor: MARKER_STROKE,
-        circleStrokeWidth: 3,
+        circleStrokeWidth: 2.5,
         circleOpacity: 1,
       }) as any,
     [],
@@ -102,7 +102,7 @@ export function RequestsMap({
     () =>
       ({
         textField: ['get', 'point_count_abbreviated'],
-        textSize: 12,
+        textSize: 11,
         textFont: ['Noto Sans Regular'],
         textColor: '#FFFFFF',
         textAllowOverlap: true,
@@ -117,7 +117,7 @@ export function RequestsMap({
         circleColor: ['coalesce', ['get', 'color'], MARKER_COLOR],
         circleRadius: ['coalesce', ['get', 'radius'], 10],
         circleStrokeColor: MARKER_STROKE,
-        circleStrokeWidth: 3,
+        circleStrokeWidth: 2.5,
         circleOpacity: 1,
       }) as any,
     [],
@@ -180,7 +180,7 @@ export function RequestsMap({
     cameraRef.current.fitBounds(
       [Math.max(...lngs), Math.max(...lats)],
       [Math.min(...lngs), Math.min(...lats)],
-      56,
+      96,
       700,
     );
   }, [points]);
@@ -218,7 +218,7 @@ export function RequestsMap({
         id="requests"
         shape={pointFeatureCollection as any}
         cluster
-        clusterRadius={44}
+        clusterRadius={40}
         clusterMaxZoomLevel={15}
         onPress={handleNativePointPress}
         hitbox={{ width: 44, height: 44 }}

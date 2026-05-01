@@ -57,6 +57,6 @@ const styles = StyleSheet.create({
   logo: { width: 100, height: 100, borderRadius: 25, backgroundColor: ORANGE, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
   logoText: { color: '#FFF', fontSize: 36, fontWeight: 'bold' },
   title: { fontSize: 32, fontWeight: 'bold', color: '#1C1C1E' },
-  subtitle: { fontSize: 16, color: '#8E8E93', marginTop: 4 },
+  subtitle: { fontSize: 16, color: '#475569', fontWeight: '500', marginTop: 4 },
   loader: { marginTop: 40 }
 });

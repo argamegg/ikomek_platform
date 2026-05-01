@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
   logo: { width: 80, height: 80, borderRadius: 20, backgroundColor: ORANGE, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
   logoText: { color: '#FFF', fontSize: 28, fontWeight: 'bold' },
   title: { fontSize: 28, fontWeight: 'bold', color: '#1C1C1E', marginBottom: 8 },
-  subtitle: { fontSize: 16, color: '#8E8E93' },
+  subtitle: { fontSize: 16, color: '#475569', fontWeight: '500' },
   form: { flex: 1 },
   inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F2F2F7', borderRadius: 12, paddingHorizontal: 16, marginBottom: 16, height: 56 },
   inputIcon: { marginRight: 12 },
