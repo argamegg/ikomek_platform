@@ -41,6 +41,8 @@ html {
 }
 
 body {
+  --app-background-image: url("./assets/background-fhd.webp");
+  --app-background-position: center center;
   position: relative;
   margin: 0;
   min-height: 100vh;
@@ -58,11 +60,62 @@ body::before {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-image: url("./assets/background-pc.png");
+  background-image: var(--app-background-image);
   background-repeat: no-repeat;
-  background-position: center top;
-  background-size: min(1600px, 100vw) auto;
-  opacity: 0.35;
+  background-position: var(--app-background-position);
+  background-size: cover;
+  opacity: 0.92;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+@media (max-width: 1440px) {
+  body {
+    --app-background-image: url("./assets/background-laptop.webp");
+    --app-background-position: center center;
+  }
+}
+
+@media (max-width: 1024px) {
+  body {
+    --app-background-image: url("./assets/background-tablet.webp");
+    --app-background-position: center 14%;
+  }
+}
+
+@media (max-width: 768px) {
+  body {
+    --app-background-image: url("./assets/background-mobile.webp");
+    --app-background-position: center 8%;
+  }
+}
+
+@media (min-width: 1921px) and (max-width: 2560px) {
+  body {
+    --app-background-image: url("./assets/background-2k.webp");
+    --app-background-position: center center;
+  }
+}
+
+@media (min-width: 2561px) and (max-width: 3440px) {
+  body {
+    --app-background-image: url("./assets/background-ultrawide.webp");
+    --app-background-position: center 42%;
+  }
+}
+
+@media (min-width: 3441px) {
+  body {
+    --app-background-image: url("./assets/background-4k.webp");
+    --app-background-position: center center;
+  }
 }
 
 a {
