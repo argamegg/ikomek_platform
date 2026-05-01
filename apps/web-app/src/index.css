@@ -43,16 +43,12 @@ html {
 body {
   --app-background-image: url("./assets/background-fhd.webp");
   --app-background-position: center center;
-  --app-background-blur: 3px;
-  --app-background-scale: 1.015;
+  --app-background-opacity: 0.19;
   position: relative;
   margin: 0;
   min-height: 100vh;
   color: var(--text);
-  background:
-    radial-gradient(circle at top left, rgba(255, 107, 0, 0.08), transparent 24%),
-    radial-gradient(circle at top right, rgba(37, 99, 235, 0.07), transparent 28%),
-    linear-gradient(180deg, #fbfcfd 0%, #f7f8fa 52%, #f3f5f8 100%);
+  background: #ffffff;
   overflow-x: hidden;
 }
 
@@ -66,10 +62,7 @@ body::before {
   background-repeat: no-repeat;
   background-position: var(--app-background-position);
   background-size: cover;
-  opacity: 0.98;
-  filter: blur(var(--app-background-blur));
-  transform: scale(var(--app-background-scale));
-  transform-origin: center;
+  opacity: var(--app-background-opacity);
 }
 
 body::after {
@@ -80,7 +73,7 @@ body::after {
   body {
     --app-background-image: url("./assets/background-laptop.webp");
     --app-background-position: center center;
-    --app-background-blur: 2px;
+    --app-background-opacity: 0.18;
   }
 }
 
@@ -88,7 +81,7 @@ body::after {
   body {
     --app-background-image: url("./assets/background-tablet.webp");
     --app-background-position: center 14%;
-    --app-background-blur: 2px;
+    --app-background-opacity: 0.17;
   }
 }
 
@@ -96,7 +89,7 @@ body::after {
   body {
     --app-background-image: url("./assets/background-mobile.webp");
     --app-background-position: center 8%;
-    --app-background-blur: 2px;
+    --app-background-opacity: 0.15;
   }
 }
 
@@ -104,7 +97,7 @@ body::after {
   body {
     --app-background-image: url("./assets/background-2k.webp");
     --app-background-position: center center;
-    --app-background-blur: 4px;
+    --app-background-opacity: 0.2;
   }
 }
 
@@ -112,7 +105,7 @@ body::after {
   body {
     --app-background-image: url("./assets/background-ultrawide.webp");
     --app-background-position: center 42%;
-    --app-background-blur: 4px;
+    --app-background-opacity: 0.2;
   }
 }
 
@@ -120,7 +113,7 @@ body::after {
   body {
     --app-background-image: url("./assets/background-4k.webp");
     --app-background-position: center center;
-    --app-background-blur: 4px;
+    --app-background-opacity: 0.2;
   }
 }
 
@@ -173,7 +166,6 @@ button {
   padding: 24px 18px 18px;
   border-right: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(18px);
   transition: width 0.24s ease, transform 0.24s ease, opacity 0.24s ease;
 }
 
@@ -288,7 +280,6 @@ button {
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.78);
   box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(18px);
 }
 
 .topbar__search .field,
@@ -500,7 +491,6 @@ button {
 
 .ui-card--glass {
   background: var(--surface);
-  backdrop-filter: blur(18px);
 }
 
 .section-card,
@@ -1300,7 +1290,6 @@ button {
   color: var(--text);
   text-align: left;
   cursor: pointer;
-  backdrop-filter: blur(16px);
   transition:
     border-color 0.2s ease,
     background-color 0.2s ease,
@@ -1383,7 +1372,6 @@ button {
   border: 1px solid var(--border);
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.76);
-  backdrop-filter: blur(16px);
 }
 
 .request-flow-progress__item strong {
@@ -1989,7 +1977,6 @@ button {
   place-items: center;
   padding: 24px;
   background: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(8px);
 }
 
 .modal {
@@ -2175,7 +2162,6 @@ button {
   border-radius: 30px;
   background: rgba(255, 255, 255, 0.72);
   box-shadow: 0 35px 70px rgba(15, 23, 42, 0.1);
-  backdrop-filter: blur(20px);
 }
 
 .home-hero__visual-orbit {
@@ -2788,7 +2774,6 @@ button {
   border-radius: 999px;
   background: rgba(15, 23, 42, 0.72);
   color: #fff;
-  backdrop-filter: blur(14px);
 }
 
 .home-map-preview__pulse i {
@@ -2808,7 +2793,6 @@ button {
   border-radius: 24px;
   background: rgba(255, 255, 255, 0.86);
   border: 1px solid rgba(15, 23, 42, 0.08);
-  backdrop-filter: blur(16px);
 }
 
 .home-map-preview__focus small {

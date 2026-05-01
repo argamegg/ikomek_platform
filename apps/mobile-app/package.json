@@ -25,7 +25,6 @@
     "axios": "^1.13.6",
     "date-fns": "^4.1.0",
     "expo": "54.0.33",
-    "expo-blur": "~15.0.8",
     "expo-constants": "~18.0.13",
     "expo-dev-client": "~6.0.20",
     "expo-font": "~14.0.11",

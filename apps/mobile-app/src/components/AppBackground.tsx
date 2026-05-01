@@ -1,6 +1,5 @@
 import React, { PropsWithChildren, useMemo } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 
 const backgroundMobile = require('../../assets/images/background-mobile.webp');
@@ -14,7 +13,7 @@ const background4k = require('../../assets/images/background-4k.webp');
 type BackgroundPreset = {
   source: number;
   contentPosition: 'top' | 'center';
-  blurIntensity: number;
+  imageOpacity: number;
 };
 
 function getResponsiveBackground(width: number, height: number): BackgroundPreset {
@@ -23,30 +22,30 @@ function getResponsiveBackground(width: number, height: number): BackgroundPrese
   const aspectRatio = longestSide / Math.max(Math.min(width, height), 1);
 
   if (isPortrait && width <= 430) {
-    return { source: backgroundMobile, contentPosition: 'top', blurIntensity: 14 };
+    return { source: backgroundMobile, contentPosition: 'top', imageOpacity: 0.2 };
   }
 
   if (isPortrait && width <= 1024) {
-    return { source: backgroundTablet, contentPosition: 'top', blurIntensity: 12 };
+    return { source: backgroundTablet, contentPosition: 'top', imageOpacity: 0.22 };
   }
 
   if (aspectRatio >= 2.1 && longestSide >= 2560) {
-    return { source: backgroundUltrawide, contentPosition: 'center', blurIntensity: 16 };
+    return { source: backgroundUltrawide, contentPosition: 'center', imageOpacity: 0.25 };
   }
 
   if (longestSide >= 3441) {
-    return { source: background4k, contentPosition: 'center', blurIntensity: 18 };
+    return { source: background4k, contentPosition: 'center', imageOpacity: 0.25 };
   }
 
   if (longestSide >= 1921) {
-    return { source: background2k, contentPosition: 'center', blurIntensity: 16 };
+    return { source: background2k, contentPosition: 'center', imageOpacity: 0.25 };
   }
 
   if (longestSide >= 1441) {
-    return { source: backgroundFhd, contentPosition: 'center', blurIntensity: 12 };
+    return { source: backgroundFhd, contentPosition: 'center', imageOpacity: 0.24 };
   }
 
-  return { source: backgroundLaptop, contentPosition: isPortrait ? 'top' : 'center', blurIntensity: 10 };
+  return { source: backgroundLaptop, contentPosition: isPortrait ? 'top' : 'center', imageOpacity: 0.23 };
 }
 
 export function AppBackground({ children }: PropsWithChildren) {
@@ -61,9 +60,8 @@ export function AppBackground({ children }: PropsWithChildren) {
           source={background.source}
           contentFit="cover"
           contentPosition={background.contentPosition}
-          style={styles.image}
+          style={[styles.image, { opacity: background.imageOpacity }]}
         />
-        <BlurView intensity={background.blurIntensity} tint="light" style={styles.blurLayer} />
       </View>
       <View style={styles.content}>{children}</View>
     </View>
@@ -83,10 +81,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
   },
   image: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.985,
-  },
-  blurLayer: {
     ...StyleSheet.absoluteFillObject,
   },
   content: {
