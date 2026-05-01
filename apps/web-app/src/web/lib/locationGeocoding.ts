@@ -88,7 +88,7 @@ export async function searchAstanaAddresses(
   const results = (await response.json()) as NominatimSearchResult[];
 
   return results
-    .map((result) => {
+    .map((result): GeocodedAddressSuggestion | null => {
       const lat = Number(result.lat);
       const lng = Number(result.lon);
 
@@ -102,9 +102,9 @@ export async function searchAstanaAddresses(
         secondaryLabel: buildSecondaryLabel(result),
         lat,
         lng,
-      } satisfies GeocodedAddressSuggestion;
+      };
     })
-    .filter((result): result is GeocodedAddressSuggestion => Boolean(result));
+    .filter((result): result is GeocodedAddressSuggestion => result !== null);
 }
 
 export async function reverseGeocodeAstanaPoint(

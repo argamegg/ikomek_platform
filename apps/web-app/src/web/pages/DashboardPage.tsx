@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Bell, MapPinned, WalletCards } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -37,6 +37,10 @@ export function DashboardPage() {
       saved: savedLocationsQuery.data?.length ?? 0,
     };
   }, [myRequestsQuery.data, savedLocationsQuery.data?.length]);
+
+  useEffect(() => {
+    console.log("Dashboard loaded");
+  }, []);
 
   return (
     <div className="page-stack">
@@ -146,6 +150,5 @@ export function DashboardPage() {
         </Card>
       </div>
     </div>
-    console.log("Dashboard loaded");
   );
 }
