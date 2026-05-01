@@ -148,6 +148,8 @@
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
 				C510C5CDDFE34B6D8C41369D /* Remove signature files (Xcode workaround) */,
 				457D76CB3D77DDE66BF41D6C /* [CP] Embed Pods Frameworks */,
+				236824B821B94DB6B801E525 /* Remove signature files (Xcode workaround) */,
+				1271282D36214FA5913FB048 /* Remove signature files (Xcode workaround) */,
 			);
 			buildRules = (
 			);
@@ -349,6 +351,40 @@
 			shellPath = /bin/sh;
 			shellScript = "\n          echo \"Remove signature files (Xcode workaround)\";\n          rm -rf \"$CONFIGURATION_BUILD_DIR/MapLibre.xcframework-ios.signature\";\n        ";
 		};
+		236824B821B94DB6B801E525 /* Remove signature files (Xcode workaround) */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Remove signature files (Xcode workaround)";
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			shellPath = /bin/sh;
+			shellScript = "
+          echo \"Remove signature files (Xcode workaround)\";
+          rm -rf \"$CONFIGURATION_BUILD_DIR/MapLibre.xcframework-ios.signature\";
+        ";
+		};
+		1271282D36214FA5913FB048 /* Remove signature files (Xcode workaround) */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Remove signature files (Xcode workaround)";
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			shellPath = /bin/sh;
+			shellScript = "
+          echo \"Remove signature files (Xcode workaround)\";
+          rm -rf \"$CONFIGURATION_BUILD_DIR/MapLibre.xcframework-ios.signature\";
+        ";
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -391,7 +427,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = com.anonymous.ikomekmobileapp;
-				PRODUCT_NAME = iKOMEKMobileApp;
+				PRODUCT_NAME = "iKOMEKMobileApp";
 				SWIFT_OBJC_BRIDGING_HEADER = "iKOMEKMobileApp/iKOMEKMobileApp-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -425,7 +461,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = com.anonymous.ikomekmobileapp;
-				PRODUCT_NAME = iKOMEKMobileApp;
+				PRODUCT_NAME = "iKOMEKMobileApp";
 				SWIFT_OBJC_BRIDGING_HEADER = "iKOMEKMobileApp/iKOMEKMobileApp-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

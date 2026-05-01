@@ -28,6 +28,7 @@
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="ikomek-mobile"/>
+        <data android:scheme="exp+ikomek-mobile-app"/>
       </intent-filter>
     </activity>
   </application>
