@@ -150,6 +150,10 @@
 				457D76CB3D77DDE66BF41D6C /* [CP] Embed Pods Frameworks */,
 				236824B821B94DB6B801E525 /* Remove signature files (Xcode workaround) */,
 				1271282D36214FA5913FB048 /* Remove signature files (Xcode workaround) */,
+				332612575FE54F81B1B54411 /* Remove signature files (Xcode workaround) */,
+				B9697EDDD47F42998672F4F2 /* Remove signature files (Xcode workaround) */,
+				C91BBE55FF9846C3A74A76D4 /* Remove signature files (Xcode workaround) */,
+				3DE7B4209D5440F49E436464 /* Remove signature files (Xcode workaround) */,
 			);
 			buildRules = (
 			);
@@ -385,6 +389,74 @@
           rm -rf \"$CONFIGURATION_BUILD_DIR/MapLibre.xcframework-ios.signature\";
         ";
 		};
+		332612575FE54F81B1B54411 /* Remove signature files (Xcode workaround) */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Remove signature files (Xcode workaround)";
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			shellPath = /bin/sh;
+			shellScript = "
+          echo \"Remove signature files (Xcode workaround)\";
+          rm -rf \"$CONFIGURATION_BUILD_DIR/MapLibre.xcframework-ios.signature\";
+        ";
+		};
+		B9697EDDD47F42998672F4F2 /* Remove signature files (Xcode workaround) */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Remove signature files (Xcode workaround)";
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			shellPath = /bin/sh;
+			shellScript = "
+          echo \"Remove signature files (Xcode workaround)\";
+          rm -rf \"$CONFIGURATION_BUILD_DIR/MapLibre.xcframework-ios.signature\";
+        ";
+		};
+		C91BBE55FF9846C3A74A76D4 /* Remove signature files (Xcode workaround) */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Remove signature files (Xcode workaround)";
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			shellPath = /bin/sh;
+			shellScript = "
+          echo \"Remove signature files (Xcode workaround)\";
+          rm -rf \"$CONFIGURATION_BUILD_DIR/MapLibre.xcframework-ios.signature\";
+        ";
+		};
+		3DE7B4209D5440F49E436464 /* Remove signature files (Xcode workaround) */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Remove signature files (Xcode workaround)";
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			shellPath = /bin/sh;
+			shellScript = "
+          echo \"Remove signature files (Xcode workaround)\";
+          rm -rf \"$CONFIGURATION_BUILD_DIR/MapLibre.xcframework-ios.signature\";
+        ";
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -427,7 +499,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = com.anonymous.ikomekmobileapp;
-				PRODUCT_NAME = "iKOMEKMobileApp";
+				PRODUCT_NAME = "ikomek109";
 				SWIFT_OBJC_BRIDGING_HEADER = "iKOMEKMobileApp/iKOMEKMobileApp-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -461,7 +533,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = com.anonymous.ikomekmobileapp;
-				PRODUCT_NAME = "iKOMEKMobileApp";
+				PRODUCT_NAME = "ikomek109";
 				SWIFT_OBJC_BRIDGING_HEADER = "iKOMEKMobileApp/iKOMEKMobileApp-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

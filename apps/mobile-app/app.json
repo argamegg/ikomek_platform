@@ -1,17 +1,25 @@
 {
   "expo": {
-    "name": "iKOMEK Mobile App",
-    "slug": "ikomek-mobile-app",
+    "name": "ikomek109",
+    "slug": "ikomek109",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "ikomek-mobile",
+    "icon": "./assets/images/app-icon.png",
+    "scheme": "ikomek109",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
+      "bundleDisplayName": "ikomek109",
+      "icon": "./assets/images/app-icon.png",
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.ikomekmobileapp"
     },
     "android": {
+      "name": "ikomek109",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/app-icon.png",
+        "backgroundColor": "#000000"
+      },
       "edgeToEdgeEnabled": true,
       "package": "com.anonymous.ikomekmobileapp"
     },

@@ -7,7 +7,7 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
     <key>CFBundleDisplayName</key>
-    <string>iKOMEK Mobile App</string>
+    <string>ikomek109</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>
@@ -27,14 +27,14 @@
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
-          <string>ikomek-mobile</string>
+          <string>ikomek109</string>
           <string>com.anonymous.ikomekmobileapp</string>
         </array>
       </dict>
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
-          <string>exp+ikomek-mobile-app</string>
+          <string>exp+ikomek109</string>
         </array>
       </dict>
     </array>
