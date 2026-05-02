@@ -71,7 +71,7 @@ export function NewsCard({ news, onPress }: NewsCardProps) {
   const borderColor = getBorderColor(period.start, period.end);
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.92}>
+    <View style={styles.card}>
       <View style={[styles.sideAccent, { backgroundColor: borderColor }]} />
       <ScrollView
         horizontal
@@ -79,9 +79,8 @@ export function NewsCard({ news, onPress }: NewsCardProps) {
         scrollEventThrottle={16}
         decelerationRate="fast"
         snapToAlignment="start"
+        nestedScrollEnabled
         contentContainerStyle={styles.typeScrollContent}
-        onStartShouldSetResponder={() => true}
-        onTouchEnd={(event) => event.stopPropagation()}
       >
         {types.map((type, index) => {
           const meta = getNewsTypeMeta(type);
@@ -103,33 +102,35 @@ export function NewsCard({ news, onPress }: NewsCardProps) {
         })}
       </ScrollView>
 
-      <Text style={styles.title} numberOfLines={2}>
-        {title}
-      </Text>
-      <Text style={styles.preview} numberOfLines={3}>
-        {content}
-      </Text>
+      <TouchableOpacity style={styles.contentPressArea} onPress={onPress} activeOpacity={0.92}>
+        <Text style={styles.title} numberOfLines={2}>
+          {title}
+        </Text>
+        <Text style={styles.preview} numberOfLines={3}>
+          {content}
+        </Text>
 
-      <View style={styles.footer}>
-        {periodLabel ? (
-          <View style={styles.footerItem}>
-            <MaterialCommunityIcons
-              name="clock-outline"
-              size={sizes.footerIconSize}
-              color="#7C8798"
-            />
-            <Text style={styles.footerText} numberOfLines={1}>
-              {periodLabel}
-            </Text>
+        <View style={styles.footer}>
+          {periodLabel ? (
+            <View style={styles.footerItem}>
+              <MaterialCommunityIcons
+                name="clock-outline"
+                size={sizes.footerIconSize}
+                color="#7C8798"
+              />
+              <Text style={styles.footerText} numberOfLines={1}>
+                {periodLabel}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.footerSpacer} />
+          )}
+          <View style={styles.categoryChip}>
+            <Text style={styles.categoryChipText}>{category}</Text>
           </View>
-        ) : (
-          <View style={styles.footerSpacer} />
-        )}
-        <View style={styles.categoryChip}>
-          <Text style={styles.categoryChipText}>{category}</Text>
         </View>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -186,6 +187,9 @@ function createStyles(sizes: ReturnType<typeof getNewsCardSizes>) {
     typeBlockMeta: {
       minWidth: 0,
       gap: 4,
+    },
+    contentPressArea: {
+      gap: sizes.gap,
     },
     typeLabel: {
       fontSize: sizes.typeLabelSize,
