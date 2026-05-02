@@ -168,13 +168,11 @@ export function NewsPage() {
           <div className="news-grid news-grid--enhanced">
             {items.map((item) => {
               const types = getNewsTypes(item);
-              const primaryType = types[0];
-              const primaryMeta = getNewsTypeMeta(primaryType);
               const category = getNewsCategory(item);
               const preview = getPreviewText(item);
               const period = formatNewsPeriod(item, activeLocale);
               const borderColor = getBorderColor(item.startAt, item.endAt);
-              const Icon = primaryMeta.icon;
+              const createdAtLabel = formatDate(item.publishedAt || item.startAt, activeLocale);
 
               return (
                 <Card
@@ -187,42 +185,28 @@ export function NewsPage() {
                     style={{ backgroundColor: borderColor }}
                     aria-hidden="true"
                   />
-                  <div className="news-card__head">
-                    <div className="news-card__type">
-                      <span
-                        className="news-card__type-icon"
-                        style={{ backgroundColor: `${primaryMeta.color}16`, color: primaryMeta.color }}
-                      >
-                        <Icon size={20} />
-                      </span>
-                      <div>
-                        <strong style={{ color: primaryMeta.color }}>{primaryType}</strong>
-                        <time>{formatDate(item.publishedAt || item.startAt, activeLocale)}</time>
-                      </div>
-                    </div>
-                  </div>
-
-                  {types.length > 1 ? (
-                    <div className="news-card-types">
-                      {types.slice(1).map((type) => {
-                        const meta = getNewsTypeMeta(type);
-                        const TypeIcon = meta.icon;
-                        return (
+                  <div className="news-card-types">
+                    {types.map((type, index) => {
+                      const meta = getNewsTypeMeta(type);
+                      const TypeIcon = meta.icon;
+                      return (
+                        <div key={`${item.id}-${type}-${index}`} className="news-card-type-block">
                           <span
-                            key={`${item.id}-${type}`}
-                            className="news-type-chip"
-                            style={{
-                              backgroundColor: `${meta.color}14`,
-                              color: meta.color,
-                            }}
+                            className="news-card__type-icon"
+                            style={{ backgroundColor: `${meta.color}16`, color: meta.color }}
                           >
-                            <TypeIcon size={14} />
-                            {type}
+                            <TypeIcon size={20} />
                           </span>
-                        );
-                      })}
-                    </div>
-                  ) : null}
+                          <div className="news-card-type-meta">
+                            <span className="type-name" style={{ color: meta.color }}>
+                              {type}
+                            </span>
+                            {index === 0 ? <span className="type-date">{createdAtLabel}</span> : null}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
 
                   <h3>{item.title}</h3>
                   <p>{preview}</p>

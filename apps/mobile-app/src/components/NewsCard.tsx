@@ -62,52 +62,41 @@ export function NewsCard({ news, onPress }: NewsCardProps) {
   const sizes = useMemo(() => getNewsCardSizes(isTablet), [isTablet]);
   const styles = useMemo(() => createStyles(sizes), [sizes]);
   const types = useMemo(() => getNewsTypes(news), [news]);
-  const primaryType = types[0];
-  const primaryMeta = getNewsTypeMeta(primaryType);
   const category = getNewsCategory(news);
   const period = getNewsPeriod(news);
   const title = getLocalizedText(news, 'title', i18n.language);
   const content = getLocalizedText(news, 'content', i18n.language);
-  const otherTypes = types.slice(1);
+  const formattedCreatedAt = formatDateLabel(news.created_at);
   const periodLabel = formatPeriodLabel(period.start, period.end);
   const borderColor = getBorderColor(period.start, period.end);
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.92}>
       <View style={[styles.sideAccent, { backgroundColor: borderColor }]} />
-      <View style={styles.headerRow}>
-        <View style={styles.headerMain}>
-          <View style={[styles.iconWrap, { backgroundColor: primaryMeta.color }]}>
-            <MaterialCommunityIcons name={primaryMeta.icon} size={sizes.iconSize} color="#FFFFFF" />
-          </View>
-          <View style={styles.headerText}>
-            <Text style={[styles.typeLabel, { color: primaryMeta.color }]} numberOfLines={1}>
-              {primaryType}
-            </Text>
-            <Text style={styles.dateLabel}>{formatDateLabel(news.created_at)}</Text>
-          </View>
-        </View>
-      </View>
-
-      {otherTypes.length > 0 ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.typeDotsRow}
-        >
-          {otherTypes.map((type) => {
-            const meta = getNewsTypeMeta(type);
-            return (
-              <View key={`${news.id}-${type}`} style={[styles.typeDotBadge, { borderColor: `${meta.color}33` }]}>
-                <MaterialCommunityIcons name={meta.icon} size={sizes.typeIconSize} color={meta.color} />
-                <Text style={[styles.typeDotText, { color: meta.color }]} numberOfLines={1}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.typeScrollContent}
+      >
+        {types.map((type, index) => {
+          const meta = getNewsTypeMeta(type);
+          return (
+            <View key={`${news.id}-${type}-${index}`} style={styles.typeBlock}>
+              <View style={[styles.iconWrap, { backgroundColor: meta.color }]}>
+                <MaterialCommunityIcons name={meta.icon} size={sizes.iconSize} color="#FFFFFF" />
+              </View>
+              <View style={styles.typeBlockMeta}>
+                <Text style={[styles.typeLabel, { color: meta.color }]} numberOfLines={1}>
                   {type}
                 </Text>
+                {index === 0 ? (
+                  <Text style={styles.dateLabel}>{formattedCreatedAt}</Text>
+                ) : null}
               </View>
-            );
-          })}
-        </ScrollView>
-      ) : null}
+            </View>
+          );
+        })}
+      </ScrollView>
 
       <Text style={styles.title} numberOfLines={2}>
         {title}
@@ -162,17 +151,18 @@ function createStyles(sizes: ReturnType<typeof getNewsCardSizes>) {
       borderTopRightRadius: 999,
       borderBottomRightRadius: 999,
     },
-    headerRow: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      justifyContent: 'space-between',
-      gap: sizes.headerGap,
-    },
-    headerMain: {
+    typeScrollContent: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: sizes.headerGap,
-      flex: 1,
+      paddingRight: sizes.headerGap,
+    },
+    typeBlock: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: sizes.headerGap,
+      flexShrink: 0,
+      minWidth: 0,
     },
     iconWrap: {
       width: sizes.iconWrapSize,
@@ -186,8 +176,7 @@ function createStyles(sizes: ReturnType<typeof getNewsCardSizes>) {
       shadowRadius: 14,
       elevation: 2,
     },
-    headerText: {
-      flex: 1,
+    typeBlockMeta: {
       minWidth: 0,
       gap: 4,
     },
@@ -211,26 +200,6 @@ function createStyles(sizes: ReturnType<typeof getNewsCardSizes>) {
     categoryChipText: {
       fontSize: sizes.categoryChipTextSize,
       color: '#FFFFFF',
-      fontWeight: '700',
-    },
-    typeDotsRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: sizes.typeBadgeGap,
-      paddingRight: 4,
-    },
-    typeDotBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: sizes.typeBadgeGap,
-      paddingHorizontal: sizes.typeBadgeHorizontal,
-      paddingVertical: sizes.typeBadgeVertical,
-      borderRadius: 999,
-      backgroundColor: '#F8FAFC',
-      borderWidth: 1,
-    },
-    typeDotText: {
-      fontSize: sizes.typeDotTextSize,
       fontWeight: '700',
     },
     title: {
