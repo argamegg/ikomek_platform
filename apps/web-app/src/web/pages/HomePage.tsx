@@ -804,22 +804,24 @@ export function HomePage() {
                       <div className="home-news__summary">
                         <p>{getNewsPreview(item)}</p>
                       </div>
-                      <div className="home-news__type-chips">
-                        {types.map((type) => {
-                          const meta = getNewsTypeMeta(type);
-                          const TypeIcon = meta.icon;
-                          return (
-                            <span
-                              key={`${item.id}-${type}`}
-                              className="news-type-chip"
-                              style={{ backgroundColor: `${meta.color}14`, color: meta.color }}
-                            >
-                              <TypeIcon size={14} />
-                              {type}
-                            </span>
-                          );
-                        })}
-                      </div>
+                      {types.length > 1 ? (
+                        <div className="home-news__type-chips">
+                          {types.slice(1).map((type) => {
+                            const meta = getNewsTypeMeta(type);
+                            const TypeIcon = meta.icon;
+                            return (
+                              <span
+                                key={`${item.id}-${type}`}
+                                className="news-type-chip"
+                                style={{ backgroundColor: `${meta.color}14`, color: meta.color }}
+                              >
+                                <TypeIcon size={14} />
+                                {type}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      ) : null}
                       {period ? (
                         <div className="home-news__meta">
                           <span>

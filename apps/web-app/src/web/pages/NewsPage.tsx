@@ -202,9 +202,9 @@ export function NewsPage() {
                     </div>
                   </div>
 
-                  {types.length > 0 ? (
+                  {types.length > 1 ? (
                     <div className="news-type-chips">
-                      {types.map((type) => {
+                      {types.slice(1).map((type) => {
                         const meta = getNewsTypeMeta(type);
                         const TypeIcon = meta.icon;
                         return (

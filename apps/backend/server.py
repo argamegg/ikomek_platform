@@ -24,6 +24,7 @@ from email.message import EmailMessage
 from email.utils import formataddr
 
 from geo import REQUEST_OUT_OF_ZONE_ERROR, is_within_astana_request_zone
+from news_fixtures import build_news_fixtures
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -196,7 +197,14 @@ class NewsItem(BaseModel):
     content_ru: str
     content_kz: str
     category: str
+    types: List[str] = []
+    summary: Optional[str] = None
+    location: Optional[str] = None
     image: Optional[str] = None
+    start_at: Optional[datetime] = None
+    end_at: Optional[datetime] = None
+    period_start: Optional[datetime] = None
+    period_end: Optional[datetime] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     is_active: bool = True
 
@@ -208,7 +216,14 @@ class NewsCreate(BaseModel):
     content_ru: str
     content_kz: str
     category: str
+    types: List[str] = []
+    summary: Optional[str] = None
+    location: Optional[str] = None
     image: Optional[str] = None
+    start_at: Optional[datetime] = None
+    end_at: Optional[datetime] = None
+    period_start: Optional[datetime] = None
+    period_end: Optional[datetime] = None
 
 class StatusUpdate(BaseModel):
     status: str
@@ -1100,47 +1115,7 @@ async def seed_demo_data():
     await db.requests.insert_many(requests_to_insert)
     
     # Create demo news
-    news_items = [
-        {
-            "id": str(uuid.uuid4()),
-            "title": "Water shutdown in Saryarka district",
-            "title_ru": "Отключение воды в районе Сарыарка",
-            "title_kz": "Сарыарқа ауданында су уақытша өшіріледі",
-            "content": "Water service will be paused in Saryarka on July 15 from 9:00 to 17:00 for scheduled maintenance.",
-            "content_ru": "Подача воды в районе Сарыарка будет временно остановлена 15 июля с 9:00 до 17:00 из-за плановых работ.",
-            "content_kz": "Сарыарқа ауданында су беру 15 шілде күні сағат 9:00-ден 17:00-ге дейін жоспарлы жұмыстарға байланысты тоқтатылады.",
-            "category": "warning",
-            "image": None,
-            "created_at": datetime.utcnow() - timedelta(days=1),
-            "is_active": True
-        },
-        {
-            "id": str(uuid.uuid4()),
-            "title": "Republic Avenue closed for repairs",
-            "title_ru": "Перекрытие проспекта Республики",
-            "title_kz": "Республика даңғылы жөндеуге жабылады",
-            "content": "Republic Avenue is temporarily closed while emergency road repairs are underway.",
-            "content_ru": "Проспект Республики временно перекрыт, пока на участке ведутся экстренные дорожные работы.",
-            "content_kz": "Республика даңғылы учаскеде шұғыл жол жөндеу жұмыстары жүргізілгенше уақытша жабық болады.",
-            "category": "critical",
-            "image": None,
-            "created_at": datetime.utcnow() - timedelta(hours=5),
-            "is_active": True
-        },
-        {
-            "id": str(uuid.uuid4()),
-            "title": "New recycling points open across the city",
-            "title_ru": "Открыты новые пункты переработки",
-            "title_kz": "Қала бойынша жаңа қайта өңдеу пункттері ашылды",
-            "content": "Residents can now use 10 new recycling collection points opened across the city.",
-            "content_ru": "Жители теперь могут пользоваться 10 новыми пунктами сбора вторсырья, открытыми по всему городу.",
-            "content_kz": "Тұрғындар енді қала бойынша ашылған 10 жаңа қайта өңдеу қабылдау пунктін пайдалана алады.",
-            "category": "info",
-            "image": None,
-            "created_at": datetime.utcnow() - timedelta(days=3),
-            "is_active": True
-        }
-    ]
+    news_items = build_news_fixtures(datetime.utcnow())
     await db.news.insert_many(news_items)
     
     return {
