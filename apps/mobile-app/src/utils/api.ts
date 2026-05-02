@@ -97,6 +97,22 @@ export interface SavedLocation {
   created_at: string;
 }
 
+export type NewsType =
+  | 'Аварийные работы'
+  | 'Погодные условия'
+  | 'Плановые работы'
+  | 'Дорожные ситуации'
+  | 'Управление образования'
+  | 'Мероприятия города';
+
+export type NewsCategory =
+  | 'Дороги'
+  | 'Коммунальные услуги'
+  | 'Транспорт'
+  | 'Образование'
+  | 'Погода'
+  | 'Благоустройство';
+
 export interface NewsItem {
   id: string;
   title: string;
@@ -105,8 +121,16 @@ export interface NewsItem {
   content: string;
   content_ru: string;
   content_kz: string;
-  category: 'critical' | 'warning' | 'info';
+  category: NewsCategory | 'critical' | 'warning' | 'info' | string;
+  types?: NewsType[] | string[];
+  type?: NewsType | string;
   image?: string;
+  summary?: string;
+  location?: string;
+  start_at?: string;
+  end_at?: string;
+  period_start?: string;
+  period_end?: string;
   created_at: string;
   is_active: boolean;
 }
@@ -200,7 +224,13 @@ export const apiService = {
   createNews: (data: {
     title: string; title_ru: string; title_kz: string;
     content: string; content_ru: string; content_kz: string;
-    category: string; image?: string;
+    category: string;
+    types: string[];
+    image?: string;
+    location?: string;
+    start_at?: string;
+    end_at?: string;
+    summary?: string;
   }) => api.post<NewsItem>('/admin/news', data),
   deleteNews: (id: string) => api.delete(`/admin/news/${id}`),
 

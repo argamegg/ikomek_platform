@@ -143,8 +143,22 @@ export type CivicRequest = {
 export type NewsItem = {
   id: string;
   title: string;
-  category: string;
-  priority: RequestPriority;
+  category:
+    | "Дороги"
+    | "Коммунальные услуги"
+    | "Транспорт"
+    | "Образование"
+    | "Погода"
+    | "Благоустройство";
+  types: Array<
+    | "Аварийные работы"
+    | "Погодные условия"
+    | "Плановые работы"
+    | "Дорожные ситуации"
+    | "Управление образования"
+    | "Мероприятия города"
+  >;
+  priority?: RequestPriority;
   summary: string;
   body: string;
   location?: string;
@@ -279,8 +293,8 @@ export type SavedLocationInput = {
 
 export type NewsCreateInput = {
   title: string;
-  category: string;
-  priority: RequestPriority;
+  category: NewsItem["category"];
+  types: NewsItem["types"];
   summary: string;
   body: string;
   location: string;

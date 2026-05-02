@@ -345,6 +345,7 @@ export const platformApi = {
   },
 
   async recoverPassword(_payload: PasswordRecoveryInput) {
+    void _payload;
     throw new Error("Password recovery is not available in the current backend yet.");
   },
 
@@ -402,7 +403,16 @@ export const platformApi = {
 
   async getAlerts(): Promise<NewsItem[]> {
     const items = await this.getNews();
-    return items.filter((item) => item.category === "critical" || item.category === "warning");
+    return items.filter((item) =>
+      item.types.some((type) =>
+        [
+          "Аварийные работы",
+          "Погодные условия",
+          "Плановые работы",
+          "Дорожные ситуации",
+        ].includes(type),
+      ),
+    );
   },
 
   async getPublicRequests(): Promise<CivicRequest[]> {
@@ -563,12 +573,13 @@ export const platformApi = {
   },
 
   async createNews(payload: NewsCreateInput) {
-    const category =
-      payload.priority === "critical" || payload.category === "critical"
+    const primaryType = payload.types[0];
+    const legacyPriority =
+      primaryType === "Аварийные работы"
         ? "critical"
-        : payload.priority === "warning" || payload.category === "warning"
+        : primaryType === "Плановые работы" || primaryType === "Дорожные ситуации"
           ? "warning"
-          : "info";
+          : "information";
     const content = payload.body || payload.summary;
     const response = await platformClient.post("/admin/news", {
       title: payload.title,
@@ -577,7 +588,14 @@ export const platformApi = {
       content,
       content_ru: content,
       content_kz: content,
-      category,
+      category: payload.category,
+      types: payload.types,
+      type: primaryType,
+      priority: legacyPriority,
+      summary: payload.summary,
+      location: payload.location,
+      start_at: payload.startAt,
+      end_at: payload.endAt,
     });
     return normalizeNews(response.data);
   },

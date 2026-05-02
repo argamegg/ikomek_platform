@@ -134,10 +134,17 @@ export function DashboardPage() {
           <div className="news-stack">
             {(alertsQuery.data ?? []).slice(0, 2).map((item) => (
               <article key={item.id} className="news-stack__item">
-                <Badge tone={getPriorityTone(item.priority)}>{item.priority}</Badge>
+                <Badge tone={getPriorityTone(item.priority ?? "information")}>
+                  {item.priority ?? "information"}
+                </Badge>
                 <strong>{item.title}</strong>
                 <p>{item.summary}</p>
-                <span>{formatDate(item.startAt, i18n.language as "en" | "ru" | "kz")}</span>
+                <span>
+                  {formatDate(
+                    item.startAt || item.publishedAt || new Date().toISOString(),
+                    i18n.language as "en" | "ru" | "kz",
+                  )}
+                </span>
               </article>
             ))}
             {(notificationsQuery.data ?? []).slice(0, 2).map((notification) => (

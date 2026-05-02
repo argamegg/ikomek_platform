@@ -18,6 +18,7 @@ import type {
   User,
   UserRole,
 } from "../../types/platform";
+import { getNewsCategory, getNewsTypes } from "./newsMeta";
 import { session } from "./session";
 
 type JsonRecord = Record<string, unknown>;
@@ -381,13 +382,42 @@ export function normalizeNews(payload: unknown): NewsItem {
     ]),
     "",
   );
-  const category = asString(pick(record, ["category", "type"]), "info");
-  const priority = normalizePriority(category);
+  const rawCategory = asString(pick(record, ["category", "news_category", "topic"]), "");
+  const rawTypes = pick(record, ["types", "type", "labels"]);
+  const types = getNewsTypes({
+    category: rawCategory || asString(pick(record, ["category", "type"]), "info"),
+    type: typeof rawTypes === "string" ? rawTypes : undefined,
+    types: Array.isArray(rawTypes) ? rawTypes : undefined,
+    priority: pick(record, ["priority", "severity", "type", "category"]),
+  });
+  const category = getNewsCategory({
+    category: rawCategory,
+    type: typeof rawTypes === "string" ? rawTypes : undefined,
+    types: Array.isArray(rawTypes) ? rawTypes : undefined,
+    priority: pick(record, ["priority", "severity", "type", "category"]),
+  });
+  const fallbackPriority =
+    types[0] === "Аварийные работы"
+      ? "critical"
+      : types[0] === "Плановые работы" || types[0] === "Дорожные ситуации"
+        ? "warning"
+        : "information";
+  const rawPriority = normalizePriority(pick(record, ["priority", "severity"]));
+  const priority =
+    rawPriority === "critical" ||
+    rawPriority === "warning" ||
+    rawPriority === "information" ||
+    rawPriority === "high" ||
+    rawPriority === "medium" ||
+    rawPriority === "low"
+      ? rawPriority
+      : fallbackPriority;
 
   return {
     id: asString(pick(record, ["id", "newsId", "uuid"]), crypto.randomUUID()),
     title: asString(pick(record, localizedKeys("title", locale)), "City update"),
     category,
+    types,
     priority,
     summary: asString(
       pick(record, [

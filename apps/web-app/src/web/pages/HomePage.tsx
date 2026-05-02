@@ -6,9 +6,11 @@ import {
   BellRing,
   CircleHelp,
   CheckCircle2,
+  Clock3,
   Droplets,
   Flame,
   MapPinned,
+  MapPin,
   Map,
   Radar,
   ShieldCheck,
@@ -19,12 +21,14 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import type { NewsItem } from "../../types/platform";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { Modal } from "../components/ui/Modal";
 import { Skeleton } from "../components/ui/Skeleton";
 import { IssueMap } from "../components/maps/IssueMap";
-import { formatDate, formatRelativeTime, getPriorityTone, getStatusTone } from "../lib/format";
+import { formatDate, formatRelativeTime, getStatusTone } from "../lib/format";
+import { getNewsCategory, getNewsTypeMeta, getNewsTypes, NEWS_CATEGORY_COLOR } from "../lib/newsMeta";
 import { platformApi, queryKeys } from "../services/platformApi";
 
 function CountUpNumber({ value }: { value: number }) {
@@ -286,24 +290,18 @@ export function HomePage() {
     }
   };
 
-  const getSeverityLabel = (priority?: string) => {
-    switch ((priority ?? "").toLowerCase()) {
-      case "critical":
-        return t("home.severity.critical");
-      case "high":
-        return t("home.severity.high");
-      case "warning":
-        return t("home.severity.warning");
-      case "medium":
-        return t("home.severity.medium");
-      case "information":
-        return t("home.severity.information");
-      case "low":
-        return t("home.severity.low");
-      default:
-        return priority ?? t("home.severity.unknown");
+  const getNewsPeriod = (item: NewsItem) => {
+    const start = item.startAt || item.publishedAt;
+    if (!start) {
+      return "";
     }
+
+    const startLabel = formatDate(start, i18n.language as "en" | "ru" | "kz");
+    const endLabel = item.endAt ? formatDate(item.endAt, i18n.language as "en" | "ru" | "kz") : "";
+    return endLabel ? `${startLabel} - ${endLabel}` : startLabel;
   };
+
+  const getNewsPreview = (item: NewsItem) => item.summary || item.body;
 
   const getLocalizedRequestStatus = (status?: string) => {
     const normalized = (status ?? "").toLowerCase();
@@ -489,17 +487,43 @@ export function HomePage() {
             </div>
             <div className="home-hero__visual-strip">
               {featuredUpdates.slice(0, 3).map((item, index) => (
-                <motion.article
-                  key={item.id}
-                  className="home-hero__signal"
-                  initial={{ opacity: 0, y: 18 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.22 + index * 0.08, duration: 0.45 }}
-                >
-                  <Badge tone={getPriorityTone(item.priority)}>{getSeverityLabel(item.priority)}</Badge>
-                  <strong>{item.title}</strong>
-                  <span>{formatRelativeTime(item.startAt, i18n.language as "en" | "ru" | "kz")}</span>
-                </motion.article>
+                (() => {
+                  const types = getNewsTypes(item);
+                  const primaryMeta = getNewsTypeMeta(types[0]);
+                  const category = getNewsCategory(item);
+                  const Icon = primaryMeta.icon;
+
+                  return (
+                    <motion.article
+                      key={item.id}
+                      className="home-hero__signal"
+                      initial={{ opacity: 0, y: 18 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.22 + index * 0.08, duration: 0.45 }}
+                    >
+                      <div className="home-hero__signal-top">
+                        <span
+                          className="home-hero__signal-type"
+                          style={{
+                            backgroundColor: `${primaryMeta.color}14`,
+                            color: primaryMeta.color,
+                          }}
+                        >
+                          <Icon size={14} />
+                          {types[0]}
+                        </span>
+                        <span
+                          className="home-hero__signal-category"
+                          style={{ backgroundColor: NEWS_CATEGORY_COLOR }}
+                        >
+                          {category}
+                        </span>
+                      </div>
+                      <strong>{item.title}</strong>
+                      <span>{formatRelativeTime(item.startAt, i18n.language as "en" | "ru" | "kz")}</span>
+                    </motion.article>
+                  );
+                })()
               ))}
             </div>
           </motion.div>
@@ -723,30 +747,81 @@ export function HomePage() {
 
         <div className="home-news__grid">
           {featuredUpdates.slice(0, 3).map((item, index) => (
-            <Link key={item.id} to="/news" className="home-news__link">
-              <motion.article
-                className={index === 0 ? "home-news__card home-news__card--featured" : "home-news__card"}
-                whileHover={{ y: -10, scale: 1.015 }}
-                transition={{ duration: 0.24 }}
-              >
-                <div className="home-news__image">
-                  <div className="home-news__image-glow" />
-                  <Badge tone={getPriorityTone(item.priority)}>{getSeverityLabel(item.priority)}</Badge>
-                </div>
-                <div className="home-news__body">
-                  <div className="home-news__title">
-                    <h3>{item.title}</h3>
-                  </div>
-                  <div className="home-news__summary">
-                    <p>{item.summary || item.body}</p>
-                  </div>
-                  <div className="home-news__meta">
-                    <span>{item.location || t("home.newsPreview.locationFallback")}</span>
-                    <time>{formatDate(item.startAt, i18n.language as "en" | "ru" | "kz")}</time>
-                  </div>
-                </div>
-              </motion.article>
-            </Link>
+            (() => {
+              const types = getNewsTypes(item);
+              const primaryMeta = getNewsTypeMeta(types[0]);
+              const category = getNewsCategory(item);
+              const Icon = primaryMeta.icon;
+              const period = getNewsPeriod(item);
+
+              return (
+                <Link key={item.id} to="/news" className="home-news__link">
+                  <motion.article
+                    className={index === 0 ? "home-news__card home-news__card--featured" : "home-news__card"}
+                    whileHover={{ y: -10, scale: 1.015 }}
+                    transition={{ duration: 0.24 }}
+                  >
+                    <div
+                      className="home-news__image"
+                      style={{
+                        background: `linear-gradient(135deg, ${primaryMeta.color}24 0%, rgba(255,255,255,0.98) 100%)`,
+                      }}
+                    >
+                      <div className="home-news__image-glow" />
+                      <div className="home-news__image-top">
+                        <span className="news-category-chip">{category}</span>
+                      </div>
+                      <div className="home-news__type-block">
+                        <span
+                          className="home-news__type-icon"
+                          style={{ backgroundColor: primaryMeta.color, color: "#fff" }}
+                        >
+                          <Icon size={24} />
+                        </span>
+                        <div>
+                          <strong style={{ color: primaryMeta.color }}>{types[0]}</strong>
+                          <time>{formatDate(item.startAt, i18n.language as "en" | "ru" | "kz")}</time>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="home-news__body">
+                      <div className="home-news__title">
+                        <h3>{item.title}</h3>
+                      </div>
+                      <div className="home-news__summary">
+                        <p>{getNewsPreview(item)}</p>
+                      </div>
+                      <div className="home-news__type-chips">
+                        {types.map((type) => {
+                          const meta = getNewsTypeMeta(type);
+                          const TypeIcon = meta.icon;
+                          return (
+                            <span
+                              key={`${item.id}-${type}`}
+                              className="news-type-chip"
+                              style={{ backgroundColor: `${meta.color}14`, color: meta.color }}
+                            >
+                              <TypeIcon size={14} />
+                              {type}
+                            </span>
+                          );
+                        })}
+                      </div>
+                      <div className="home-news__meta">
+                        <span>
+                          <Clock3 size={14} />
+                          {period || formatDate(item.startAt, i18n.language as "en" | "ru" | "kz")}
+                        </span>
+                        <span>
+                          <MapPin size={14} />
+                          {item.location || t("home.newsPreview.locationFallback")}
+                        </span>
+                      </div>
+                    </div>
+                  </motion.article>
+                </Link>
+              );
+            })()
           ))}
         </div>
       </motion.section>

@@ -1,56 +1,79 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  RefreshControl,
-  TouchableOpacity,
   ActivityIndicator,
-  Modal
+  FlatList,
+  Modal,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
-import { apiService, NewsItem } from '../../src/utils/api';
+import { NewsCard } from '../../src/components/NewsCard';
 import { useAuth } from '../../src/context/AuthContext';
+import { apiService, NewsItem } from '../../src/utils/api';
+import {
+  formatNewsRelativeTime,
+  getNewsCategory,
+  getNewsLocation,
+  getNewsPeriod,
+  getNewsTypeMeta,
+  getNewsTypes,
+  NEWS_CATEGORY_COLOR,
+  NEWS_CATEGORY_OPTIONS,
+} from '../../src/utils/newsMeta';
 
-const ORANGE = '#FF6B00';
+const ALL_CATEGORY = 'Все';
+const ORANGE = '#FB8C00';
 
-const CATEGORY_CONFIG = {
-  critical: {
-    icon: 'alert-circle' as const,
-    color: '#FF3B30',
-    bgColor: 'rgba(255, 59, 48, 0.1)'
-  },
-  warning: {
-    icon: 'warning' as const,
-    color: '#FF9500',
-    bgColor: 'rgba(255, 149, 0, 0.1)'
-  },
-  info: {
-    icon: 'information-circle' as const,
-    color: '#007AFF',
-    bgColor: 'rgba(0, 122, 255, 0.1)'
+function getLocalizedText(item: NewsItem, field: 'title' | 'content', language: string) {
+  const normalized = language.startsWith('kz') || language.startsWith('kk')
+    ? 'kz'
+    : language.startsWith('ru')
+      ? 'ru'
+      : 'en';
+  const localizedField = normalized === 'en' ? field : `${field}_${normalized}`;
+  return String((item as Record<string, unknown>)[localizedField] ?? item[field] ?? '');
+}
+
+function formatDetailPeriod(start?: string, end?: string) {
+  if (!start) {
+    return '';
   }
-};
+
+  const startDate = new Date(start);
+  const endDate = end ? new Date(end) : null;
+  if (Number.isNaN(startDate.getTime())) {
+    return '';
+  }
+
+  const startLabel = format(startDate, 'dd.MM.yyyy HH:mm');
+  if (!endDate || Number.isNaN(endDate.getTime())) {
+    return startLabel;
+  }
+
+  return `${startLabel} - ${format(endDate, 'dd.MM.yyyy HH:mm')}`;
+}
 
 export default function NewsScreen() {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const [news, setNews] = useState<NewsItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>(ALL_CATEGORY);
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
-  const [filter, setFilter] = useState<string | null>(null);
-  
-  const insets = useSafeAreaInsets();
-  const currentLang = user?.language || i18n.language || 'ru';
+  const currentLanguage = user?.language || i18n.language || 'ru';
 
   const fetchNews = useCallback(async () => {
     try {
-      const response = await apiService.getNews(filter || undefined);
+      const response = await apiService.getNews();
       setNews(response.data);
     } catch (error) {
       console.error('Error fetching news:', error);
@@ -58,97 +81,142 @@ export default function NewsScreen() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [filter]);
+  }, []);
 
   useEffect(() => {
     fetchNews();
   }, [fetchNews]);
 
-  const onRefresh = () => {
+  const categories = useMemo(() => [ALL_CATEGORY, ...NEWS_CATEGORY_OPTIONS], []);
+
+  const filteredNews = useMemo(() => {
+    if (selectedCategory === ALL_CATEGORY) {
+      return news;
+    }
+
+    return news.filter((item) => getNewsCategory(item) === selectedCategory);
+  }, [news, selectedCategory]);
+
+  const onRefresh = useCallback(() => {
     setIsRefreshing(true);
     fetchNews();
-  };
+  }, [fetchNews]);
 
-  const getLocalizedText = (item: NewsItem, field: 'title' | 'content') => {
-    const langSuffix = currentLang === 'en' ? '' : `_${currentLang}`;
-    const localizedField = langSuffix ? `${field}${langSuffix}` : field;
-    return (item as any)[localizedField] || item[field];
-  };
+  const renderHeader = () => (
+    <View style={styles.headerBlock}>
+      <Text style={styles.headerTitle}>{t('news.title')}</Text>
+      <Text style={styles.headerSubtitle}>{t('news.subtitle')}</Text>
 
-  const filters = [
-    { key: null, label: t('common.all'), icon: 'list' },
-    { key: 'critical', label: t('news.critical'), icon: 'alert-circle', color: '#FF3B30' },
-    { key: 'warning', label: t('news.warning'), icon: 'warning', color: '#FF9500' },
-    { key: 'info', label: t('news.info'), icon: 'information-circle', color: '#007AFF' }
-  ];
-
-  const renderNewsCard = ({ item }: { item: NewsItem }) => {
-    const config = CATEGORY_CONFIG[item.category as keyof typeof CATEGORY_CONFIG] || CATEGORY_CONFIG.info;
-    const title = getLocalizedText(item, 'title');
-    const content = getLocalizedText(item, 'content');
-
-    return (
-      <TouchableOpacity 
-        style={styles.newsCard} 
-        onPress={() => setSelectedNews(item)}
-        activeOpacity={0.8}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filtersRow}
       >
-        <View style={[styles.indicator, { backgroundColor: config.color }]} />
-        <View style={styles.newsContent}>
-          <View style={styles.newsHeader}>
-            <View style={[styles.badge, { backgroundColor: config.bgColor }]}>
-              <Ionicons name={config.icon} size={14} color={config.color} />
-              <Text style={[styles.badgeText, { color: config.color }]}>
-                {t(`news.${item.category}`)}
+        {categories.map((category) => {
+          const active = category === selectedCategory;
+          return (
+            <TouchableOpacity
+              key={category}
+              style={[styles.filterChip, active && styles.filterChipActive]}
+              onPress={() => setSelectedCategory(category)}
+              activeOpacity={0.9}
+            >
+              <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                {category}
               </Text>
-            </View>
-            <Text style={styles.newsDate}>
-              {format(new Date(item.created_at), 'dd.MM.yyyy')}
-            </Text>
-          </View>
-          <Text style={styles.newsTitle} numberOfLines={2}>{title}</Text>
-          <Text style={styles.newsPreview} numberOfLines={2}>{content}</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color="#C7C7CC" style={styles.chevron} />
-      </TouchableOpacity>
-    );
-  };
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
 
-  const renderNewsDetail = () => {
-    if (!selectedNews) return null;
-    
-    const config = CATEGORY_CONFIG[selectedNews.category as keyof typeof CATEGORY_CONFIG] || CATEGORY_CONFIG.info;
-    const title = getLocalizedText(selectedNews, 'title');
-    const content = getLocalizedText(selectedNews, 'content');
+  const renderDetailModal = () => {
+    if (!selectedNews) {
+      return null;
+    }
+
+    const types = getNewsTypes(selectedNews);
+    const primaryType = types[0];
+    const primaryMeta = getNewsTypeMeta(primaryType);
+    const category = getNewsCategory(selectedNews);
+    const location = getNewsLocation(selectedNews);
+    const period = getNewsPeriod(selectedNews);
+    const title = getLocalizedText(selectedNews, 'title', currentLanguage);
+    const content = getLocalizedText(selectedNews, 'content', currentLanguage);
+    const periodLabel = formatDetailPeriod(period.start, period.end);
 
     return (
-      <Modal visible={!!selectedNews} animationType="slide" presentationStyle="pageSheet">
-        <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setSelectedNews(null)} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color="#1C1C1E" />
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>{t('news.title')}</Text>
-            <View style={{ width: 44 }} />
-          </View>
-          
-          <View style={styles.modalContent}>
-            <View style={[styles.categoryBadge, { backgroundColor: `${config.color}15` }]}>
-              <Ionicons name={config.icon} size={16} color={config.color} />
-              <Text style={[styles.categoryText, { color: config.color }]}>
-                {t(`news.${selectedNews.category}`)}
-              </Text>
+      <Modal
+        visible
+        animationType="slide"
+        presentationStyle="pageSheet"
+        allowSwipeDismissal
+        onRequestClose={() => setSelectedNews(null)}
+      >
+        <View style={styles.modalScreen}>
+          <View style={[styles.modalColorBand, { backgroundColor: primaryMeta.color }]} />
+          <View style={[styles.modalHeader, { paddingTop: insets.top + 12 }]}>
+            <View style={[styles.modalIconWrap, { backgroundColor: primaryMeta.color }]}>
+              <MaterialCommunityIcons name={primaryMeta.icon} size={26} color="#FFFFFF" />
             </View>
-            
-            <Text style={styles.detailTitle}>{title}</Text>
-            <Text style={styles.detailDate}>
-              {format(new Date(selectedNews.created_at), 'dd MMMM yyyy, HH:mm')}
-            </Text>
-            
-            <View style={styles.divider} />
-            
-            <Text style={styles.detailContent}>{content}</Text>
+            <TouchableOpacity
+              onPress={() => setSelectedNews(null)}
+              style={styles.closeButton}
+              activeOpacity={0.8}
+            >
+              <MaterialCommunityIcons name="close" size={24} color="#111827" />
+            </TouchableOpacity>
           </View>
+
+          <ScrollView
+            style={styles.modalScroll}
+            contentContainerStyle={[styles.modalContent, { paddingBottom: insets.bottom + 32 }]}
+            showsVerticalScrollIndicator={false}
+          >
+            <Text style={styles.modalTitle}>{title}</Text>
+
+            <View style={styles.modalMetaRow}>
+              <View style={styles.modalTimeRow}>
+                <MaterialCommunityIcons name="clock-outline" size={15} color="#6B7280" />
+                <Text style={styles.modalMetaText}>{formatNewsRelativeTime(selectedNews.created_at)}</Text>
+              </View>
+              <View style={styles.modalCategoryChip}>
+                <Text style={styles.modalCategoryChipText}>{category}</Text>
+              </View>
+            </View>
+
+            <View style={styles.modalTypesRow}>
+              {types.map((type) => {
+                const meta = getNewsTypeMeta(type);
+                return (
+                  <View
+                    key={`${selectedNews.id}-${type}`}
+                    style={[styles.modalTypeChip, { backgroundColor: `${meta.color}14` }]}
+                  >
+                    <MaterialCommunityIcons name={meta.icon} size={15} color={meta.color} />
+                    <Text style={[styles.modalTypeChipText, { color: meta.color }]}>{type}</Text>
+                  </View>
+                );
+              })}
+            </View>
+
+            <Text style={styles.modalBodyText}>{content}</Text>
+
+            {periodLabel ? (
+              <View style={styles.detailInfoCard}>
+                <Text style={styles.detailInfoLabel}>Период</Text>
+                <Text style={styles.detailInfoValue}>{periodLabel}</Text>
+              </View>
+            ) : null}
+
+            {location ? (
+              <View style={styles.detailInfoCard}>
+                <Text style={styles.detailInfoLabel}>Локация</Text>
+                <Text style={styles.detailInfoValue}>{location}</Text>
+              </View>
+            ) : null}
+          </ScrollView>
         </View>
       </Modal>
     );
@@ -164,47 +232,27 @@ export default function NewsScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>{t('news.title')}</Text>
-        <Text style={styles.headerSubtitle}>{t('news.subtitle')}</Text>
-      </View>
-
-      <View style={styles.filterContainer}>
-        {filters.map((f) => (
-          <TouchableOpacity
-            key={f.key || 'all'}
-            style={[styles.filterButton, filter === f.key && styles.filterButtonActive]}
-            onPress={() => setFilter(f.key)}
-          >
-            <Ionicons
-              name={f.icon as any}
-              size={16}
-              color={filter === f.key ? '#FFF' : (f.color || '#8E8E93')}
-            />
-            <Text style={[styles.filterText, filter === f.key && styles.filterTextActive]}>
-              {f.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
       <FlatList
-        data={news}
+        data={filteredNews}
         keyExtractor={(item) => item.id}
-        renderItem={renderNewsCard}
+        renderItem={({ item }) => <NewsCard news={item} onPress={() => setSelectedNews(item)} />}
+        ListHeaderComponent={renderHeader}
+        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 120 }]}
+        ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={ORANGE} />
         }
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="newspaper-outline" size={48} color="#C7C7CC" />
-            <Text style={styles.emptyText}>{t('news.noNews')}</Text>
+          <View style={styles.emptyState}>
+            <MaterialCommunityIcons name="newspaper-variant-outline" size={52} color="#CBD5E1" />
+            <Text style={styles.emptyTitle}>Новостей пока нет</Text>
+            <Text style={styles.emptyText}>Попробуйте выбрать другую категорию или обновить список.</Text>
           </View>
         }
+        showsVerticalScrollIndicator={false}
       />
 
-      {renderNewsDetail()}
+      {renderDetailModal()}
     </View>
   );
 }
@@ -212,181 +260,195 @@ export default function NewsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent'
+    backgroundColor: 'transparent',
   },
   centered: {
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
   },
-  header: {
-    padding: 20,
-    paddingBottom: 12
+  listContent: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  headerBlock: {
+    gap: 14,
+    paddingBottom: 18,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1C1C1E'
+    fontSize: 30,
+    lineHeight: 34,
+    color: '#111827',
+    fontWeight: '800',
   },
   headerSubtitle: {
     fontSize: 15,
+    lineHeight: 21,
     color: '#475569',
     fontWeight: '500',
-    marginTop: 4
   },
-  filterContainer: {
-    flexDirection: 'row',
+  filtersRow: {
+    gap: 10,
+    paddingRight: 8,
+  },
+  filterChip: {
+    borderRadius: 999,
+    borderWidth: 1.5,
+    borderColor: ORANGE,
     paddingHorizontal: 16,
-    paddingBottom: 12,
-    gap: 8
+    paddingVertical: 10,
+    backgroundColor: 'rgba(255,255,255,0.88)',
   },
-  filterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    gap: 4
+  filterChipActive: {
+    backgroundColor: ORANGE,
   },
-  filterButtonActive: {
-    backgroundColor: ORANGE
-  },
-  filterText: {
+  filterChipText: {
     fontSize: 13,
-    color: '#8E8E93',
-    fontWeight: '500'
+    color: ORANGE,
+    fontWeight: '700',
   },
-  filterTextActive: {
-    color: '#FFF'
+  filterChipTextActive: {
+    color: '#FFFFFF',
   },
-  listContent: {
-    paddingTop: 4,
-    paddingHorizontal: 16
-  },
-  newsCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    overflow: 'hidden'
-  },
-  indicator: {
-    width: 4,
-    height: '100%',
-    position: 'absolute',
-    left: 0
-  },
-  newsContent: {
-    flex: 1,
-    padding: 16,
-    paddingLeft: 20
-  },
-  newsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    gap: 4
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '600'
-  },
-  newsDate: {
-    fontSize: 12,
-    color: '#8E8E93'
-  },
-  newsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1C1C1E',
-    marginBottom: 4
-  },
-  newsPreview: {
-    fontSize: 13,
-    color: '#8E8E93',
-    lineHeight: 18
-  },
-  chevron: {
-    marginRight: 12
-  },
-  emptyContainer: {
+  emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 60
+    gap: 8,
+    paddingVertical: 64,
+    paddingHorizontal: 20,
+  },
+  emptyTitle: {
+    fontSize: 17,
+    color: '#111827',
+    fontWeight: '700',
   },
   emptyText: {
-    fontSize: 16,
-    color: '#8E8E93',
-    marginTop: 12
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#64748B',
+    textAlign: 'center',
+    fontWeight: '500',
   },
-  modalContainer: {
+  modalScreen: {
     flex: 1,
-    backgroundColor: '#FFF'
+    backgroundColor: '#F8FAFC',
+  },
+  modalColorBand: {
+    height: 10,
+    width: '100%',
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F2F2F7'
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+  },
+  modalIconWrap: {
+    width: 54,
+    height: 54,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    elevation: 3,
   },
   closeButton: {
-    width: 44,
-    height: 44,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
   },
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#1C1C1E'
+  modalScroll: {
+    flex: 1,
   },
   modalContent: {
-    padding: 20
+    paddingHorizontal: 20,
+    gap: 18,
   },
-  categoryBadge: {
+  modalTitle: {
+    fontSize: 28,
+    lineHeight: 34,
+    color: '#111827',
+    fontWeight: '800',
+  },
+  modalMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginBottom: 16,
-    gap: 6
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 12,
   },
-  categoryText: {
-    fontSize: 13,
-    fontWeight: '600'
+  modalTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
-  detailTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1C1C1E',
-    marginBottom: 8
-  },
-  detailDate: {
+  modalMetaText: {
     fontSize: 14,
-    color: '#8E8E93'
+    color: '#6B7280',
+    fontWeight: '600',
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#F2F2F7',
-    marginVertical: 20
+  modalCategoryChip: {
+    backgroundColor: NEWS_CATEGORY_COLOR,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
   },
-  detailContent: {
+  modalCategoryChipText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  modalTypesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  modalTypeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  modalTypeChipText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  modalBodyText: {
     fontSize: 16,
-    color: '#3C3C43',
-    lineHeight: 24
-  }
+    lineHeight: 25,
+    color: '#334155',
+    fontWeight: '500',
+  },
+  detailInfoCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 6,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    elevation: 2,
+  },
+  detailInfoLabel: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  detailInfoValue: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#1F2937',
+    fontWeight: '600',
+  },
 });

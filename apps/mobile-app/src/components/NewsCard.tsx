@@ -1,115 +1,266 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useMemo } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
-import { NewsItem } from '../utils/api';
+import type { NewsItem } from '../utils/api';
+import {
+  getNewsCategory,
+  getNewsLocation,
+  getNewsPeriod,
+  getNewsTypeMeta,
+  getNewsTypes,
+  NEWS_CATEGORY_COLOR,
+} from '../utils/newsMeta';
 
-const CATEGORY_CONFIG = {
-  critical: {
-    icon: 'alert-circle' as const,
-    color: '#FF3B30',
-    bgColor: 'rgba(255, 59, 48, 0.1)'
-  },
-  warning: {
-    icon: 'warning' as const,
-    color: '#FF9500',
-    bgColor: 'rgba(255, 149, 0, 0.1)'
-  },
-  info: {
-    icon: 'information-circle' as const,
-    color: '#007AFF',
-    bgColor: 'rgba(0, 122, 255, 0.1)'
-  }
-};
-
-interface NewsCardProps {
+type NewsCardProps = {
   news: NewsItem;
   onPress: () => void;
+};
+
+function getLocalizedText(item: NewsItem, field: 'title' | 'content', language: string) {
+  const normalized = language.startsWith('kz') || language.startsWith('kk')
+    ? 'kz'
+    : language.startsWith('ru')
+      ? 'ru'
+      : 'en';
+  const localizedField = normalized === 'en' ? field : `${field}_${normalized}`;
+  return String((item as Record<string, unknown>)[localizedField] ?? item[field] ?? '');
 }
 
-export const NewsCard = ({ news, onPress }: NewsCardProps) => {
-  const { t } = useTranslation();
-  const config = CATEGORY_CONFIG[news.category] || CATEGORY_CONFIG.info;
+function formatDateLabel(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return 'Дата не указана';
+  }
+
+  return format(date, 'dd.MM.yyyy');
+}
+
+function formatPeriodLabel(start?: string, end?: string) {
+  if (!start) {
+    return '';
+  }
+
+  const startDate = new Date(start);
+  const endDate = end ? new Date(end) : null;
+  const startLabel = Number.isNaN(startDate.getTime()) ? '' : format(startDate, 'dd.MM HH:mm');
+  const endLabel =
+    endDate && !Number.isNaN(endDate.getTime()) ? format(endDate, 'dd.MM HH:mm') : '';
+
+  if (!startLabel) {
+    return '';
+  }
+
+  return endLabel ? `${startLabel} - ${endLabel}` : startLabel;
+}
+
+export function NewsCard({ news, onPress }: NewsCardProps) {
+  const { i18n } = useTranslation();
+  const types = useMemo(() => getNewsTypes(news), [news]);
+  const primaryType = types[0];
+  const primaryMeta = getNewsTypeMeta(primaryType);
+  const category = getNewsCategory(news);
+  const location = getNewsLocation(news);
+  const period = getNewsPeriod(news);
+  const title = getLocalizedText(news, 'title', i18n.language);
+  const content = getLocalizedText(news, 'content', i18n.language);
+  const otherTypes = types.slice(1);
+  const periodLabel = formatPeriodLabel(period.start, period.end);
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
-      <View style={[styles.indicator, { backgroundColor: config.color }]} />
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <View style={[styles.badge, { backgroundColor: config.bgColor }]}>
-            <Ionicons name={config.icon} size={14} color={config.color} />
-            <Text style={[styles.badgeText, { color: config.color }]}>{t(`news.${news.category}`)}</Text>
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.92}>
+      <View style={[styles.sideAccent, { backgroundColor: primaryMeta.color }]} />
+      <View style={styles.headerRow}>
+        <View style={styles.headerMain}>
+          <View style={[styles.iconWrap, { backgroundColor: primaryMeta.color }]}>
+            <MaterialCommunityIcons name={primaryMeta.icon} size={26} color="#FFFFFF" />
           </View>
-          <Text style={styles.date}>
-            {format(new Date(news.created_at), 'dd.MM.yyyy')}
-          </Text>
+          <View style={styles.headerText}>
+            <Text style={[styles.typeLabel, { color: primaryMeta.color }]} numberOfLines={1}>
+              {primaryType}
+            </Text>
+            <Text style={styles.dateLabel}>{formatDateLabel(news.created_at)}</Text>
+          </View>
         </View>
-        <Text style={styles.title} numberOfLines={2}>{news.title}</Text>
-        <Text style={styles.preview} numberOfLines={2}>{news.content}</Text>
+        <View style={styles.categoryChip}>
+          <Text style={styles.categoryChipText}>{category}</Text>
+        </View>
       </View>
-      <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+
+      {otherTypes.length > 0 ? (
+        <View style={styles.typeDotsRow}>
+          {otherTypes.map((type) => {
+            const meta = getNewsTypeMeta(type);
+            return (
+              <View key={`${news.id}-${type}`} style={[styles.typeDotBadge, { borderColor: `${meta.color}33` }]}>
+                <View style={[styles.typeDot, { backgroundColor: meta.color }]} />
+                <Text style={[styles.typeDotText, { color: meta.color }]} numberOfLines={1}>
+                  {type}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
+
+      <Text style={styles.title} numberOfLines={2}>
+        {title}
+      </Text>
+      <Text style={styles.preview} numberOfLines={3}>
+        {content}
+      </Text>
+
+      {location || periodLabel ? (
+        <View style={styles.footer}>
+          {location ? (
+            <View style={styles.footerItem}>
+              <MaterialCommunityIcons name="map-marker-outline" size={14} color="#7C8798" />
+              <Text style={styles.footerText} numberOfLines={1}>
+                {location}
+              </Text>
+            </View>
+          ) : null}
+          {periodLabel ? (
+            <View style={styles.footerItem}>
+              <MaterialCommunityIcons name="calendar-clock-outline" size={14} color="#7C8798" />
+              <Text style={styles.footerText} numberOfLines={1}>
+                {periodLabel}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
     </TouchableOpacity>
   );
-};
+}
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    marginHorizontal: 16,
-    marginVertical: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
+    position: 'relative',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    gap: 14,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 4,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3
   },
-  indicator: {
-    width: 4,
-    height: '100%',
+  sideAccent: {
     position: 'absolute',
-    left: 0
+    left: 0,
+    top: 18,
+    bottom: 18,
+    width: 5,
+    borderTopRightRadius: 999,
+    borderBottomRightRadius: 999,
   },
-  content: {
-    flex: 1,
-    padding: 16,
-    paddingLeft: 20
-  },
-  header: {
+  headerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 8
+    gap: 12,
   },
-  badge: {
+  headerMain: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    gap: 4
+    gap: 12,
+    flex: 1,
   },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '600'
+  iconWrap: {
+    width: 58,
+    height: 58,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    elevation: 2,
   },
-  date: {
+  headerText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
+  typeLabel: {
+    fontSize: 20,
+    lineHeight: 24,
+    fontWeight: '800',
+  },
+  dateLabel: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '600',
+  },
+  categoryChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: NEWS_CATEGORY_COLOR,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  categoryChipText: {
     fontSize: 12,
-    color: '#8E8E93'
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  typeDotsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  typeDotBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+  },
+  typeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 999,
+  },
+  typeDotText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   title: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1C1C1E',
-    marginBottom: 4
+    fontSize: 20,
+    lineHeight: 25,
+    color: '#1F2937',
+    fontWeight: '800',
   },
   preview: {
-    fontSize: 13,
-    color: '#8E8E93',
-    lineHeight: 18
-  }
+    fontSize: 14,
+    lineHeight: 21,
+    color: '#4B5563',
+    fontWeight: '500',
+  },
+  footer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    paddingTop: 2,
+  },
+  footerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    maxWidth: '100%',
+  },
+  footerText: {
+    fontSize: 12,
+    color: '#7C8798',
+    fontWeight: '600',
+  },
 });
