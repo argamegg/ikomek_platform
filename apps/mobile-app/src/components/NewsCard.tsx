@@ -12,6 +12,7 @@ import {
   getNewsTypes,
   NEWS_CATEGORY_COLOR,
 } from '../utils/newsMeta';
+import { getNewsCardSizes, useResponsive } from '../utils/responsive';
 
 type NewsCardProps = {
   news: NewsItem;
@@ -57,6 +58,9 @@ function formatPeriodLabel(start?: string, end?: string) {
 
 export function NewsCard({ news, onPress }: NewsCardProps) {
   const { i18n } = useTranslation();
+  const { isTablet } = useResponsive();
+  const sizes = useMemo(() => getNewsCardSizes(isTablet), [isTablet]);
+  const styles = useMemo(() => createStyles(sizes), [sizes]);
   const types = useMemo(() => getNewsTypes(news), [news]);
   const primaryType = types[0];
   const primaryMeta = getNewsTypeMeta(primaryType);
@@ -74,7 +78,7 @@ export function NewsCard({ news, onPress }: NewsCardProps) {
       <View style={styles.headerRow}>
         <View style={styles.headerMain}>
           <View style={[styles.iconWrap, { backgroundColor: primaryMeta.color }]}>
-            <MaterialCommunityIcons name={primaryMeta.icon} size={26} color="#FFFFFF" />
+            <MaterialCommunityIcons name={primaryMeta.icon} size={sizes.iconSize} color="#FFFFFF" />
           </View>
           <View style={styles.headerText}>
             <Text style={[styles.typeLabel, { color: primaryMeta.color }]} numberOfLines={1}>
@@ -115,7 +119,11 @@ export function NewsCard({ news, onPress }: NewsCardProps) {
         <View style={styles.footer}>
           {location ? (
             <View style={styles.footerItem}>
-              <MaterialCommunityIcons name="map-marker-outline" size={14} color="#7C8798" />
+              <MaterialCommunityIcons
+                name="map-marker-outline"
+                size={sizes.footerIconSize}
+                color="#7C8798"
+              />
               <Text style={styles.footerText} numberOfLines={1}>
                 {location}
               </Text>
@@ -123,7 +131,11 @@ export function NewsCard({ news, onPress }: NewsCardProps) {
           ) : null}
           {periodLabel ? (
             <View style={styles.footerItem}>
-              <MaterialCommunityIcons name="calendar-clock-outline" size={14} color="#7C8798" />
+              <MaterialCommunityIcons
+                name="calendar-clock-outline"
+                size={sizes.footerIconSize}
+                color="#7C8798"
+              />
               <Text style={styles.footerText} numberOfLines={1}>
                 {periodLabel}
               </Text>
@@ -135,132 +147,134 @@ export function NewsCard({ news, onPress }: NewsCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    position: 'relative',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    paddingHorizontal: 18,
-    paddingVertical: 18,
-    gap: 14,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    elevation: 4,
-    overflow: 'hidden',
-  },
-  sideAccent: {
-    position: 'absolute',
-    left: 0,
-    top: 18,
-    bottom: 18,
-    width: 5,
-    borderTopRightRadius: 999,
-    borderBottomRightRadius: 999,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  headerMain: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  iconWrap: {
-    width: 58,
-    height: 58,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 14,
-    elevation: 2,
-  },
-  headerText: {
-    flex: 1,
-    minWidth: 0,
-    gap: 4,
-  },
-  typeLabel: {
-    fontSize: 20,
-    lineHeight: 24,
-    fontWeight: '800',
-  },
-  dateLabel: {
-    fontSize: 13,
-    color: '#6B7280',
-    fontWeight: '600',
-  },
-  categoryChip: {
-    alignSelf: 'flex-start',
-    backgroundColor: NEWS_CATEGORY_COLOR,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-  },
-  categoryChipText: {
-    fontSize: 12,
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  typeDotsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  typeDotBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-  },
-  typeDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 999,
-  },
-  typeDotText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  title: {
-    fontSize: 20,
-    lineHeight: 25,
-    color: '#1F2937',
-    fontWeight: '800',
-  },
-  preview: {
-    fontSize: 14,
-    lineHeight: 21,
-    color: '#4B5563',
-    fontWeight: '500',
-  },
-  footer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    paddingTop: 2,
-  },
-  footerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    maxWidth: '100%',
-  },
-  footerText: {
-    fontSize: 12,
-    color: '#7C8798',
-    fontWeight: '600',
-  },
-});
+function createStyles(sizes: ReturnType<typeof getNewsCardSizes>) {
+  return StyleSheet.create({
+    card: {
+      position: 'relative',
+      backgroundColor: '#FFFFFF',
+      borderRadius: sizes.borderRadius,
+      paddingHorizontal: sizes.paddingHorizontal,
+      paddingVertical: sizes.paddingVertical,
+      gap: sizes.gap,
+      shadowColor: '#0F172A',
+      shadowOffset: { width: 0, height: sizes.shadowOffsetHeight },
+      shadowOpacity: 0.08,
+      shadowRadius: sizes.shadowRadius,
+      elevation: sizes.elevation,
+      overflow: 'hidden',
+    },
+    sideAccent: {
+      position: 'absolute',
+      left: 0,
+      top: sizes.sideAccentInset,
+      bottom: sizes.sideAccentInset,
+      width: sizes.sideAccentWidth,
+      borderTopRightRadius: 999,
+      borderBottomRightRadius: 999,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: sizes.headerGap,
+    },
+    headerMain: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: sizes.headerGap,
+      flex: 1,
+    },
+    iconWrap: {
+      width: sizes.iconWrapSize,
+      height: sizes.iconWrapSize,
+      borderRadius: sizes.iconWrapRadius,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#0F172A',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.12,
+      shadowRadius: 14,
+      elevation: 2,
+    },
+    headerText: {
+      flex: 1,
+      minWidth: 0,
+      gap: 4,
+    },
+    typeLabel: {
+      fontSize: sizes.typeLabelSize,
+      lineHeight: sizes.typeLabelLineHeight,
+      fontWeight: '800',
+    },
+    dateLabel: {
+      fontSize: sizes.dateLabelSize,
+      color: '#6B7280',
+      fontWeight: '600',
+    },
+    categoryChip: {
+      alignSelf: 'flex-start',
+      backgroundColor: NEWS_CATEGORY_COLOR,
+      borderRadius: 999,
+      paddingHorizontal: sizes.categoryChipHorizontal,
+      paddingVertical: sizes.categoryChipVertical,
+    },
+    categoryChipText: {
+      fontSize: sizes.categoryChipTextSize,
+      color: '#FFFFFF',
+      fontWeight: '700',
+    },
+    typeDotsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: sizes.typeBadgeGap,
+    },
+    typeDotBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: sizes.typeBadgeGap,
+      paddingHorizontal: sizes.typeBadgeHorizontal,
+      paddingVertical: sizes.typeBadgeVertical,
+      borderRadius: 999,
+      backgroundColor: '#F8FAFC',
+      borderWidth: 1,
+    },
+    typeDot: {
+      width: sizes.typeDotSize,
+      height: sizes.typeDotSize,
+      borderRadius: 999,
+    },
+    typeDotText: {
+      fontSize: sizes.typeDotTextSize,
+      fontWeight: '700',
+    },
+    title: {
+      fontSize: sizes.titleSize,
+      lineHeight: sizes.titleLineHeight,
+      color: '#1F2937',
+      fontWeight: '800',
+    },
+    preview: {
+      fontSize: sizes.previewSize,
+      lineHeight: sizes.previewLineHeight,
+      color: '#4B5563',
+      fontWeight: '500',
+    },
+    footer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: sizes.footerGap,
+      paddingTop: 2,
+    },
+    footerItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      maxWidth: '100%',
+    },
+    footerText: {
+      fontSize: sizes.footerTextSize,
+      color: '#7C8798',
+      fontWeight: '600',
+    },
+  });
+}
