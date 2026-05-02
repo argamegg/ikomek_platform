@@ -1286,6 +1286,7 @@ button {
 .news-card-types {
   display: flex;
   flex-direction: row;
+  align-items: flex-start;
   gap: 16px;
   overflow-x: auto;
   overflow-y: hidden;
@@ -1301,7 +1302,7 @@ button {
 .news-card-type-block {
   display: flex;
   flex-direction: row;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   flex-shrink: 0;
   min-width: 0;
