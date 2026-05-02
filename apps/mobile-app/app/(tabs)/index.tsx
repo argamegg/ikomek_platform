@@ -138,8 +138,6 @@ export default function NewsScreen() {
     }
 
     const types = getNewsTypes(selectedNews);
-    const primaryType = types[0];
-    const primaryMeta = getNewsTypeMeta(primaryType);
     const category = getNewsCategory(selectedNews);
     const location = getNewsLocation(selectedNews);
     const period = getNewsPeriod(selectedNews);
@@ -159,8 +157,18 @@ export default function NewsScreen() {
         <View style={styles.modalScreen}>
           <View style={[styles.modalColorBand, { backgroundColor: accentColor }]} />
           <View style={[styles.modalHeader, { paddingTop: insets.top + 12 }]}>
-            <View style={[styles.modalIconWrap, { backgroundColor: primaryMeta.color }]}>
-              <MaterialCommunityIcons name={primaryMeta.icon} size={26} color="#FFFFFF" />
+            <View style={styles.modalIconsRow}>
+              {types.map((type, index) => {
+                const meta = getNewsTypeMeta(type);
+                return (
+                  <View
+                    key={`${selectedNews.id}-modal-icon-${type}-${index}`}
+                    style={[styles.modalIconWrap, { backgroundColor: meta.color }]}
+                  >
+                    <MaterialCommunityIcons name={meta.icon} size={26} color="#FFFFFF" />
+                  </View>
+                );
+              })}
             </View>
             <TouchableOpacity
               onPress={() => setSelectedNews(null)}
@@ -340,10 +348,17 @@ const styles = StyleSheet.create({
   },
   modalHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingBottom: 12,
+  },
+  modalIconsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexShrink: 1,
+    paddingRight: 12,
   },
   modalIconWrap: {
     width: 54,
