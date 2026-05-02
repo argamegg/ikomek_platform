@@ -76,7 +76,12 @@ export function NewsCard({ news, onPress }: NewsCardProps) {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        scrollEventThrottle={16}
+        decelerationRate="fast"
+        snapToAlignment="start"
         contentContainerStyle={styles.typeScrollContent}
+        onStartShouldSetResponder={() => true}
+        onTouchEnd={(event) => event.stopPropagation()}
       >
         {types.map((type, index) => {
           const meta = getNewsTypeMeta(type);
@@ -105,8 +110,8 @@ export function NewsCard({ news, onPress }: NewsCardProps) {
         {content}
       </Text>
 
-      {periodLabel ? (
-        <View style={styles.footer}>
+      <View style={styles.footer}>
+        {periodLabel ? (
           <View style={styles.footerItem}>
             <MaterialCommunityIcons
               name="clock-outline"
@@ -117,11 +122,13 @@ export function NewsCard({ news, onPress }: NewsCardProps) {
               {periodLabel}
             </Text>
           </View>
-          <View style={styles.categoryChip}>
-            <Text style={styles.categoryChipText}>{category}</Text>
-          </View>
+        ) : (
+          <View style={styles.footerSpacer} />
+        )}
+        <View style={styles.categoryChip}>
+          <Text style={styles.categoryChipText}>{category}</Text>
         </View>
-      ) : null}
+      </View>
     </TouchableOpacity>
   );
 }
@@ -226,6 +233,9 @@ function createStyles(sizes: ReturnType<typeof getNewsCardSizes>) {
       alignItems: 'center',
       gap: 6,
       maxWidth: '100%',
+    },
+    footerSpacer: {
+      flex: 1,
     },
     footerText: {
       fontSize: sizes.footerTextSize,

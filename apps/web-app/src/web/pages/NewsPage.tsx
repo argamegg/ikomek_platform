@@ -211,15 +211,17 @@ export function NewsPage() {
                   <h3>{item.title}</h3>
                   <p>{preview}</p>
 
-                  {period ? (
-                    <div className="news-card__meta-list">
+                  <div className="news-card__meta-list">
+                    {period ? (
                       <span>
                         <Clock3 size={14} />
                         {period}
                       </span>
-                      <span className="news-category-chip">{category}</span>
-                    </div>
-                  ) : null}
+                    ) : (
+                      <span className="news-card__meta-spacer" aria-hidden="true" />
+                    )}
+                    <span className="news-category-chip">{category}</span>
+                  </div>
                 </Card>
               );
             })}

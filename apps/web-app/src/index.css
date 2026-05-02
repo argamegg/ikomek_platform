@@ -1357,8 +1357,16 @@ button {
 
 .news-card__meta-list {
   margin-top: auto;
+  justify-content: space-between;
+  align-items: center;
   color: var(--text-faint);
   font-size: 0.9rem;
+}
+
+.news-card__meta-spacer,
+.home-news__meta-spacer {
+  flex: 1 1 auto;
+  min-width: 1px;
 }
 
 .news-empty-state {
@@ -3154,6 +3162,7 @@ button {
 }
 
 .home-news__meta {
+  justify-content: space-between;
   align-items: center;
   gap: 12px;
   margin-top: auto;

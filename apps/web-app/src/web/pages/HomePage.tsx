@@ -817,15 +817,17 @@ export function HomePage() {
                       <div className="home-news__summary">
                         <p>{getNewsPreview(item)}</p>
                       </div>
-                      {period ? (
-                        <div className="home-news__meta">
+                      <div className="home-news__meta">
+                        {period ? (
                           <span>
                             <Clock3 size={14} />
                             {period}
                           </span>
-                          <span className="news-category-chip">{category}</span>
-                        </div>
-                      ) : null}
+                        ) : (
+                          <span className="home-news__meta-spacer" aria-hidden="true" />
+                        )}
+                        <span className="news-category-chip">{category}</span>
+                      </div>
                     </div>
                   </motion.article>
                 </Link>
