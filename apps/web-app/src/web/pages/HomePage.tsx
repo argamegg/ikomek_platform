@@ -10,7 +10,6 @@ import {
   Droplets,
   Flame,
   MapPinned,
-  MapPin,
   Map,
   Radar,
   ShieldCheck,
@@ -28,7 +27,13 @@ import { Modal } from "../components/ui/Modal";
 import { Skeleton } from "../components/ui/Skeleton";
 import { IssueMap } from "../components/maps/IssueMap";
 import { formatDate, formatRelativeTime, getStatusTone } from "../lib/format";
-import { getNewsCategory, getNewsTypeMeta, getNewsTypes, NEWS_CATEGORY_COLOR } from "../lib/newsMeta";
+import {
+  getBorderColor,
+  getNewsCategory,
+  getNewsTypeMeta,
+  getNewsTypes,
+  NEWS_CATEGORY_COLOR,
+} from "../lib/newsMeta";
 import { platformApi, queryKeys } from "../services/platformApi";
 
 function CountUpNumber({ value }: { value: number }) {
@@ -296,8 +301,17 @@ export function HomePage() {
       return "";
     }
 
-    const startLabel = formatDate(start, i18n.language as "en" | "ru" | "kz");
-    const endLabel = item.endAt ? formatDate(item.endAt, i18n.language as "en" | "ru" | "kz") : "";
+    const locale = i18n.language === "kz" ? "kk-KZ" : i18n.language === "ru" ? "ru-RU" : "en-US";
+    const formatter = new Intl.DateTimeFormat(locale, {
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const startDate = new Date(start);
+    const startLabel = Number.isNaN(startDate.getTime()) ? "" : formatter.format(startDate);
+    const endDate = item.endAt ? new Date(item.endAt) : null;
+    const endLabel = endDate && !Number.isNaN(endDate.getTime()) ? formatter.format(endDate) : "";
     return endLabel ? `${startLabel} - ${endLabel}` : startLabel;
   };
 
@@ -753,6 +767,7 @@ export function HomePage() {
               const category = getNewsCategory(item);
               const Icon = primaryMeta.icon;
               const period = getNewsPeriod(item);
+              const borderColor = getBorderColor(item.startAt, item.endAt);
 
               return (
                 <Link key={item.id} to="/news" className="home-news__link">
@@ -761,6 +776,7 @@ export function HomePage() {
                     whileHover={{ y: -10, scale: 1.015 }}
                     transition={{ duration: 0.24 }}
                   >
+                    <div className="home-news__accent" style={{ backgroundColor: borderColor }} />
                     <div
                       className="home-news__image"
                       style={{
@@ -768,9 +784,6 @@ export function HomePage() {
                       }}
                     >
                       <div className="home-news__image-glow" />
-                      <div className="home-news__image-top">
-                        <span className="news-category-chip">{category}</span>
-                      </div>
                       <div className="home-news__type-block">
                         <span
                           className="home-news__type-icon"
@@ -807,16 +820,15 @@ export function HomePage() {
                           );
                         })}
                       </div>
-                      <div className="home-news__meta">
-                        <span>
-                          <Clock3 size={14} />
-                          {period || formatDate(item.startAt, i18n.language as "en" | "ru" | "kz")}
-                        </span>
-                        <span>
-                          <MapPin size={14} />
-                          {item.location || t("home.newsPreview.locationFallback")}
-                        </span>
-                      </div>
+                      {period ? (
+                        <div className="home-news__meta">
+                          <span>
+                            <Clock3 size={14} />
+                            {period}
+                          </span>
+                          <span className="news-category-chip">{category}</span>
+                        </div>
+                      ) : null}
                     </div>
                   </motion.article>
                 </Link>

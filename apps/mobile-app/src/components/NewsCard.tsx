@@ -5,8 +5,8 @@ import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import type { NewsItem } from '../utils/api';
 import {
+  getBorderColor,
   getNewsCategory,
-  getNewsLocation,
   getNewsPeriod,
   getNewsTypeMeta,
   getNewsTypes,
@@ -65,16 +65,16 @@ export function NewsCard({ news, onPress }: NewsCardProps) {
   const primaryType = types[0];
   const primaryMeta = getNewsTypeMeta(primaryType);
   const category = getNewsCategory(news);
-  const location = getNewsLocation(news);
   const period = getNewsPeriod(news);
   const title = getLocalizedText(news, 'title', i18n.language);
   const content = getLocalizedText(news, 'content', i18n.language);
   const otherTypes = types.slice(1);
   const periodLabel = formatPeriodLabel(period.start, period.end);
+  const borderColor = getBorderColor(period.start, period.end);
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.92}>
-      <View style={[styles.sideAccent, { backgroundColor: primaryMeta.color }]} />
+      <View style={[styles.sideAccent, { backgroundColor: borderColor }]} />
       <View style={styles.headerRow}>
         <View style={styles.headerMain}>
           <View style={[styles.iconWrap, { backgroundColor: primaryMeta.color }]}>
@@ -86,9 +86,6 @@ export function NewsCard({ news, onPress }: NewsCardProps) {
             </Text>
             <Text style={styles.dateLabel}>{formatDateLabel(news.created_at)}</Text>
           </View>
-        </View>
-        <View style={styles.categoryChip}>
-          <Text style={styles.categoryChipText}>{category}</Text>
         </View>
       </View>
 
@@ -115,32 +112,21 @@ export function NewsCard({ news, onPress }: NewsCardProps) {
         {content}
       </Text>
 
-      {location || periodLabel ? (
+      {periodLabel ? (
         <View style={styles.footer}>
-          {location ? (
-            <View style={styles.footerItem}>
-              <MaterialCommunityIcons
-                name="map-marker-outline"
-                size={sizes.footerIconSize}
-                color="#7C8798"
-              />
-              <Text style={styles.footerText} numberOfLines={1}>
-                {location}
-              </Text>
-            </View>
-          ) : null}
-          {periodLabel ? (
-            <View style={styles.footerItem}>
-              <MaterialCommunityIcons
-                name="calendar-clock-outline"
-                size={sizes.footerIconSize}
-                color="#7C8798"
-              />
-              <Text style={styles.footerText} numberOfLines={1}>
-                {periodLabel}
-              </Text>
-            </View>
-          ) : null}
+          <View style={styles.footerItem}>
+            <MaterialCommunityIcons
+              name="clock-outline"
+              size={sizes.footerIconSize}
+              color="#7C8798"
+            />
+            <Text style={styles.footerText} numberOfLines={1}>
+              {periodLabel}
+            </Text>
+          </View>
+          <View style={styles.categoryChip}>
+            <Text style={styles.categoryChipText}>{category}</Text>
+          </View>
         </View>
       ) : null}
     </TouchableOpacity>
@@ -261,7 +247,8 @@ function createStyles(sizes: ReturnType<typeof getNewsCardSizes>) {
     },
     footer: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
+      alignItems: 'center',
+      justifyContent: 'space-between',
       gap: sizes.footerGap,
       paddingTop: 2,
     },

@@ -88,6 +88,38 @@ export function getNewsCategory(item: {
   return getNewsTypeMeta(getNewsTypes(item)[0]).defaultCategory;
 }
 
+export function getBorderColor(startAt?: string, endAt?: string) {
+  const fallbackColor = "#FB8C00";
+  if (!startAt) {
+    return fallbackColor;
+  }
+
+  const start = new Date(startAt).getTime();
+  if (Number.isNaN(start)) {
+    return fallbackColor;
+  }
+
+  const now = Date.now();
+  if (now < start) {
+    return fallbackColor;
+  }
+
+  if (!endAt) {
+    return "#E53935";
+  }
+
+  const end = new Date(endAt).getTime();
+  if (Number.isNaN(end)) {
+    return "#E53935";
+  }
+
+  if (now > end) {
+    return "#43A047";
+  }
+
+  return "#E53935";
+}
+
 export function formatNewsRelativeTime(value: string, locale = "ru") {
   if (!value) {
     return locale === "en" ? "Created recently" : "Создано недавно";

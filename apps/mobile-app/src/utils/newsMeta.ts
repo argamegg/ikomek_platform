@@ -107,9 +107,41 @@ export function getNewsLocation(item: NewsItem) {
 }
 
 export function getNewsPeriod(item: NewsItem) {
-  const start = item.start_at || item.period_start || item.created_at;
+  const start = item.start_at || item.period_start || '';
   const end = item.end_at || item.period_end || '';
   return { start, end };
+}
+
+export function getBorderColor(startAt?: string, endAt?: string) {
+  const fallbackColor = '#FB8C00';
+  if (!startAt) {
+    return fallbackColor;
+  }
+
+  const start = new Date(startAt).getTime();
+  if (Number.isNaN(start)) {
+    return fallbackColor;
+  }
+
+  const now = Date.now();
+  if (now < start) {
+    return fallbackColor;
+  }
+
+  if (!endAt) {
+    return '#E53935';
+  }
+
+  const end = new Date(endAt).getTime();
+  if (Number.isNaN(end)) {
+    return '#E53935';
+  }
+
+  if (now > end) {
+    return '#43A047';
+  }
+
+  return '#E53935';
 }
 
 export function formatNewsRelativeTime(value: string) {

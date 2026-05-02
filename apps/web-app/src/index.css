@@ -2985,6 +2985,7 @@ button {
   --news-summary-line-height: 1.65;
   --news-summary-lines: 2;
   --news-summary-block: calc(var(--news-summary-size) * var(--news-summary-line-height) * var(--news-summary-lines));
+  position: relative;
   display: grid;
   grid-template-rows: 200px minmax(0, 1fr);
   width: 100%;
@@ -2999,6 +3000,15 @@ button {
   transition:
     box-shadow 200ms ease,
     border-color 200ms ease;
+}
+
+.home-news__accent {
+  position: absolute;
+  inset: 22px auto 22px 0;
+  width: 6px;
+  border-top-right-radius: 999px;
+  border-bottom-right-radius: 999px;
+  z-index: 2;
 }
 
 .home-news__card--featured {

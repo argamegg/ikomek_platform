@@ -18,7 +18,9 @@ import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { apiService, NewsCategory, NewsItem, NewsType } from '../../src/utils/api';
 import {
+  getBorderColor,
   getNewsCategory,
+  getNewsPeriod,
   getNewsTypeMeta,
   getNewsTypes,
   NEWS_CATEGORY_COLOR,
@@ -170,10 +172,15 @@ export default function NewsManageScreen() {
     const primaryType = types[0];
     const primaryMeta = getNewsTypeMeta(primaryType);
     const category = getNewsCategory(item);
+    const period = getNewsPeriod(item);
+    const borderColor = getBorderColor(period.start, period.end);
+    const periodLabel = period.start
+      ? `${format(new Date(period.start), 'dd.MM HH:mm')}${period.end ? ` - ${format(new Date(period.end), 'dd.MM HH:mm')}` : ''}`
+      : '';
 
     return (
       <View style={styles.newsCard}>
-        <View style={[styles.newsStrip, { backgroundColor: primaryMeta.color }]} />
+        <View style={[styles.newsStrip, { backgroundColor: borderColor }]} />
         <View style={styles.newsBody}>
           <View style={styles.newsTop}>
             <View style={[styles.newsTypePill, { backgroundColor: `${primaryMeta.color}14` }]}>
@@ -181,10 +188,6 @@ export default function NewsManageScreen() {
               <Text style={[styles.newsTypeText, { color: primaryMeta.color }]}>{primaryType}</Text>
             </View>
             <Text style={styles.newsDate}>{format(new Date(item.created_at), 'dd.MM.yy')}</Text>
-          </View>
-
-          <View style={styles.newsCategoryChip}>
-            <Text style={styles.newsCategoryChipText}>{category}</Text>
           </View>
 
           <Text style={styles.newsTitle} numberOfLines={2}>
@@ -205,6 +208,18 @@ export default function NewsManageScreen() {
                   </View>
                 );
               })}
+            </View>
+          ) : null}
+
+          {periodLabel ? (
+            <View style={styles.newsMetaRow}>
+              <View style={styles.newsMetaItem}>
+                <MaterialCommunityIcons name="clock-outline" size={13} color="#7C8798" />
+                <Text style={styles.newsMetaText} numberOfLines={1}>{periodLabel}</Text>
+              </View>
+              <View style={styles.newsCategoryChip}>
+                <Text style={styles.newsCategoryChipText}>{category}</Text>
+              </View>
             </View>
           ) : null}
 
@@ -541,6 +556,23 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     color: '#475569',
     fontWeight: '500',
+  },
+  newsMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  newsMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+  },
+  newsMetaText: {
+    fontSize: 12,
+    color: '#7C8798',
+    fontWeight: '600',
   },
   extraTypesRow: {
     flexDirection: 'row',

@@ -10,6 +10,7 @@ import { Modal } from "../components/ui/Modal";
 import { PageHeader } from "../components/ui/PageHeader";
 import { getErrorMessage, platformApi, queryKeys } from "../services/platformApi";
 import {
+  getBorderColor,
   getNewsCategory,
   getNewsTypeMeta,
   getNewsTypes,
@@ -27,6 +28,28 @@ const initialForm: NewsCreateInput = {
   startAt: new Date().toISOString().slice(0, 16),
   endAt: "",
 };
+
+function formatPreviewPeriod(startAt?: string, endAt?: string) {
+  if (!startAt) {
+    return "";
+  }
+
+  const formatter = new Intl.DateTimeFormat("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const start = new Date(startAt);
+  if (Number.isNaN(start.getTime())) {
+    return "";
+  }
+
+  const startLabel = formatter.format(start);
+  const end = endAt ? new Date(endAt) : null;
+  const endLabel = end && !Number.isNaN(end.getTime()) ? formatter.format(end) : "";
+  return endLabel ? `${startLabel} - ${endLabel}` : startLabel;
+}
 
 export function AdminPage() {
   const { t } = useTranslation();
@@ -93,27 +116,34 @@ export function AdminPage() {
           const primaryMeta = getNewsTypeMeta(types[0]);
           const category = getNewsCategory(item);
           const Icon = primaryMeta.icon;
+          const period = formatPreviewPeriod(item.startAt, item.endAt);
+          const borderColor = getBorderColor(item.startAt, item.endAt);
 
           return (
             <Card key={item.id} className="news-card news-card--enhanced" hover={false}>
-              <div className="news-card__accent" style={{ backgroundColor: primaryMeta.color }} />
+              <div className="news-card__accent" style={{ backgroundColor: borderColor }} />
               <div className="news-card__head">
                 <div className="news-card__type">
                   <span
                     className="news-card__type-icon"
                     style={{ backgroundColor: `${primaryMeta.color}16`, color: primaryMeta.color }}
-                  >
-                    <Icon size={18} />
-                  </span>
-                  <div>
-                    <strong style={{ color: primaryMeta.color }}>{types[0]}</strong>
-                    <time>{item.startAt.slice(0, 10)}</time>
+                    >
+                      <Icon size={18} />
+                    </span>
+                    <div>
+                      <strong style={{ color: primaryMeta.color }}>{types[0]}</strong>
+                      <time>{(item.publishedAt || item.startAt || "").slice(0, 10)}</time>
+                    </div>
                   </div>
-                </div>
-                <span className="news-category-chip">{category}</span>
               </div>
               <h3>{item.title}</h3>
               <p>{item.summary || item.body}</p>
+              {period ? (
+                <div className="news-card__meta-list">
+                  <span>{period}</span>
+                  <span className="news-category-chip">{category}</span>
+                </div>
+              ) : null}
             </Card>
           );
         })}

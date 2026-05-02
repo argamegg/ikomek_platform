@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Clock3, MapPin } from "lucide-react";
+import { Clock3 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { NewsItem } from "../../types/platform";
 import { Card } from "../components/ui/Card";
@@ -8,6 +8,7 @@ import { Modal } from "../components/ui/Modal";
 import { PageHeader } from "../components/ui/PageHeader";
 import { formatDate } from "../lib/format";
 import {
+  getBorderColor,
   formatNewsRelativeTime,
   getNewsCategory,
   getNewsTypeMeta,
@@ -27,8 +28,25 @@ function formatNewsPeriod(item: NewsItem, locale: "en" | "ru" | "kz") {
     return "";
   }
 
-  const startLabel = formatDate(start, locale);
-  const endLabel = item.endAt ? formatDate(item.endAt, locale) : "";
+  const startDate = new Date(start);
+  const startLabel = Number.isNaN(startDate.getTime())
+    ? ""
+    : new Intl.DateTimeFormat(locale === "kz" ? "kk-KZ" : locale === "ru" ? "ru-RU" : "en-US", {
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(startDate);
+  const endDate = item.endAt ? new Date(item.endAt) : null;
+  const endLabel =
+    endDate && !Number.isNaN(endDate.getTime())
+      ? new Intl.DateTimeFormat(locale === "kz" ? "kk-KZ" : locale === "ru" ? "ru-RU" : "en-US", {
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(endDate)
+      : "";
   return endLabel ? `${startLabel} - ${endLabel}` : startLabel;
 }
 
@@ -155,6 +173,7 @@ export function NewsPage() {
               const category = getNewsCategory(item);
               const preview = getPreviewText(item);
               const period = formatNewsPeriod(item, activeLocale);
+              const borderColor = getBorderColor(item.startAt, item.endAt);
               const Icon = primaryMeta.icon;
 
               return (
@@ -165,7 +184,7 @@ export function NewsPage() {
                 >
                   <div
                     className="news-card__accent"
-                    style={{ backgroundColor: primaryMeta.color }}
+                    style={{ backgroundColor: borderColor }}
                     aria-hidden="true"
                   />
                   <div className="news-card__head">
@@ -181,7 +200,6 @@ export function NewsPage() {
                         <time>{formatDate(item.publishedAt || item.startAt, activeLocale)}</time>
                       </div>
                     </div>
-                    <span className="news-category-chip">{category}</span>
                   </div>
 
                   {types.length > 0 ? (
@@ -209,20 +227,15 @@ export function NewsPage() {
                   <h3>{item.title}</h3>
                   <p>{preview}</p>
 
-                  <div className="news-card__meta-list">
-                    {period ? (
+                  {period ? (
+                    <div className="news-card__meta-list">
                       <span>
                         <Clock3 size={14} />
                         {period}
                       </span>
-                    ) : null}
-                    {item.location ? (
-                      <span>
-                        <MapPin size={14} />
-                        {item.location}
-                      </span>
-                    ) : null}
-                  </div>
+                      <span className="news-category-chip">{category}</span>
+                    </div>
+                  ) : null}
                 </Card>
               );
             })}
