@@ -161,13 +161,13 @@ function createStyles(sizes: ReturnType<typeof getNewsCardSizes>) {
     },
     typeScrollContent: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       gap: sizes.headerGap,
       paddingRight: sizes.headerGap,
     },
     typeBlock: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       gap: sizes.headerGap,
       flexShrink: 0,
       minWidth: 0,
