@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
@@ -43,8 +43,8 @@ function formatPeriodLabel(start?: string, end?: string) {
     return '';
   }
 
-  const startDate = new Date(start);
-  const endDate = end ? new Date(end) : null;
+  const startDate = new Date(start.endsWith('Z') ? start : `${start}Z`);
+  const endDate = end ? new Date(end.endsWith('Z') ? end : `${end}Z`) : null;
   const startLabel = Number.isNaN(startDate.getTime()) ? '' : format(startDate, 'dd.MM HH:mm');
   const endLabel =
     endDate && !Number.isNaN(endDate.getTime()) ? format(endDate, 'dd.MM HH:mm') : '';
@@ -90,19 +90,23 @@ export function NewsCard({ news, onPress }: NewsCardProps) {
       </View>
 
       {otherTypes.length > 0 ? (
-        <View style={styles.typeDotsRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.typeDotsRow}
+        >
           {otherTypes.map((type) => {
             const meta = getNewsTypeMeta(type);
             return (
               <View key={`${news.id}-${type}`} style={[styles.typeDotBadge, { borderColor: `${meta.color}33` }]}>
-                <View style={[styles.typeDot, { backgroundColor: meta.color }]} />
+                <MaterialCommunityIcons name={meta.icon} size={sizes.typeIconSize} color={meta.color} />
                 <Text style={[styles.typeDotText, { color: meta.color }]} numberOfLines={1}>
                   {type}
                 </Text>
               </View>
             );
           })}
-        </View>
+        </ScrollView>
       ) : null}
 
       <Text style={styles.title} numberOfLines={2}>
@@ -211,8 +215,9 @@ function createStyles(sizes: ReturnType<typeof getNewsCardSizes>) {
     },
     typeDotsRow: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
+      alignItems: 'center',
       gap: sizes.typeBadgeGap,
+      paddingRight: 4,
     },
     typeDotBadge: {
       flexDirection: 'row',
@@ -223,11 +228,6 @@ function createStyles(sizes: ReturnType<typeof getNewsCardSizes>) {
       borderRadius: 999,
       backgroundColor: '#F8FAFC',
       borderWidth: 1,
-    },
-    typeDot: {
-      width: sizes.typeDotSize,
-      height: sizes.typeDotSize,
-      borderRadius: 999,
     },
     typeDotText: {
       fontSize: sizes.typeDotTextSize,

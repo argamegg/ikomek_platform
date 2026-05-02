@@ -308,9 +308,9 @@ export function HomePage() {
       hour: "2-digit",
       minute: "2-digit",
     });
-    const startDate = new Date(start);
+    const startDate = new Date(start.endsWith("Z") ? start : `${start}Z`);
     const startLabel = Number.isNaN(startDate.getTime()) ? "" : formatter.format(startDate);
-    const endDate = item.endAt ? new Date(item.endAt) : null;
+    const endDate = item.endAt ? new Date(item.endAt.endsWith("Z") ? item.endAt : `${item.endAt}Z`) : null;
     const endLabel = endDate && !Number.isNaN(endDate.getTime()) ? formatter.format(endDate) : "";
     return endLabel ? `${startLabel} - ${endLabel}` : startLabel;
   };
@@ -805,7 +805,7 @@ export function HomePage() {
                         <p>{getNewsPreview(item)}</p>
                       </div>
                       {types.length > 1 ? (
-                        <div className="home-news__type-chips">
+                        <div className="news-card-types">
                           {types.slice(1).map((type) => {
                             const meta = getNewsTypeMeta(type);
                             const TypeIcon = meta.icon;

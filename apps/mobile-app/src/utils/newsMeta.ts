@@ -65,6 +65,16 @@ const LEGACY_NEWS_TYPE_MAP: Record<string, NewsType> = {
 
 const typeLookup = new Map(NEWS_TYPE_OPTIONS.map((item) => [item.label, item]));
 
+function parseBackendUtc(value?: string) {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = value.endsWith('Z') ? value : `${value}Z`;
+  const date = new Date(normalized);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 export function isNewsCategory(value: unknown): value is NewsCategory {
   return typeof value === 'string' && NEWS_CATEGORY_OPTIONS.includes(value as NewsCategory);
 }
@@ -114,27 +124,23 @@ export function getNewsPeriod(item: NewsItem) {
 
 export function getBorderColor(startAt?: string, endAt?: string) {
   const fallbackColor = '#FB8C00';
-  if (!startAt) {
+  if (!startAt || !endAt) {
     return fallbackColor;
   }
 
-  const start = new Date(startAt).getTime();
-  if (Number.isNaN(start)) {
+  const start = parseBackendUtc(startAt);
+  if (!start) {
     return fallbackColor;
   }
 
-  const now = Date.now();
+  const now = new Date();
   if (now < start) {
     return fallbackColor;
   }
 
-  if (!endAt) {
-    return '#E53935';
-  }
-
-  const end = new Date(endAt).getTime();
-  if (Number.isNaN(end)) {
-    return '#E53935';
+  const end = parseBackendUtc(endAt);
+  if (!end) {
+    return fallbackColor;
   }
 
   if (now > end) {

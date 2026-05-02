@@ -28,7 +28,7 @@ function formatNewsPeriod(item: NewsItem, locale: "en" | "ru" | "kz") {
     return "";
   }
 
-  const startDate = new Date(start);
+  const startDate = new Date(start.endsWith("Z") ? start : `${start}Z`);
   const startLabel = Number.isNaN(startDate.getTime())
     ? ""
     : new Intl.DateTimeFormat(locale === "kz" ? "kk-KZ" : locale === "ru" ? "ru-RU" : "en-US", {
@@ -37,7 +37,7 @@ function formatNewsPeriod(item: NewsItem, locale: "en" | "ru" | "kz") {
         hour: "2-digit",
         minute: "2-digit",
       }).format(startDate);
-  const endDate = item.endAt ? new Date(item.endAt) : null;
+  const endDate = item.endAt ? new Date(item.endAt.endsWith("Z") ? item.endAt : `${item.endAt}Z`) : null;
   const endLabel =
     endDate && !Number.isNaN(endDate.getTime())
       ? new Intl.DateTimeFormat(locale === "kz" ? "kk-KZ" : locale === "ru" ? "ru-RU" : "en-US", {
@@ -203,7 +203,7 @@ export function NewsPage() {
                   </div>
 
                   {types.length > 1 ? (
-                    <div className="news-type-chips">
+                    <div className="news-card-types">
                       {types.slice(1).map((type) => {
                         const meta = getNewsTypeMeta(type);
                         const TypeIcon = meta.icon;
@@ -259,15 +259,15 @@ export function NewsPage() {
         {selectedNews ? (
           (() => {
             const types = getNewsTypes(selectedNews);
-            const primaryMeta = getNewsTypeMeta(types[0]);
             const category = getNewsCategory(selectedNews);
             const period = formatNewsPeriod(selectedNews, activeLocale);
+            const accentColor = getBorderColor(selectedNews.startAt, selectedNews.endAt);
 
             return (
               <div className="news-detail">
                 <div
                   className="news-detail__band"
-                  style={{ backgroundColor: primaryMeta.color }}
+                  style={{ backgroundColor: accentColor }}
                   aria-hidden="true"
                 />
                 <div className="news-detail__meta">

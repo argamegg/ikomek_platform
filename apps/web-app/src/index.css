@@ -1283,6 +1283,25 @@ button {
   flex-wrap: wrap;
 }
 
+.news-card-types {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 2px;
+}
+
+.news-card-types::-webkit-scrollbar {
+  display: none;
+}
+
+.news-card-types > * {
+  flex: 0 0 auto;
+}
+
 .news-type-chip {
   display: inline-flex;
   align-items: center;

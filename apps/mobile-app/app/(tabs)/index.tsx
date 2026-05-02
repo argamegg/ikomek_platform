@@ -19,6 +19,7 @@ import { useAuth } from '../../src/context/AuthContext';
 import { apiService, NewsItem } from '../../src/utils/api';
 import {
   formatNewsRelativeTime,
+  getBorderColor,
   getNewsCategory,
   getNewsLocation,
   getNewsPeriod,
@@ -46,8 +47,8 @@ function formatDetailPeriod(start?: string, end?: string) {
     return '';
   }
 
-  const startDate = new Date(start);
-  const endDate = end ? new Date(end) : null;
+  const startDate = new Date(start.endsWith('Z') ? start : `${start}Z`);
+  const endDate = end ? new Date(end.endsWith('Z') ? end : `${end}Z`) : null;
   if (Number.isNaN(startDate.getTime())) {
     return '';
   }
@@ -142,6 +143,7 @@ export default function NewsScreen() {
     const category = getNewsCategory(selectedNews);
     const location = getNewsLocation(selectedNews);
     const period = getNewsPeriod(selectedNews);
+    const accentColor = getBorderColor(period.start, period.end);
     const title = getLocalizedText(selectedNews, 'title', currentLanguage);
     const content = getLocalizedText(selectedNews, 'content', currentLanguage);
     const periodLabel = formatDetailPeriod(period.start, period.end);
@@ -155,7 +157,7 @@ export default function NewsScreen() {
         onRequestClose={() => setSelectedNews(null)}
       >
         <View style={styles.modalScreen}>
-          <View style={[styles.modalColorBand, { backgroundColor: primaryMeta.color }]} />
+          <View style={[styles.modalColorBand, { backgroundColor: accentColor }]} />
           <View style={[styles.modalHeader, { paddingTop: insets.top + 12 }]}>
             <View style={[styles.modalIconWrap, { backgroundColor: primaryMeta.color }]}>
               <MaterialCommunityIcons name={primaryMeta.icon} size={26} color="#FFFFFF" />
