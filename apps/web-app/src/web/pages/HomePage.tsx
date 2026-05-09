@@ -23,8 +23,10 @@ import { useTranslation } from "react-i18next";
 import type { NewsItem } from "../../types/platform";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
+import { Card } from "../components/ui/Card";
 import { Modal } from "../components/ui/Modal";
 import { Skeleton } from "../components/ui/Skeleton";
+import { Input } from "../components/ui/Input";
 import { IssueMap } from "../components/maps/IssueMap";
 import { formatRelativeTime, getStatusTone } from "../lib/format";
 import { categoryKeyMap, formatNewsDate, formatNewsPeriod, typeKeyMap } from "../lib/normalizers";
@@ -84,10 +86,16 @@ export function HomePage() {
     queryFn: platformApi.getAlerts,
     placeholderData: (previous) => previous ?? [],
   });
+  const [newsSearchInput, setNewsSearchInput] = useState("");
+  const [newsSearch, setNewsSearch] = useState("");
   const newsQuery = useQuery({
     queryKey: [...queryKeys.news, i18n.language],
-    queryFn: platformApi.getNews,
-    placeholderData: (previous) => previous ?? [],
+    queryFn: () => platformApi.getNews({ limit: 8 }),
+  });
+  const newsPreviewQuery = useQuery({
+    queryKey: [...queryKeys.news, i18n.language, "preview-search", newsSearch],
+    queryFn: () => platformApi.getNews({ search: newsSearch || undefined, limit: 4 }),
+    placeholderData: (previous) => previous,
   });
   const categoriesQuery = useQuery({
     queryKey: [...queryKeys.categories, i18n.language],
@@ -97,7 +105,7 @@ export function HomePage() {
 
   const publicRequests = publicRequestsQuery.data ?? [];
   const alerts = alertsQuery.data ?? [];
-  const news = newsQuery.data ?? [];
+  const news = newsQuery.data?.news ?? [];
   const categories = categoriesQuery.data ?? [];
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
 
@@ -105,6 +113,15 @@ export function HomePage() {
     const merged = [...alerts, ...news].slice(0, 4);
     return merged;
   }, [alerts, news]);
+  const previewNewsItems = newsSearch ? newsPreviewQuery.data?.news ?? [] : featuredUpdates.slice(0, 3);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setNewsSearch(newsSearchInput.trim());
+    }, 500);
+
+    return () => window.clearTimeout(timer);
+  }, [newsSearchInput]);
 
   const highlightRequest = publicRequests[0] ?? null;
   const activeCategory = categories.find((category) => category.id === activeCategoryId) ?? null;
@@ -752,8 +769,16 @@ export function HomePage() {
           <p>{t("home.newsPreview.description")}</p>
         </div>
 
+        <div className="home-news__search">
+          <Input
+            value={newsSearchInput}
+            onChange={(event) => setNewsSearchInput(event.target.value)}
+            placeholder={t("news.searchPlaceholder", { defaultValue: "Поиск..." })}
+          />
+        </div>
+
         <div className="home-news__grid">
-          {featuredUpdates.slice(0, 3).map((item, index) => (
+          {previewNewsItems.map((item, index) => (
             (() => {
               const types = getNewsTypes(item);
               const primaryMeta = getNewsTypeMeta(types[0]);
@@ -827,6 +852,13 @@ export function HomePage() {
             })()
           ))}
         </div>
+
+        {!newsPreviewQuery.isLoading && previewNewsItems.length === 0 ? (
+          <Card className="news-empty-state" hover={false}>
+            <h3>{t("news.noResults", { defaultValue: "Ничего не найдено" })}</h3>
+            <p>{t("news.emptyFiltered", { defaultValue: "Измените поисковый запрос." })}</p>
+          </Card>
+        ) : null}
       </motion.section>
 
       <motion.section

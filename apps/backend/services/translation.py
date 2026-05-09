@@ -1,8 +1,24 @@
 from typing import Optional
 
 import httpx
+from langdetect import LangDetectException, detect
 
 MYMEMORY_API_URL = "https://api.mymemory.translated.net/get"
+
+
+def detect_language(text: str) -> str:
+    if not text or not text.strip():
+        return "ru"
+
+    try:
+        lang = detect(text)
+        if lang in {"kk", "kz"}:
+            return "kk"
+        if lang == "en":
+            return "en"
+        return "ru"
+    except LangDetectException:
+        return "ru"
 
 
 async def translate_text(text: str, source_lang: str, target_lang: str) -> Optional[str]:

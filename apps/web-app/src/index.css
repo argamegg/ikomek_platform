@@ -1177,6 +1177,16 @@ button {
   padding: 18px 20px;
 }
 
+.news-toolbar {
+  padding: 18px 20px;
+}
+
+.news-toolbar__grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 1.6fr) repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .news-category-pills,
 .news-admin-categories {
   display: flex;
@@ -1370,6 +1380,13 @@ button {
   min-width: 1px;
 }
 
+.news-card__actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+
 .news-empty-state {
   padding: 30px;
   text-align: center;
@@ -1381,6 +1398,13 @@ button {
 
 .news-empty-state p {
   margin: 0;
+}
+
+.news-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
 }
 
 .news-detail {
@@ -1447,6 +1471,35 @@ button {
   gap: 12px;
 }
 
+.news-form__actions,
+.news-form__footer {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.news-form__tabs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.news-form__tab {
+  border: 1.5px solid rgba(15, 23, 42, 0.12);
+  background: #fff;
+  color: var(--text-soft);
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.news-form__tab.is-active {
+  background: #fb8c00;
+  color: #fff;
+  border-color: #fb8c00;
+}
+
 .news-admin-type {
   display: flex;
   align-items: center;
@@ -1485,6 +1538,18 @@ button {
 .news-admin-type__body small {
   color: var(--text-faint);
   font-weight: 600;
+}
+
+.news-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.06);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .request-card__top {
@@ -3014,6 +3079,11 @@ button {
     #ffffff;
 }
 
+.home-news__search {
+  max-width: 420px;
+  margin-bottom: 20px;
+}
+
 .home-news__grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3586,6 +3656,14 @@ button {
     background: rgba(15, 23, 42, 0.05);
     color: var(--text);
   }
+
+  .news-toolbar__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .news-pagination {
+    flex-wrap: wrap;
+  }
 }
 
 @media (max-width: 720px) {
@@ -3605,6 +3683,17 @@ button {
   .inline-grid,
   .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .news-toolbar__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .news-form__actions,
+  .news-form__footer,
+  .news-pagination {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .page-actions,

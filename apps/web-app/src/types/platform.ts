@@ -143,6 +143,9 @@ export type CivicRequest = {
 export type NewsItem = {
   id: string;
   title: string;
+  titleRu?: string;
+  titleKz?: string;
+  titleEn?: string;
   category:
     | "Дороги"
     | "Коммунальные услуги"
@@ -160,12 +163,38 @@ export type NewsItem = {
   >;
   priority?: RequestPriority;
   summary: string;
+  summaryRu?: string;
+  summaryKz?: string;
+  summaryEn?: string;
   body: string;
+  bodyRu?: string;
+  bodyKz?: string;
+  bodyEn?: string;
   location?: string;
+  sourceLang?: "ru" | "kk" | "en" | string;
+  translationStatus?: "translated" | "failed" | "skipped" | string;
   startAt: string;
   endAt?: string;
   imageUrl?: string;
   publishedAt?: string;
+  updatedAt?: string;
+  isActive?: boolean;
+};
+
+export type NewsListResponse = {
+  news: NewsItem[];
+  total: number;
+  page: number;
+  limit: number;
+};
+
+export type NewsTranslationPreview = {
+  sourceLang: "ru" | "kk" | "en";
+  translations: {
+    ru: { title: string; content: string };
+    kk: { title: string; content: string };
+    en: { title: string; content: string };
+  };
 };
 
 export type NotificationItem = {
@@ -300,6 +329,18 @@ export type NewsCreateInput = {
   location: string;
   startAt: string;
   endAt?: string;
+  titleRu?: string;
+  titleKz?: string;
+  titleEn?: string;
+  bodyRu?: string;
+  bodyKz?: string;
+  bodyEn?: string;
+  summaryRu?: string;
+  summaryKz?: string;
+  summaryEn?: string;
+  sourceLang?: "ru" | "kk" | "en";
+  translationStatus?: "translated" | "failed" | "skipped" | string;
+  skipTranslation?: boolean;
 };
 
 export type RouteConfig = {

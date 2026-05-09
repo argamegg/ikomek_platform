@@ -135,19 +135,40 @@ export interface NewsItem {
   content_ru: string;
   content_kz: string;
   content_en?: string;
+  summary?: string;
+  summary_ru?: string;
+  summary_kz?: string;
+  summary_en?: string;
   source_lang?: string;
+  translation_status?: 'translated' | 'failed' | 'skipped' | string;
   category: NewsCategory | 'critical' | 'warning' | 'info' | string;
   types?: NewsType[] | string[];
   type?: NewsType | string;
   image?: string;
-  summary?: string;
   location?: string;
   start_at?: string;
   end_at?: string;
   period_start?: string;
   period_end?: string;
   created_at: string;
+  updated_at?: string;
   is_active: boolean;
+}
+
+export interface NewsListResponse {
+  news: NewsItem[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface NewsTranslationPreview {
+  source_lang: 'ru' | 'kk' | 'en';
+  translations: {
+    ru: { title: string; content: string };
+    kk: { title: string; content: string };
+    en: { title: string; content: string };
+  };
 }
 
 export interface Message {
@@ -232,29 +253,55 @@ export const apiService = {
     api.post<Message>(`/requests/${requestId}/messages`, { content }),
 
   // News
-  getNews: (category?: string) => api.get<NewsItem[]>('/news', { params: { category, lang: getCurrentLang() } }),
+  getNews: (params?: {
+    lang?: string;
+    search?: string;
+    category?: string;
+    type?: string;
+    period?: string;
+    sort?: string;
+    page?: number;
+    limit?: number;
+  }) => {
+    const queryParams = {
+      lang: params?.lang || getCurrentLang(),
+      search: params?.search,
+      category: params?.category,
+      type: params?.type,
+      period: params?.period,
+      sort: params?.sort,
+      page: params?.page,
+      limit: params?.limit,
+    };
+    return api.get<NewsListResponse>('/news', { params: queryParams });
+  },
   getNewsItem: (id: string) => api.get<NewsItem>(`/news/${id}`, { params: { lang: getCurrentLang() } }),
+  previewNewsTranslation: (data: { title: string; content: string }) =>
+    api.post<NewsTranslationPreview>('/admin/news/translate-preview', data),
 
   // Admin - News
   createNews: (data: {
-    title: string; title_ru: string; title_kz: string; title_en?: string;
-    content: string; content_ru: string; content_kz: string; content_en?: string;
+    title: string; title_ru?: string; title_kz?: string; title_en?: string;
+    content: string; content_ru?: string; content_kz?: string; content_en?: string;
+    summary?: string; summary_ru?: string; summary_kz?: string; summary_en?: string;
     category: string;
     types: string[];
     image?: string;
     location?: string;
     start_at?: string;
     end_at?: string;
-    summary?: string;
+    source_lang?: string;
+    translation_status?: string;
+    skip_translation?: boolean;
   }) => {
     const source_lang = getCurrentLang();
     return api.post<NewsItem>('/admin/news', {
       ...data,
-      title_en: data.title_en || (source_lang === 'en' ? data.title : undefined),
-      content_en: data.content_en || (source_lang === 'en' ? data.content : undefined),
-      source_lang,
+      source_lang: data.source_lang || source_lang,
     });
   },
+  updateNews: (id: string, data: Partial<NewsItem> & { skip_translation?: boolean }) =>
+    api.put<NewsItem>(`/admin/news/${id}`, data),
   deleteNews: (id: string) => api.delete(`/admin/news/${id}`),
 
   // Admin - Users

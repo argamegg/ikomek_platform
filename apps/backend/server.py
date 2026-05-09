@@ -25,7 +25,7 @@ from email.utils import formataddr
 
 from geo import REQUEST_OUT_OF_ZONE_ERROR, is_within_astana_request_zone
 from news_fixtures import build_news_fixtures
-from services.translation import translate_to_all_languages
+from services.translation import detect_language, translate_to_all_languages
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -204,7 +204,11 @@ class NewsItem(BaseModel):
     content_ru: Optional[str] = None
     content_kz: Optional[str] = None
     content_en: Optional[str] = None
+    summary_ru: Optional[str] = None
+    summary_kz: Optional[str] = None
+    summary_en: Optional[str] = None
     source_lang: Optional[str] = "ru"
+    translation_status: Optional[str] = None
     category: str
     types: List[str] = []
     summary: Optional[str] = None
@@ -215,6 +219,7 @@ class NewsItem(BaseModel):
     period_start: Optional[datetime] = None
     period_end: Optional[datetime] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = None
     is_active: bool = True
 
 class NewsCreate(BaseModel):
@@ -226,7 +231,12 @@ class NewsCreate(BaseModel):
     content_ru: Optional[str] = None
     content_kz: Optional[str] = None
     content_en: Optional[str] = None
+    summary_ru: Optional[str] = None
+    summary_kz: Optional[str] = None
+    summary_en: Optional[str] = None
     source_lang: Optional[str] = "ru"
+    translation_status: Optional[str] = None
+    skip_translation: bool = False
     category: str
     types: List[str] = []
     summary: Optional[str] = None
@@ -290,6 +300,7 @@ def normalize_translation_language(language: Optional[str]) -> str:
     return "ru"
 
 def localize_news_document(news: dict, lang: Optional[str]) -> dict:
+    news = dict(news)
     content_lang = normalize_content_language(lang)
 
     if content_lang == "kz":
@@ -308,6 +319,7 @@ def localize_news_document(news: dict, lang: Optional[str]) -> dict:
     return news
 
 def localize_request_document(request: dict, lang: Optional[str]) -> dict:
+    request = dict(request)
     content_lang = normalize_content_language(lang)
 
     if content_lang == "kz":
@@ -318,6 +330,11 @@ def localize_request_document(request: dict, lang: Optional[str]) -> dict:
         request["description"] = request.get("description_ru") or request.get("description") or request.get("description_en") or request.get("description_kz")
 
     return request
+
+def to_pagination_params(page: int, limit: int) -> tuple[int, int]:
+    safe_page = max(1, page)
+    safe_limit = min(max(1, limit), 100)
+    return safe_page, safe_limit
 
 def seconds_until(value: Optional[datetime]) -> int:
     if not value:
@@ -898,13 +915,55 @@ async def send_message(request_id: str, message_data: MessageCreate, current_use
 # NEWS ENDPOINTS
 # ================================
 
-@api_router.get("/news", response_model=List[NewsItem])
-async def get_news(category: Optional[str] = None, lang: str = "ru"):
+@api_router.get("/news")
+async def get_news(
+    lang: str = "ru",
+    search: Optional[str] = None,
+    category: Optional[str] = None,
+    type: Optional[str] = None,
+    period: Optional[str] = "all",
+    sort: Optional[str] = "date_desc",
+    page: int = 1,
+    limit: int = 20,
+):
     query = {"is_active": True}
+    now = datetime.utcnow().isoformat()
+
     if category:
         query["category"] = category
-    news = await db.news.find(query).sort("created_at", -1).to_list(50)
-    return [NewsItem(**localize_news_document(item, lang)) for item in news]
+
+    if type:
+        query["types"] = {"$in": [type]}
+
+    if period == "active":
+        query["start_at"] = {"$lte": now}
+        query["end_at"] = {"$gte": now}
+    elif period == "finished":
+        query["end_at"] = {"$lt": now}
+    elif period == "no_period":
+        query["$or"] = [
+            {"start_at": None},
+            {"start_at": {"$exists": False}},
+        ]
+
+    if search:
+        query["$text"] = {"$search": search}
+
+    sort_order = -1 if sort != "date_asc" else 1
+    safe_page, safe_limit = to_pagination_params(page, limit)
+    skip = (safe_page - 1) * safe_limit
+
+    cursor = db.news.find(query).sort("created_at", sort_order).skip(skip).limit(safe_limit)
+    news = await cursor.to_list(safe_limit)
+    total = await db.news.count_documents(query)
+
+    localized_news = [NewsItem(**localize_news_document(item, lang)).dict() for item in news]
+    return {
+        "news": localized_news,
+        "total": total,
+        "page": safe_page,
+        "limit": safe_limit,
+    }
 
 @api_router.get("/news/{news_id}", response_model=NewsItem)
 async def get_news_item(news_id: str, lang: str = "ru"):
@@ -913,59 +972,101 @@ async def get_news_item(news_id: str, lang: str = "ru"):
         raise HTTPException(status_code=404, detail="News not found")
     return NewsItem(**localize_news_document(news, lang))
 
+@api_router.post("/admin/news/translate-preview")
+async def translate_preview(
+    data: dict,
+    current_user: dict = Depends(require_role([ROLE_ADMIN])),
+):
+    title = (data.get("title") or "").strip()
+    content = (data.get("content") or "").strip()
+    source_lang = detect_language(f"{title} {content}".strip())
+
+    title_translations = await translate_to_all_languages(title, source_lang)
+    content_translations = await translate_to_all_languages(content, source_lang)
+
+    return {
+        "source_lang": source_lang,
+        "translations": {
+            "ru": {
+                "title": title_translations["ru"],
+                "content": content_translations["ru"],
+            },
+            "kk": {
+                "title": title_translations["kk"],
+                "content": content_translations["kk"],
+            },
+            "en": {
+                "title": title_translations["en"],
+                "content": content_translations["en"],
+            },
+        },
+    }
+
 @api_router.post("/admin/news", response_model=NewsItem)
 async def create_news(news_data: NewsCreate, current_user: dict = Depends(require_role([ROLE_ADMIN]))):
     news_dict = news_data.dict()
-    source_lang = normalize_translation_language(news_dict.get("source_lang", "ru"))
+    source_title = (news_dict.get("title") or "").strip()
+    source_content = (news_dict.get("content") or "").strip()
+    source_summary = (news_dict.get("summary") or "").strip()
+    source_lang = normalize_translation_language(news_dict.get("source_lang")) if news_dict.get("source_lang") else detect_language(f"{source_title} {source_content}".strip())
 
-    if source_lang == "ru":
-        source_title = news_dict.get("title_ru") or news_dict.get("title") or ""
-        source_content = news_dict.get("content_ru") or news_dict.get("content") or ""
-        source_summary = news_dict.get("summary_ru") or news_dict.get("summary") or ""
-    elif source_lang == "kk":
-        source_title = news_dict.get("title_kz") or news_dict.get("title") or ""
-        source_content = news_dict.get("content_kz") or news_dict.get("content") or ""
-        source_summary = news_dict.get("summary_kz") or news_dict.get("summary") or ""
-    else:
-        source_title = news_dict.get("title_en") or news_dict.get("title") or ""
-        source_content = news_dict.get("content_en") or news_dict.get("content") or ""
-        source_summary = news_dict.get("summary_en") or news_dict.get("summary") or ""
+    has_translations = all(
+        news_dict.get(field)
+        for field in ("title_ru", "title_kz", "title_en", "content_ru", "content_kz", "content_en")
+    )
 
-    if source_title:
-        title_translations = await translate_to_all_languages(source_title, source_lang)
-        if not news_dict.get("title_ru"):
+    if not news_dict.get("skip_translation") and not has_translations and source_title:
+        try:
+            title_translations = await translate_to_all_languages(source_title, source_lang)
+            content_translations = await translate_to_all_languages(source_content, source_lang)
+            summary_translations = await translate_to_all_languages(source_summary or source_content[:180], source_lang)
+
             news_dict["title_ru"] = title_translations["ru"]
-        if not news_dict.get("title_kz"):
             news_dict["title_kz"] = title_translations["kk"]
-        if not news_dict.get("title_en"):
             news_dict["title_en"] = title_translations["en"]
-
-    if source_content:
-        content_translations = await translate_to_all_languages(source_content, source_lang)
-        if not news_dict.get("content_ru"):
             news_dict["content_ru"] = content_translations["ru"]
-        if not news_dict.get("content_kz"):
             news_dict["content_kz"] = content_translations["kk"]
-        if not news_dict.get("content_en"):
             news_dict["content_en"] = content_translations["en"]
-
-    if source_summary:
-        summary_translations = await translate_to_all_languages(source_summary, source_lang)
-        if not news_dict.get("summary_ru"):
             news_dict["summary_ru"] = summary_translations["ru"]
-        if not news_dict.get("summary_kz"):
             news_dict["summary_kz"] = summary_translations["kk"]
-        if not news_dict.get("summary_en"):
             news_dict["summary_en"] = summary_translations["en"]
+            news_dict["translation_status"] = "translated"
+        except Exception:
+            news_dict["translation_status"] = "failed"
+    elif has_translations:
+        news_dict["translation_status"] = "translated"
+    elif news_dict.get("skip_translation"):
+        news_dict["translation_status"] = "skipped"
+    else:
+        news_dict["translation_status"] = news_dict.get("translation_status") or "failed"
 
-    news_dict["title"] = source_title
-    news_dict["content"] = source_content
-    news_dict["summary"] = source_summary or source_content[:180]
+    news_dict["title"] = source_title or news_dict.get("title_ru") or news_dict.get("title_kz") or news_dict.get("title_en")
+    news_dict["content"] = source_content or news_dict.get("content_ru") or news_dict.get("content_kz") or news_dict.get("content_en")
+    news_dict["summary"] = source_summary or news_dict.get("summary_ru") or news_dict.get("summary_kz") or news_dict.get("summary_en") or (news_dict["content"] or "")[:180]
     news_dict["source_lang"] = source_lang
+    news_dict["created_at"] = news_dict.get("created_at") or datetime.utcnow()
+    news_dict["updated_at"] = datetime.utcnow()
+    news_dict.pop("skip_translation", None)
 
     news_item = NewsItem(**news_dict)
-    await db.news.insert_one(news_dict)
+    await db.news.insert_one(news_item.dict())
     return news_item
+
+@api_router.put("/admin/news/{news_id}", response_model=NewsItem)
+async def update_news(
+    news_id: str,
+    news_data: dict,
+    current_user: dict = Depends(require_role([ROLE_ADMIN])),
+):
+    existing = await db.news.find_one({"id": news_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="News not found")
+
+    update_data = {key: value for key, value in news_data.items() if value is not None}
+    update_data["updated_at"] = datetime.utcnow()
+    await db.news.update_one({"id": news_id}, {"$set": update_data})
+    updated = await db.news.find_one({"id": news_id})
+    return NewsItem(**localize_news_document(updated, existing.get("source_lang")))
 
 @api_router.delete("/admin/news/{news_id}")
 async def delete_news(news_id: str, current_user: dict = Depends(require_role([ROLE_ADMIN]))):
@@ -1274,3 +1375,18 @@ async def shutdown_db_client():
     client.close()
 
     print("Server started successfully")
+
+@app.on_event("startup")
+async def ensure_indexes():
+    await db.news.create_index(
+        [
+            ("title_ru", "text"),
+            ("title_kz", "text"),
+            ("title_en", "text"),
+            ("content_ru", "text"),
+            ("content_kz", "text"),
+            ("content_en", "text"),
+        ],
+        default_language="russian",
+        name="news_text_search_index",
+    )

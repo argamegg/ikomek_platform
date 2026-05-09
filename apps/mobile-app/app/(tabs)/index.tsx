@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -16,7 +17,7 @@ import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { NewsCard } from '../../src/components/NewsCard';
 import { useAuth } from '../../src/context/AuthContext';
-import { apiService, NewsItem } from '../../src/utils/api';
+import { apiService, type NewsItem } from '../../src/utils/api';
 import {
   categoryKeyMap,
   getBorderColor,
@@ -27,11 +28,16 @@ import {
   getNewsTypes,
   NEWS_CATEGORY_COLOR,
   NEWS_CATEGORY_OPTIONS,
+  NEWS_TYPE_OPTIONS,
   typeKeyMap,
 } from '../../src/utils/newsMeta';
 
-const ALL_CATEGORY = '__all__';
+const ALL_FILTER = '__all__';
 const ORANGE = '#FB8C00';
+const LIMIT = 20;
+
+type PeriodFilter = 'all' | 'active' | 'finished' | 'no_period';
+type SortFilter = 'date_desc' | 'date_asc';
 
 function normalizeLanguage(language?: string) {
   if (!language) {
@@ -51,7 +57,7 @@ function normalizeLanguage(language?: string) {
 
 function getLocalizedText(item: NewsItem, field: 'title' | 'content', language: string) {
   const normalized = normalizeLanguage(language);
-  const localizedField = normalized === 'en' ? field : `${field}_${normalized}`;
+  const localizedField = normalized === 'en' ? `${field}_en` : `${field}_${normalized}`;
   return String((item as Record<string, unknown>)[localizedField] ?? item[field] ?? '');
 }
 
@@ -99,42 +105,65 @@ export default function NewsScreen() {
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const [news, setNews] = useState<NewsItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string>(ALL_CATEGORY);
+  const [isFetching, setIsFetching] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>(ALL_FILTER);
+  const [selectedType, setSelectedType] = useState<string>(ALL_FILTER);
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodFilter>('all');
+  const [sort, setSort] = useState<SortFilter>('date_desc');
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
   const currentLanguage = normalizeLanguage(user?.language || i18n.language || 'ru');
   const t = useMemo(() => i18n.getFixedT(currentLanguage), [currentLanguage, i18n]);
 
-  const fetchNews = useCallback(async () => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  const fetchNews = useCallback(async (refresh = false) => {
+    if (!refresh) {
+      setIsFetching(true);
+    }
+
     try {
-      const response = await apiService.getNews();
-      setNews(response.data);
+      const response = await apiService.getNews({
+        search: search || undefined,
+        category: selectedCategory !== ALL_FILTER ? selectedCategory : undefined,
+        type: selectedType !== ALL_FILTER ? selectedType : undefined,
+        period: selectedPeriod !== 'all' ? selectedPeriod : undefined,
+        sort,
+        page,
+        limit: LIMIT,
+      });
+      setNews(response.data.news);
+      setTotal(response.data.total);
     } catch (error) {
       console.error('Error fetching news:', error);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
+      setIsFetching(false);
     }
-  }, []);
+  }, [page, search, selectedCategory, selectedPeriod, selectedType, sort]);
 
   useEffect(() => {
-    fetchNews();
+    void fetchNews();
   }, [fetchNews]);
 
-  const categories = useMemo(() => [ALL_CATEGORY, ...NEWS_CATEGORY_OPTIONS], []);
-
-  const filteredNews = useMemo(() => {
-    if (selectedCategory === ALL_CATEGORY) {
-      return news;
-    }
-
-    return news.filter((item) => getNewsCategory(item) === selectedCategory);
-  }, [news, selectedCategory]);
+  const pageCount = Math.max(1, Math.ceil(total / LIMIT));
 
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
-    fetchNews();
+    void fetchNews(true);
   }, [fetchNews]);
 
   const renderHeader = () => (
@@ -142,21 +171,36 @@ export default function NewsScreen() {
       <Text style={styles.headerTitle}>{t('news.title')}</Text>
       <Text style={styles.headerSubtitle}>{t('news.subtitle')}</Text>
 
+      <View style={styles.searchWrap}>
+        <MaterialCommunityIcons name="magnify" size={20} color="#94A3B8" />
+        <TextInput
+          style={styles.searchInput}
+          value={searchInput}
+          onChangeText={setSearchInput}
+          placeholder={t('news.searchPlaceholder', { defaultValue: 'Поиск по заголовку или тексту...' })}
+          placeholderTextColor="#94A3B8"
+        />
+      </View>
+
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.filtersRow}
       >
-        {categories.map((category) => {
+        {[ALL_FILTER, ...NEWS_CATEGORY_OPTIONS].map((category) => {
           const active = category === selectedCategory;
-          const label = category === ALL_CATEGORY
-            ? t('common.all')
+          const label = category === ALL_FILTER
+            ? t('news.allCategories', { defaultValue: 'Все категории' })
             : t(categoryKeyMap[category] ?? category);
+
           return (
             <TouchableOpacity
               key={category}
               style={[styles.filterChip, active && styles.filterChipActive]}
-              onPress={() => setSelectedCategory(category)}
+              onPress={() => {
+                setPage(1);
+                setSelectedCategory(category);
+              }}
               activeOpacity={0.9}
             >
               <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
@@ -166,6 +210,83 @@ export default function NewsScreen() {
           );
         })}
       </ScrollView>
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filtersRow}
+      >
+        {[ALL_FILTER, ...NEWS_TYPE_OPTIONS.map((item) => item.label)].map((type) => {
+          const active = type === selectedType;
+          const label = type === ALL_FILTER
+            ? t('news.allTypes', { defaultValue: 'Все типы' })
+            : t(typeKeyMap[type] ?? type);
+
+          return (
+            <TouchableOpacity
+              key={type}
+              style={[styles.filterChip, active && styles.filterChipActive]}
+              onPress={() => {
+                setPage(1);
+                setSelectedType(type);
+              }}
+              activeOpacity={0.9}
+            >
+              <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      <View style={styles.multiFiltersRow}>
+        {([
+          { key: 'all', label: t('news.periodAll', { defaultValue: 'Все периоды' }) },
+          { key: 'active', label: t('news.periodActive', { defaultValue: 'Активные' }) },
+          { key: 'finished', label: t('news.periodFinished', { defaultValue: 'Завершённые' }) },
+          { key: 'no_period', label: t('news.periodNoPeriod', { defaultValue: 'Без периода' }) },
+        ] as { key: PeriodFilter; label: string }[]).map((item) => {
+          const active = item.key === selectedPeriod;
+          return (
+            <TouchableOpacity
+              key={item.key}
+              style={[styles.filterChip, active && styles.filterChipActive]}
+              onPress={() => {
+                setPage(1);
+                setSelectedPeriod(item.key);
+              }}
+            >
+              <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      <View style={styles.multiFiltersRow}>
+        {([
+          { key: 'date_desc', label: t('news.sortNewest', { defaultValue: 'Сначала новые' }) },
+          { key: 'date_asc', label: t('news.sortOldest', { defaultValue: 'Сначала старые' }) },
+        ] as { key: SortFilter; label: string }[]).map((item) => {
+          const active = item.key === sort;
+          return (
+            <TouchableOpacity
+              key={item.key}
+              style={[styles.filterChip, active && styles.filterChipActive]}
+              onPress={() => {
+                setPage(1);
+                setSort(item.key);
+              }}
+            >
+              <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </View>
   );
 
@@ -286,7 +407,7 @@ export default function NewsScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <FlatList
-        data={filteredNews}
+        data={news}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <NewsCard news={item} onPress={() => setSelectedNews(item)} />}
         ListHeaderComponent={renderHeader}
@@ -295,11 +416,35 @@ export default function NewsScreen() {
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={ORANGE} />
         }
+        ListFooterComponent={
+          <View style={styles.footerSpace}>
+            {isFetching ? <ActivityIndicator size="small" color={ORANGE} /> : null}
+            <View style={styles.paginationRow}>
+              <TouchableOpacity
+                style={[styles.paginationButton, page <= 1 && styles.paginationButtonDisabled]}
+                disabled={page <= 1}
+                onPress={() => setPage((current) => Math.max(1, current - 1))}
+              >
+                <Text style={styles.paginationButtonText}>{t('common.back')}</Text>
+              </TouchableOpacity>
+              <Text style={styles.paginationText}>{page} / {pageCount}</Text>
+              <TouchableOpacity
+                style={[styles.paginationButton, page >= pageCount && styles.paginationButtonDisabled]}
+                disabled={page >= pageCount}
+                onPress={() => setPage((current) => Math.min(pageCount, current + 1))}
+              >
+                <Text style={styles.paginationButtonText}>{t('common.continue')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        }
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <MaterialCommunityIcons name="newspaper-variant-outline" size={52} color="#CBD5E1" />
-            <Text style={styles.emptyTitle}>Новостей пока нет</Text>
-            <Text style={styles.emptyText}>Попробуйте выбрать другую категорию или обновить список.</Text>
+            <Text style={styles.emptyTitle}>{t('news.noNews', { defaultValue: 'Нет новостей' })}</Text>
+            <Text style={styles.emptyText}>
+              {t('news.emptyFiltered', { defaultValue: 'Попробуйте выбрать другие фильтры или обновить список.' })}
+            </Text>
           </View>
         }
         showsVerticalScrollIndicator={false}
@@ -324,7 +469,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   headerBlock: {
-    gap: 4,
+    gap: 12,
     paddingBottom: 18,
   },
   headerTitle: {
@@ -339,10 +484,31 @@ const styles = StyleSheet.create({
     color: '#475569',
     fontWeight: '500',
   },
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#111827',
+    paddingVertical: 0,
+  },
   filtersRow: {
     gap: 10,
-    marginTop: 10,
     paddingRight: 8,
+  },
+  multiFiltersRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
   },
   filterChip: {
     borderRadius: 999,
@@ -381,6 +547,39 @@ const styles = StyleSheet.create({
     color: '#64748B',
     textAlign: 'center',
     fontWeight: '500',
+  },
+  footerSpace: {
+    gap: 16,
+    paddingTop: 16,
+  },
+  paginationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  paginationButton: {
+    flex: 1,
+    minHeight: 46,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  paginationButtonDisabled: {
+    opacity: 0.45,
+  },
+  paginationButtonText: {
+    fontSize: 14,
+    color: '#111827',
+    fontWeight: '700',
+  },
+  paginationText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '700',
   },
   modalScreen: {
     flex: 1,

@@ -9,6 +9,8 @@ import type {
   EmailVerificationInput,
   NewsCreateInput,
   NewsItem,
+  NewsListResponse,
+  NewsTranslationPreview,
   NotificationItem,
   PasswordRecoveryInput,
   PlatformMetrics,
@@ -33,6 +35,7 @@ import {
   normalizeMessage,
   normalizeMetrics,
   normalizeNews,
+  normalizeNewsListResponse,
   normalizeNotification,
   normalizeReason,
   normalizeRequest,
@@ -413,16 +416,24 @@ export const platformApi = {
     }
   },
 
-  async getNews(): Promise<NewsItem[]> {
+  async getNews(params?: {
+    search?: string;
+    category?: string;
+    type?: string;
+    period?: string;
+    sort?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<NewsListResponse> {
     const response = await platformClient.get(apiConfig.endpoints.news, {
-      params: { lang: getCurrentLang() },
+      params: { lang: getCurrentLang(), ...params },
     });
-    return normalizeList(response.data, normalizeNews);
+    return normalizeNewsListResponse(response.data);
   },
 
   async getAlerts(): Promise<NewsItem[]> {
-    const items = await this.getNews();
-    return items.filter((item) =>
+    const items = await this.getNews({ limit: 20 });
+    return items.news.filter((item) =>
       item.types.some((type) =>
         [
           "Аварийные работы",
@@ -586,7 +597,7 @@ export const platformApi = {
     const [requests, news] = await Promise.all([this.getMyRequests(), this.getNews()]);
     return [
       ...requests.slice(0, 4).map(toNotificationItem),
-      ...news.slice(0, 3).map((item) =>
+      ...news.news.slice(0, 3).map((item) =>
         normalizeNotification({
           id: `news-${item.id}`,
           title: item.title,
@@ -610,23 +621,84 @@ export const platformApi = {
     const sourceLang = getCurrentLang();
     const response = await platformClient.post("/admin/news", {
       title: payload.title,
-      title_ru: sourceLang === "ru" ? payload.title : undefined,
-      title_kz: sourceLang === "kk" ? payload.title : undefined,
-      title_en: sourceLang === "en" ? payload.title : undefined,
+      title_ru: payload.titleRu ?? (sourceLang === "ru" ? payload.title : undefined),
+      title_kz: payload.titleKz ?? (sourceLang === "kk" ? payload.title : undefined),
+      title_en: payload.titleEn ?? (sourceLang === "en" ? payload.title : undefined),
       content,
-      content_ru: sourceLang === "ru" ? content : undefined,
-      content_kz: sourceLang === "kk" ? content : undefined,
-      content_en: sourceLang === "en" ? content : undefined,
+      content_ru: payload.bodyRu ?? (sourceLang === "ru" ? content : undefined),
+      content_kz: payload.bodyKz ?? (sourceLang === "kk" ? content : undefined),
+      content_en: payload.bodyEn ?? (sourceLang === "en" ? content : undefined),
       category: payload.category,
       types: payload.types,
       type: primaryType,
       priority: legacyPriority,
       summary: payload.summary,
+      summary_ru: payload.summaryRu,
+      summary_kz: payload.summaryKz,
+      summary_en: payload.summaryEn,
       location: payload.location,
       start_at: payload.startAt,
       end_at: payload.endAt,
-      source_lang: sourceLang,
+      source_lang: payload.sourceLang ?? sourceLang,
+      translation_status: payload.translationStatus,
+      skip_translation: payload.skipTranslation ?? false,
     });
     return normalizeNews(response.data);
+  },
+
+  async previewNewsTranslation(payload: { title: string; content: string }): Promise<NewsTranslationPreview> {
+    const response = await platformClient.post("/admin/news/translate-preview", payload);
+    const record =
+      typeof response.data === "object" && response.data !== null
+        ? (response.data as Record<string, unknown>)
+        : {};
+
+    return {
+      sourceLang: String(record.source_lang ?? record.sourceLang ?? "ru") as NewsTranslationPreview["sourceLang"],
+      translations: {
+        ru: {
+          title: String((record.translations as Record<string, any> | undefined)?.ru?.title ?? ""),
+          content: String((record.translations as Record<string, any> | undefined)?.ru?.content ?? ""),
+        },
+        kk: {
+          title: String((record.translations as Record<string, any> | undefined)?.kk?.title ?? ""),
+          content: String((record.translations as Record<string, any> | undefined)?.kk?.content ?? ""),
+        },
+        en: {
+          title: String((record.translations as Record<string, any> | undefined)?.en?.title ?? ""),
+          content: String((record.translations as Record<string, any> | undefined)?.en?.content ?? ""),
+        },
+      },
+    };
+  },
+
+  async updateNews(newsId: string, payload: NewsCreateInput) {
+    const response = await platformClient.put(`/admin/news/${newsId}`, {
+      title: payload.title,
+      title_ru: payload.titleRu,
+      title_kz: payload.titleKz,
+      title_en: payload.titleEn,
+      content: payload.body,
+      content_ru: payload.bodyRu,
+      content_kz: payload.bodyKz,
+      content_en: payload.bodyEn,
+      summary: payload.summary,
+      summary_ru: payload.summaryRu,
+      summary_kz: payload.summaryKz,
+      summary_en: payload.summaryEn,
+      category: payload.category,
+      types: payload.types,
+      type: payload.types[0],
+      location: payload.location,
+      start_at: payload.startAt,
+      end_at: payload.endAt,
+      source_lang: payload.sourceLang ?? getCurrentLang(),
+      translation_status: payload.translationStatus,
+    });
+    return normalizeNews(response.data);
+  },
+
+  async deleteNews(newsId: string) {
+    await platformClient.delete(`/admin/news/${newsId}`);
   },
 };

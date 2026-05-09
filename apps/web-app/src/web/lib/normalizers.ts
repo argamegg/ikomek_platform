@@ -4,6 +4,7 @@ import type {
   District,
   Locale,
   NewsItem,
+  NewsListResponse,
   NotificationItem,
   PlatformMetrics,
   RequestAttachment,
@@ -471,6 +472,9 @@ export function normalizeNews(payload: unknown): NewsItem {
   return {
     id: asString(pick(record, ["id", "newsId", "uuid"]), crypto.randomUUID()),
     title: asString(pick(record, localizedKeys("title", locale)), "City update"),
+    titleRu: asString(pick(record, ["title_ru", "titleRu"])),
+    titleKz: asString(pick(record, ["title_kz", "titleKz"])),
+    titleEn: asString(pick(record, ["title_en", "titleEn"])),
     category,
     types,
     priority,
@@ -482,8 +486,18 @@ export function normalizeNews(payload: unknown): NewsItem {
       ]),
       body.slice(0, 160),
     ),
+    summaryRu: asString(pick(record, ["summary_ru", "summaryRu"])),
+    summaryKz: asString(pick(record, ["summary_kz", "summaryKz"])),
+    summaryEn: asString(pick(record, ["summary_en", "summaryEn"])),
     body,
+    bodyRu: asString(pick(record, ["content_ru", "contentRu", "body_ru", "bodyRu"])),
+    bodyKz: asString(pick(record, ["content_kz", "contentKz", "body_kz", "bodyKz"])),
+    bodyEn: asString(pick(record, ["content_en", "contentEn", "body_en", "bodyEn"])),
     location: asString(pick(record, ["location", "district"])),
+    sourceLang: asString(pick(record, ["source_lang", "sourceLang"])),
+    translationStatus: asString(
+      pick(record, ["translation_status", "translationStatus"]),
+    ) as NewsItem["translationStatus"],
     startAt: asString(
       pick(record, ["startAt", "start_at", "publishedAt", "published_at", "created_at"]),
       new Date().toISOString(),
@@ -491,6 +505,21 @@ export function normalizeNews(payload: unknown): NewsItem {
     endAt: asString(pick(record, ["endAt", "end_at"])),
     imageUrl: asString(pick(record, ["imageUrl", "image_url", "cover", "image"])),
     publishedAt: asString(pick(record, ["publishedAt", "published_at", "created_at"])),
+    updatedAt: asString(pick(record, ["updatedAt", "updated_at"])),
+    isActive: asBoolean(pick(record, ["isActive", "is_active"]), true),
+  };
+}
+
+export function normalizeNewsListResponse(payload: unknown): NewsListResponse {
+  const record = isRecord(unwrapPayload<JsonRecord>(payload)) ? unwrapPayload<JsonRecord>(payload) : {};
+  const items = pick(record, ["news", "items"]);
+  const news = Array.isArray(items) ? items.map((item) => normalizeNews(item)) : normalizeList(payload, normalizeNews);
+
+  return {
+    news,
+    total: asNumber(pick(record, ["total"]), news.length),
+    page: asNumber(pick(record, ["page"]), 1),
+    limit: asNumber(pick(record, ["limit"]), news.length || 20),
   };
 }
 
