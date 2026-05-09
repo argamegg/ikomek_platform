@@ -8,34 +8,12 @@ import { platformApi, queryKeys } from "./web/services/platformApi";
 
 export type Copy = Record<string, unknown>;
 
-const SPLASH_SESSION_KEY = "splashShown";
-let splashDecision: boolean | null = null;
-
 export default function App() {
   const queryClient = useQueryClient();
-  const [shouldShowSplash] = useState(() => {
-    if (splashDecision === null) {
-      if (typeof window === "undefined") {
-        splashDecision = false;
-      } else {
-        try {
-          const shown = window.sessionStorage.getItem(SPLASH_SESSION_KEY) === "true";
-          splashDecision = !shown;
-
-          if (!shown) {
-            window.sessionStorage.setItem(SPLASH_SESSION_KEY, "true");
-          }
-        } catch {
-          splashDecision = true;
-        }
-      }
-    }
-
-    return splashDecision;
-  });
-  const [videoFinished, setVideoFinished] = useState(!shouldShowSplash);
-  const [dataLoaded, setDataLoaded] = useState(!shouldShowSplash);
-  const [splashMounted, setSplashMounted] = useState(shouldShowSplash);
+  const shouldShowSplash = typeof window !== "undefined";
+  const [videoFinished, setVideoFinished] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
+  const [splashMounted, setSplashMounted] = useState(true);
   const fadingOut = shouldShowSplash && splashMounted && videoFinished && dataLoaded;
 
   useEffect(() => {

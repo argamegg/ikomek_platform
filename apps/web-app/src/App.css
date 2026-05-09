@@ -28,7 +28,7 @@
   }
 }
 
-.splash-screen {
+.splash-container {
   position: fixed;
   inset: 0;
   z-index: 9999;
@@ -40,14 +40,16 @@
   transition: opacity 300ms ease;
 }
 
-.splash-screen--hidden {
+.splash-container--hidden {
   opacity: 0;
   pointer-events: none;
 }
 
-.splash-screen__video {
-  width: min(100vw, 100%);
-  height: min(100vh, 100%);
+.splash-video {
+  width: 40%;
+  max-width: 400px;
+  min-width: 200px;
+  height: auto;
   object-fit: contain;
   display: block;
 }

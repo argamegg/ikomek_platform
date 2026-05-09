@@ -13,7 +13,7 @@ export function SplashScreen({
 }: SplashScreenProps) {
   return (
     <div
-      className={`splash-screen${fadingOut ? " splash-screen--hidden" : ""}`}
+      className={`splash-container${fadingOut ? " splash-container--hidden" : ""}`}
       onTransitionEnd={(event) => {
         if (event.target === event.currentTarget && fadingOut) {
           onExited();
@@ -22,7 +22,7 @@ export function SplashScreen({
     >
       {showProgress ? <div className="splash-progress" aria-hidden="true" /> : null}
       <video
-        className="splash-screen__video"
+        className="splash-video"
         src="/logo_anim.mp4"
         autoPlay
         muted

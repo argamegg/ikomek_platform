@@ -1,6 +1,7 @@
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { ResizeMode, type AVPlaybackStatus, Video } from 'expo-av';
+import { useEventListener } from 'expo';
+import { useVideoPlayer, VideoView } from 'expo-video';
 
 type SplashVideoProps = {
   onFinish: () => void;
@@ -8,27 +9,31 @@ type SplashVideoProps = {
 
 export function SplashVideo({ onFinish }: SplashVideoProps) {
   const hasFinishedRef = useRef(false);
+  const source = useMemo(() => require('../../assets/logo_anim.mp4'), []);
+  const player = useVideoPlayer(source, (instance) => {
+    instance.loop = false;
+    instance.muted = true;
+    instance.play();
+  });
 
-  const handlePlaybackStatusUpdate = (status: AVPlaybackStatus) => {
-    if (!status.isLoaded || hasFinishedRef.current || !status.didJustFinish) {
+  useEventListener(player, 'playToEnd', () => {
+    if (hasFinishedRef.current) {
       return;
     }
 
     hasFinishedRef.current = true;
     onFinish();
-  };
+  });
 
   return (
     <View style={styles.container}>
-      <Video
-        source={require('../../assets/logo_anim.mp4')}
+      <VideoView
+        player={player}
         style={styles.video}
-        resizeMode={ResizeMode.COVER}
-        shouldPlay
-        isLooping={false}
-        isMuted
-        useNativeControls={false}
-        onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+        contentFit="contain"
+        nativeControls={false}
+        fullscreenOptions={{ enable: false }}
+        allowsPictureInPicture={false}
       />
     </View>
   );
@@ -38,8 +43,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   video: {
-    ...StyleSheet.absoluteFillObject,
+    width: '70%',
+    aspectRatio: 1,
   },
 });

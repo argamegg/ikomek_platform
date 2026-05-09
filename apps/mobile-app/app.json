@@ -43,7 +43,8 @@
           "backgroundColor": "#FFFFFF"
         }
       ],
-      "@maplibre/maplibre-react-native"
+      "@maplibre/maplibre-react-native",
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true
