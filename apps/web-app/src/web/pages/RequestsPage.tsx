@@ -9,6 +9,12 @@ import { Tabs } from "../components/ui/Tabs";
 import { PageHeader } from "../components/ui/PageHeader";
 import { EmptyState } from "../components/ui/EmptyState";
 import { formatDate, getPriorityTone, getStatusTone } from "../lib/format";
+import {
+  localizeRequestDescription,
+  localizeRequestPriority,
+  localizeRequestProblemType,
+  localizeRequestStatus,
+} from "../lib/requestMeta";
 import { platformApi, queryKeys } from "../services/platformApi";
 
 type FilterMode = "all" | "pending" | "in_progress" | "closed";
@@ -58,12 +64,12 @@ export function RequestsPage() {
           <Card key={request.id} className="request-card">
             <div className="request-card__top">
               <div>
-                <Badge tone={getPriorityTone(request.priority)}>{request.priority}</Badge>
-                <h3>{request.title}</h3>
+                <Badge tone={getPriorityTone(request.priority)}>{localizeRequestPriority(request.priority, t)}</Badge>
+                <h3>{localizeRequestProblemType(request.categoryId || request.categoryName, request.title, t)}</h3>
               </div>
-              <Badge tone={getStatusTone(request.status)}>{request.statusLabel ?? request.status}</Badge>
+              <Badge tone={getStatusTone(request.status)}>{localizeRequestStatus(request.statusLabel || request.status, t)}</Badge>
             </div>
-            <p>{request.description}</p>
+            <p>{localizeRequestDescription(request.description, request.categoryId, request.title, request.reasonId || request.reasonName, t)}</p>
             <div className="request-card__meta">
               <span>{request.address}</span>
               <span>{formatDate(request.updatedAt, i18n.language as "en" | "ru" | "kz")}</span>

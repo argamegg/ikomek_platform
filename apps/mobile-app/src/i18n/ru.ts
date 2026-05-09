@@ -200,6 +200,22 @@ export const ru = {
     },
   },
 
+  requests: {
+    statuses: {
+      pending: 'Ожидает',
+      in_progress: 'В работе',
+      closed: 'Закрыто',
+      open: 'Открыто',
+      resolved: 'Решено',
+      rejected: 'Отклонено',
+    },
+    priorities: {
+      low: 'Низкий',
+      medium: 'Средний',
+      high: 'Высокий',
+    },
+  },
+
   // Categories
   categories: {
     electricity: 'Электричество',

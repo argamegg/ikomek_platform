@@ -8,6 +8,15 @@ import { Badge } from "../components/ui/Badge";
 import { EmptyState } from "../components/ui/EmptyState";
 import { IssueMap } from "../components/maps/IssueMap";
 import { formatDate, getPriorityTone, getStatusTone } from "../lib/format";
+import {
+  localizeAttachmentType,
+  localizeRequestCategory,
+  localizeRequestDescription,
+  localizeRequestPriority,
+  localizeRequestProblemType,
+  localizeRequestReason,
+  localizeRequestStatus,
+} from "../lib/requestMeta";
 import { platformApi, queryKeys } from "../services/platformApi";
 
 export function RequestDetailsPage() {
@@ -24,12 +33,12 @@ export function RequestDetailsPage() {
   return (
     <div className="page-stack">
       <PageHeader
-        title={request?.title ?? t("requestDetails.overview")}
-        description={request?.description}
+        title={request ? localizeRequestProblemType(request.categoryId || request.categoryName, request.title, t) : t("requestDetails.overview")}
+        description={request ? localizeRequestDescription(request.description, request.categoryId, request.title, request.reasonId || request.reasonName, t) : undefined}
         action={
           request ? (
             <Link to={`/requests/${request.id}/chat`} className="page-actions">
-              <Badge tone={getStatusTone(request.status)}>{request.statusLabel ?? request.status}</Badge>
+              <Badge tone={getStatusTone(request.status)}>{localizeRequestStatus(request.statusLabel || request.status, t)}</Badge>
             </Link>
           ) : null
         }
@@ -46,12 +55,12 @@ export function RequestDetailsPage() {
                   <span className="section-card__eyebrow">{t("requestDetails.overview")}</span>
                   <h3>{request.address}</h3>
                 </div>
-                <Badge tone={getPriorityTone(request.priority)}>{request.priority}</Badge>
+                <Badge tone={getPriorityTone(request.priority)}>{localizeRequestPriority(request.priority, t)}</Badge>
               </div>
               <div className="details-grid">
                 <div>
                   <span>Status</span>
-                  <strong>{request.statusLabel ?? request.status}</strong>
+                  <strong>{localizeRequestStatus(request.statusLabel || request.status, t)}</strong>
                 </div>
                 <div>
                   <span>Created</span>
@@ -59,14 +68,14 @@ export function RequestDetailsPage() {
                 </div>
                 <div>
                   <span>Category</span>
-                  <strong>{request.categoryName || request.categoryId || "—"}</strong>
+                  <strong>{localizeRequestCategory(request.categoryId || request.categoryName, t) || "—"}</strong>
                 </div>
                 <div>
                   <span>Reason</span>
-                  <strong>{request.reasonName || request.reasonId || "—"}</strong>
+                  <strong>{localizeRequestReason(request.categoryId || request.categoryName, request.reasonId || request.reasonName, t) || "—"}</strong>
                 </div>
               </div>
-              <p>{request.description}</p>
+              <p>{localizeRequestDescription(request.description, request.categoryId, request.title, request.reasonId || request.reasonName, t)}</p>
             </Card>
 
             <Card className="section-card section-card--map" hover={false}>
@@ -88,8 +97,8 @@ export function RequestDetailsPage() {
                   <div key={item.id} className="timeline__item">
                     <span className="timeline__dot" />
                     <div>
-                      <strong>{item.label}</strong>
-                      <p>{item.note || item.status}</p>
+                      <strong>{localizeRequestStatus(item.label || item.status, t)}</strong>
+                      <p>{localizeRequestStatus(item.note || item.status, t)}</p>
                       <small>{formatDate(item.timestamp, i18n.language as "en" | "ru" | "kz")}</small>
                     </div>
                   </div>
@@ -109,7 +118,7 @@ export function RequestDetailsPage() {
                 {request.attachments.map((attachment) => (
                   <a key={attachment.id} href={attachment.url} className="attachment-tile" target="_blank" rel="noreferrer">
                     <strong>{attachment.label}</strong>
-                    <span>{attachment.type}</span>
+                    <span>{localizeAttachmentType(attachment.type, t)}</span>
                   </a>
                 ))}
               </div>

@@ -28,6 +28,7 @@ import { Skeleton } from "../components/ui/Skeleton";
 import { IssueMap } from "../components/maps/IssueMap";
 import { formatRelativeTime, getStatusTone } from "../lib/format";
 import { categoryKeyMap, formatNewsDate, formatNewsPeriod, typeKeyMap } from "../lib/normalizers";
+import { localizeRequestProblemType, localizeRequestStatus } from "../lib/requestMeta";
 import {
   getBorderColor,
   getNewsCategory,
@@ -307,8 +308,6 @@ export function HomePage() {
     return endLabel ? `${startLabel} - ${endLabel}` : startLabel;
   };
 
-  const getNewsPreview = (item: NewsItem) => item.summary || item.body;
-
   const getLocalizedRequestStatus = (status?: string) => {
     const normalized = (status ?? "").toLowerCase();
 
@@ -329,6 +328,8 @@ export function HomePage() {
         return status ?? "";
     }
   };
+
+  const getNewsPreview = (item: NewsItem) => item.summary || item.body;
 
   const stats = useMemo(
     () => [
@@ -860,10 +861,12 @@ export function HomePage() {
                 transition={{ duration: 0.45, delay: 0.15 }}
               >
                 <small>{t("home.preview.selectedIssue")}</small>
-                <strong>{highlightRequest.title}</strong>
+                <strong>{localizeRequestProblemType(highlightRequest.categoryId || highlightRequest.categoryName, highlightRequest.title, t)}</strong>
                 <p>{highlightRequest.address}</p>
                 <Badge tone={getStatusTone(highlightRequest.status)}>
-                  {highlightRequest.statusLabel ?? getLocalizedRequestStatus(highlightRequest.status)}
+                  {highlightRequest.statusLabel
+                    ? localizeRequestStatus(highlightRequest.statusLabel, t)
+                    : getLocalizedRequestStatus(highlightRequest.status)}
                 </Badge>
               </motion.div>
             ) : null}

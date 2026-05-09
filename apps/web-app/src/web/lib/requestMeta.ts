@@ -1,45 +1,62 @@
-import type { ComponentProps } from 'react';
-import { Ionicons } from '@expo/vector-icons';
-
-type IconName = ComponentProps<typeof Ionicons>['name'];
 type TranslationFn = (key: string, options?: Record<string, unknown>) => string;
 
 type RequestOption = {
   id: string;
-  icon?: IconName;
   legacyLabels?: string[];
 };
 
-export type RequestCategory = {
+type RequestCategory = {
   id: string;
   i18nKey: string;
-  icon: IconName;
-  color: string;
   legacyLabels?: string[];
 };
 
-export const REQUEST_CATEGORIES: RequestCategory[] = [
-  { id: 'electricity', i18nKey: 'electricity', icon: 'flash', color: '#FFB300', legacyLabels: ['Electricity', 'Электричество', 'Электр қуаты'] },
-  { id: 'water', i18nKey: 'water', icon: 'water', color: '#2196F3', legacyLabels: ['Water Supply', 'Water', 'Водоснабжение', 'Сумен қамтамасыз ету'] },
-  { id: 'roads', i18nKey: 'roads', icon: 'car', color: '#607D8B', legacyLabels: ['Roads', 'Дороги', 'Жолдар'] },
-  { id: 'public_order', i18nKey: 'publicOrder', icon: 'shield-checkmark', color: '#4CAF50', legacyLabels: ['Public Order', 'Нарушение порядка', 'Тәртіп бұзушылық'] },
-  { id: 'waste', i18nKey: 'waste', icon: 'trash', color: '#795548', legacyLabels: ['Waste', 'Мусор', 'Қоқыс'] },
-  { id: 'heating', i18nKey: 'heating', icon: 'flame', color: '#FF5722', legacyLabels: ['Heating', 'Отопление', 'Жылыту'] },
-  { id: 'street_lighting', i18nKey: 'streetLighting', icon: 'bulb', color: '#FFC107', legacyLabels: ['Street Lighting', 'Уличное освещение', 'Көше жарығы'] },
-  { id: 'sewage', i18nKey: 'sewage', icon: 'water', color: '#607D8B', legacyLabels: ['Sewage', 'Канализация', 'Кәріз'] },
-  { id: 'other', i18nKey: 'other', icon: 'ellipsis-horizontal', color: '#9E9E9E', legacyLabels: ['Other', 'Другое', 'Басқа'] },
+export const statusKeyMap: Record<string, string> = {
+  pending: 'requests.statuses.pending',
+  in_progress: 'requests.statuses.in_progress',
+  closed: 'requests.statuses.closed',
+  open: 'requests.statuses.open',
+  resolved: 'requests.statuses.resolved',
+  rejected: 'requests.statuses.rejected',
+};
+
+export const priorityKeyMap: Record<string, string> = {
+  low: 'requests.priorities.low',
+  medium: 'requests.priorities.medium',
+  high: 'requests.priorities.high',
+  warning: 'requests.priorities.medium',
+  normal: 'requests.priorities.medium',
+  info: 'requests.priorities.low',
+  information: 'requests.priorities.low',
+  urgent: 'requests.priorities.high',
+  critical: 'requests.priorities.high',
+};
+
+const REQUEST_CATEGORIES: RequestCategory[] = [
+  { id: 'electricity', i18nKey: 'electricity', legacyLabels: ['Electricity', 'Электричество', 'Электр қуаты'] },
+  { id: 'water', i18nKey: 'water', legacyLabels: ['Water Supply', 'Water', 'Водоснабжение', 'Сумен қамтамасыз ету'] },
+  { id: 'roads', i18nKey: 'roads', legacyLabels: ['Roads', 'Дороги', 'Жолдар'] },
+  { id: 'public_order', i18nKey: 'publicOrder', legacyLabels: ['Public Order', 'Нарушение порядка', 'Тәртіп бұзушылық'] },
+  { id: 'waste', i18nKey: 'waste', legacyLabels: ['Waste', 'Мусор', 'Қоқыс'] },
+  { id: 'heating', i18nKey: 'heating', legacyLabels: ['Heating', 'Отопление', 'Жылыту'] },
+  { id: 'street_lighting', i18nKey: 'streetLighting', legacyLabels: ['Street Lighting', 'Уличное освещение', 'Көше жарығы'] },
+  { id: 'sewage', i18nKey: 'sewage', legacyLabels: ['Sewage', 'Канализация', 'Кәріз'] },
+  { id: 'other', i18nKey: 'other', legacyLabels: ['Other', 'Другое', 'Басқа'] },
 ];
 
-export const PLACE_TYPES: RequestOption[] = [
-  { id: 'apartment', icon: 'business', legacyLabels: ['Apartment', 'Квартира', 'Пәтер'] },
-  { id: 'house', icon: 'home', legacyLabels: ['Private House', 'House', 'Частный дом', 'Дом', 'Жеке үй', 'Үй'] },
-  { id: 'office', icon: 'briefcase', legacyLabels: ['Office', 'Офис', 'Кеңсе'] },
-  { id: 'street', icon: 'navigate', legacyLabels: ['Street', 'Улица', 'Көше'] },
-  { id: 'park', icon: 'leaf', legacyLabels: ['Park/Square', 'Park', 'Парк/сквер', 'Парк', 'Саябақ/алаң', 'Саябақ'] },
-  { id: 'other', icon: 'ellipsis-horizontal', legacyLabels: ['Other', 'Другое', 'Басқа'] },
+const PLACE_TYPES: RequestOption[] = [
+  { id: 'apartment', legacyLabels: ['Apartment', 'Квартира', 'Пәтер'] },
+  { id: 'house', legacyLabels: ['Private House', 'House', 'Частный дом', 'Дом', 'Жеке үй', 'Үй'] },
+  { id: 'office', legacyLabels: ['Office', 'Офис', 'Кеңсе'] },
+  { id: 'street', legacyLabels: ['Street', 'Улица', 'Көше'] },
+  { id: 'park', legacyLabels: ['Park/Square', 'Park', 'Парк/сквер', 'Парк', 'Саябақ/алаң', 'Саябақ'] },
+  { id: 'entrance', legacyLabels: ['Entrance', 'Подъезд', 'Кіреберіс'] },
+  { id: 'yard', legacyLabels: ['Yard', 'Двор', 'Аула'] },
+  { id: 'parking', legacyLabels: ['Parking', 'Паркинг', 'Тұрақ'] },
+  { id: 'other', legacyLabels: ['Other', 'Другое', 'Басқа'] },
 ];
 
-export const PROBLEM_TYPES: Record<string, RequestOption[]> = {
+const PROBLEM_TYPES: Record<string, RequestOption[]> = {
   electricity: [
     { id: 'power_outage', legacyLabels: ['Power outage'] },
     { id: 'voltage_issue', legacyLabels: ['Voltage fluctuation'] },
@@ -112,7 +129,7 @@ export const PROBLEM_TYPES: Record<string, RequestOption[]> = {
   ],
 };
 
-export const REASONS: Record<string, RequestOption[]> = {
+const REASONS: Record<string, RequestOption[]> = {
   electricity: [
     { id: 'infrastructure', legacyLabels: ['Infrastructure failure'] },
     { id: 'weather', legacyLabels: ['Weather damage'] },
@@ -207,7 +224,7 @@ const resolveOptionId = (options: RequestOption[], value?: string | null) => {
   return match?.id || value || '';
 };
 
-export const getCategoryConfig = (categoryId?: string | null) => {
+export const getRequestCategoryConfig = (categoryId?: string | null) => {
   const target = normalize(categoryId);
   return REQUEST_CATEGORIES.find((category) => (
     normalize(category.id) === target ||
@@ -215,40 +232,50 @@ export const getCategoryConfig = (categoryId?: string | null) => {
   )) || REQUEST_CATEGORIES.find((category) => category.id === 'other')!;
 };
 
-export const getProblemOptions = (categoryId?: string | null) => (
-  PROBLEM_TYPES[getCategoryConfig(categoryId).id] || PROBLEM_TYPES.other
+const getProblemOptions = (categoryId?: string | null) => (
+  PROBLEM_TYPES[getRequestCategoryConfig(categoryId).id] || PROBLEM_TYPES.other
 );
 
-export const getReasonOptions = (categoryId?: string | null) => (
-  REASONS[getCategoryConfig(categoryId).id] || REASONS.other
+const getReasonOptions = (categoryId?: string | null) => (
+  REASONS[getRequestCategoryConfig(categoryId).id] || REASONS.other
 );
 
-export const localizeCategory = (categoryId: string | undefined | null, t: TranslationFn) => {
-  const category = getCategoryConfig(categoryId);
+export const localizeRequestStatus = (status: string | undefined | null, t: TranslationFn) => {
+  const key = status ? statusKeyMap[normalize(status)] : undefined;
+  return key ? translate(t, key, prettify(status)) : prettify(status);
+};
+
+export const localizeRequestPriority = (priority: string | undefined | null, t: TranslationFn) => {
+  const key = priority ? priorityKeyMap[normalize(priority)] : undefined;
+  return key ? translate(t, key, prettify(priority)) : prettify(priority);
+};
+
+export const localizeRequestCategory = (categoryId: string | undefined | null, t: TranslationFn) => {
+  const category = getRequestCategoryConfig(categoryId);
   return translate(t, `categories.${category.i18nKey}`, prettify(categoryId));
 };
 
-export const localizePlaceType = (placeType: string | undefined | null, t: TranslationFn) => {
+export const localizeRequestPlaceType = (placeType: string | undefined | null, t: TranslationFn) => {
   const id = resolveOptionId(PLACE_TYPES, placeType);
   return translate(t, `placeTypes.${id}`, prettify(placeType));
 };
 
-export const localizeProblemType = (
+export const localizeRequestProblemType = (
   categoryId: string | undefined | null,
   problemType: string | undefined | null,
   t: TranslationFn,
 ) => {
   const id = resolveOptionId(getProblemOptions(categoryId), problemType);
-  return translate(t, `problemTypes.${getCategoryConfig(categoryId).id}.${id}`, prettify(problemType));
+  return translate(t, `problemTypes.${getRequestCategoryConfig(categoryId).id}.${id}`, prettify(problemType));
 };
 
-export const localizeReason = (
+export const localizeRequestReason = (
   categoryId: string | undefined | null,
   reason: string | undefined | null,
   t: TranslationFn,
 ) => {
   const id = resolveOptionId(getReasonOptions(categoryId), reason);
-  return translate(t, `reasons.${getCategoryConfig(categoryId).id}.${id}`, prettify(reason));
+  return translate(t, `reasons.${getRequestCategoryConfig(categoryId).id}.${id}`, prettify(reason));
 };
 
 export const localizeRequestDescription = (
@@ -260,8 +287,8 @@ export const localizeRequestDescription = (
 ) => {
   if (!description) return '';
 
-  const problemLabel = localizeProblemType(categoryId, problemType, t);
-  const reasonLabel = localizeReason(categoryId, reason, t);
+  const problemLabel = localizeRequestProblemType(categoryId, problemType, t);
+  const reasonLabel = localizeRequestReason(categoryId, reason, t);
   const defaultDescription = `${problemType || ''} - ${reason || ''}`;
 
   if (description === defaultDescription) {
@@ -270,8 +297,8 @@ export const localizeRequestDescription = (
 
   const parts = description.split(' - ');
   if (parts.length === 2) {
-    const localizedLeft = localizeProblemType(categoryId, parts[0], t);
-    const localizedRight = localizeReason(categoryId, parts[1], t);
+    const localizedLeft = localizeRequestProblemType(categoryId, parts[0], t);
+    const localizedRight = localizeRequestReason(categoryId, parts[1], t);
     if (localizedLeft !== parts[0] || localizedRight !== parts[1]) {
       return `${localizedLeft} - ${localizedRight}`;
     }
@@ -280,4 +307,10 @@ export const localizeRequestDescription = (
   return description;
 };
 
-export { getStatusTranslationKey } from './requestMeta';
+export const localizeAttachmentType = (type: string | undefined | null, t: TranslationFn) => {
+  const normalized = normalize(type);
+  if (normalized === 'image' || normalized === 'document') {
+    return translate(t, `requests.attachmentTypes.${normalized}`, prettify(type));
+  }
+  return prettify(type);
+};

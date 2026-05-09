@@ -200,6 +200,22 @@ export const kz = {
     },
   },
 
+  requests: {
+    statuses: {
+      pending: 'Күтуде',
+      in_progress: 'Жұмыста',
+      closed: 'Жабылды',
+      open: 'Ашық',
+      resolved: 'Шешілді',
+      rejected: 'Қабылданбады',
+    },
+    priorities: {
+      low: 'Төмен',
+      medium: 'Орташа',
+      high: 'Жоғары',
+    },
+  },
+
   // Categories
   categories: {
     electricity: 'Электр қуаты',

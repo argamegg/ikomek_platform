@@ -9,6 +9,11 @@ import { Button } from "../components/ui/Button";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageHeader } from "../components/ui/PageHeader";
 import { formatDate, formatRelativeTime, getPriorityTone, getStatusTone } from "../lib/format";
+import {
+  localizeRequestPriority,
+  localizeRequestProblemType,
+  localizeRequestStatus,
+} from "../lib/requestMeta";
 import { platformApi, queryKeys } from "../services/platformApi";
 
 export function DashboardPage() {
@@ -82,11 +87,11 @@ export function DashboardPage() {
             {(myRequestsQuery.data ?? []).slice(0, 4).map((request) => (
               <Link key={request.id} to={`/requests/${request.id}`} className="request-row">
                 <div>
-                  <strong>{request.title}</strong>
+                  <strong>{localizeRequestProblemType(request.categoryId || request.categoryName, request.title, t)}</strong>
                   <p>{request.address}</p>
                 </div>
                 <div className="request-row__meta">
-                  <Badge tone={getStatusTone(request.status)}>{request.statusLabel ?? request.status}</Badge>
+                  <Badge tone={getStatusTone(request.status)}>{localizeRequestStatus(request.statusLabel || request.status, t)}</Badge>
                   <span>{formatRelativeTime(request.updatedAt, i18n.language as "en" | "ru" | "kz")}</span>
                 </div>
               </Link>
@@ -135,7 +140,7 @@ export function DashboardPage() {
             {(alertsQuery.data ?? []).slice(0, 2).map((item) => (
               <article key={item.id} className="news-stack__item">
                 <Badge tone={getPriorityTone(item.priority ?? "information")}>
-                  {item.priority ?? "information"}
+                  {localizeRequestPriority(item.priority ?? "information", t)}
                 </Badge>
                 <strong>{item.title}</strong>
                 <p>{item.summary}</p>

@@ -10,6 +10,12 @@ import { Button } from "../components/ui/Button";
 import { Input, Select, Textarea } from "../components/ui/Input";
 import { Modal } from "../components/ui/Modal";
 import { formatDate, getPriorityTone, getStatusTone } from "../lib/format";
+import {
+  localizeRequestDescription,
+  localizeRequestPriority,
+  localizeRequestProblemType,
+  localizeRequestStatus,
+} from "../lib/requestMeta";
 import { getErrorMessage, platformApi, queryKeys } from "../services/platformApi";
 
 export function OperatorPage() {
@@ -71,12 +77,12 @@ export function OperatorPage() {
           <Card key={request.id} className="request-card">
             <div className="request-card__top">
               <div>
-                <Badge tone={getPriorityTone(request.priority)}>{request.priority}</Badge>
-                <h3>{request.title}</h3>
+                <Badge tone={getPriorityTone(request.priority)}>{localizeRequestPriority(request.priority, t)}</Badge>
+                <h3>{localizeRequestProblemType(request.categoryId || request.categoryName, request.title, t)}</h3>
               </div>
-              <Badge tone={getStatusTone(request.status)}>{request.statusLabel ?? request.status}</Badge>
+              <Badge tone={getStatusTone(request.status)}>{localizeRequestStatus(request.statusLabel || request.status, t)}</Badge>
             </div>
-            <p>{request.description}</p>
+            <p>{localizeRequestDescription(request.description, request.categoryId, request.title, request.reasonId || request.reasonName, t)}</p>
             <div className="request-card__meta">
               <span>{request.address}</span>
               <span>{formatDate(request.createdAt, i18n.language as "en" | "ru" | "kz")}</span>
@@ -91,7 +97,7 @@ export function OperatorPage() {
       <Modal
         open={Boolean(selectedRequest)}
         onClose={() => setSelectedRequestId(null)}
-        title={selectedRequest?.title ?? t("operator.update")}
+        title={selectedRequest ? localizeRequestProblemType(selectedRequest.categoryId || selectedRequest.categoryName, selectedRequest.title, t) : t("operator.update")}
         description={selectedRequest?.address}
       >
         <form
@@ -102,10 +108,10 @@ export function OperatorPage() {
           }}
         >
           <Select value={status} onChange={(event) => setStatus(event.target.value as RequestStatus)}>
-            <option value="pending">Pending</option>
-            <option value="in_progress">In progress</option>
-            <option value="closed">Closed</option>
-            <option value="resolved">Resolved</option>
+            <option value="pending">{localizeRequestStatus("pending", t)}</option>
+            <option value="in_progress">{localizeRequestStatus("in_progress", t)}</option>
+            <option value="closed">{localizeRequestStatus("closed", t)}</option>
+            <option value="resolved">{localizeRequestStatus("resolved", t)}</option>
           </Select>
           <Input value={departmentName} onChange={(event) => setDepartmentName(event.target.value)} placeholder="Department name" />
           <Textarea rows={5} value={internalNote} onChange={(event) => setInternalNote(event.target.value)} placeholder="Internal note" />

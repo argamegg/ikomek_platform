@@ -9,6 +9,7 @@ import { Input, Textarea } from "../components/ui/Input";
 import { Modal } from "../components/ui/Modal";
 import { PageHeader } from "../components/ui/PageHeader";
 import { categoryKeyMap, formatNewsDate, typeKeyMap } from "../lib/normalizers";
+import { localizeRequestCategory } from "../lib/requestMeta";
 import { getErrorMessage, platformApi, queryKeys } from "../services/platformApi";
 import {
   getBorderColor,
@@ -102,7 +103,7 @@ export function AdminPage() {
           { label: "Total requests", value: metricsQuery.data?.totalRequests ?? 0 },
           { label: "Active requests", value: metricsQuery.data?.activeRequests ?? 0 },
           { label: "Pending requests", value: metricsQuery.data?.pendingRequests ?? 0 },
-          { label: "Top category", value: metricsQuery.data?.topCategory ?? "—" },
+          { label: "Top category", value: metricsQuery.data?.topCategory ? localizeRequestCategory(metricsQuery.data.topCategory, t) : "—" },
         ].map((item) => (
           <Card key={item.label}>
             <span className="stat-tile__label">{item.label}</span>

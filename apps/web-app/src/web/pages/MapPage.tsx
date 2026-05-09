@@ -8,6 +8,12 @@ import { Tabs } from "../components/ui/Tabs";
 import { Badge } from "../components/ui/Badge";
 import { IssueMap } from "../components/maps/IssueMap";
 import { getPriorityTone, getStatusTone } from "../lib/format";
+import {
+  localizeRequestDescription,
+  localizeRequestPriority,
+  localizeRequestProblemType,
+  localizeRequestStatus,
+} from "../lib/requestMeta";
 import { platformApi, queryKeys } from "../services/platformApi";
 
 export function MapPage() {
@@ -69,16 +75,16 @@ export function MapPage() {
           <div className="section-card__header">
             <div>
               <span className="section-card__eyebrow">Selection</span>
-              <h3>{selectedRequest?.title ?? "Choose a marker"}</h3>
+              <h3>{selectedRequest ? localizeRequestProblemType(selectedRequest.categoryId || selectedRequest.categoryName, selectedRequest.title, t) : "Choose a marker"}</h3>
             </div>
           </div>
           {selectedRequest ? (
             <>
-              <Badge tone={getPriorityTone(selectedRequest.priority)}>{selectedRequest.priority}</Badge>
+              <Badge tone={getPriorityTone(selectedRequest.priority)}>{localizeRequestPriority(selectedRequest.priority, t)}</Badge>
               <p>{selectedRequest.address}</p>
-              <p>{selectedRequest.description}</p>
+              <p>{localizeRequestDescription(selectedRequest.description, selectedRequest.categoryId, selectedRequest.title, selectedRequest.reasonId || selectedRequest.reasonName, t)}</p>
               <Badge tone={getStatusTone(selectedRequest.status)}>
-                {selectedRequest.statusLabel ?? selectedRequest.status}
+                {localizeRequestStatus(selectedRequest.statusLabel || selectedRequest.status, t)}
               </Badge>
             </>
           ) : null}

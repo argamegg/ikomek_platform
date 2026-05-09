@@ -200,6 +200,22 @@ export const en = {
     },
   },
 
+  requests: {
+    statuses: {
+      pending: 'Pending',
+      in_progress: 'In Progress',
+      closed: 'Closed',
+      open: 'Open',
+      resolved: 'Resolved',
+      rejected: 'Rejected',
+    },
+    priorities: {
+      low: 'Low',
+      medium: 'Medium',
+      high: 'High',
+    },
+  },
+
   // Categories
   categories: {
     electricity: 'Electricity',
