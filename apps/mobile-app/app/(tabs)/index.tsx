@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { NewsFilterSheet, type PeriodFilter, type SortFilter } from '../../src/components/NewsFilterSheet';
 import { NewsCard } from '../../src/components/NewsCard';
@@ -68,12 +67,21 @@ function formatDetailPeriod(start?: string, end?: string) {
     return '';
   }
 
-  const startLabel = format(startDate, 'dd.MM.yyyy HH:mm');
+  const formatUtcDate = (value: Date) => {
+    const day = String(value.getUTCDate()).padStart(2, '0');
+    const month = String(value.getUTCMonth() + 1).padStart(2, '0');
+    const year = value.getUTCFullYear();
+    const hours = String(value.getUTCHours()).padStart(2, '0');
+    const minutes = String(value.getUTCMinutes()).padStart(2, '0');
+    return `${day}.${month}.${year} ${hours}:${minutes}`;
+  };
+
+  const startLabel = formatUtcDate(startDate);
   if (!endDate || Number.isNaN(endDate.getTime())) {
     return startLabel;
   }
 
-  return `${startLabel} - ${format(endDate, 'dd.MM.yyyy HH:mm')}`;
+  return `${startLabel} - ${formatUtcDate(endDate)}`;
 }
 
 function formatNewsCreatedLabel(value: string, t: (key: string, options?: Record<string, unknown>) => string) {
