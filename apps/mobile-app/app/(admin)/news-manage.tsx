@@ -29,6 +29,22 @@ import {
 } from '../../src/utils/newsMeta';
 
 const ORANGE = '#FB8C00';
+const NEWS_CATEGORY_TRANSLATION_KEYS: Record<NewsCategory, string> = {
+  'Дороги': 'admin.news.categories.roads',
+  'Коммунальные услуги': 'admin.news.categories.utilities',
+  'Транспорт': 'admin.news.categories.transport',
+  'Образование': 'admin.news.categories.education',
+  'Погода': 'admin.news.categories.weather',
+  'Благоустройство': 'admin.news.categories.improvement',
+};
+const NEWS_TYPE_TRANSLATION_KEYS: Record<NewsType, string> = {
+  'Аварийные работы': 'admin.news.types.emergency',
+  'Погодные условия': 'admin.news.types.weather',
+  'Плановые работы': 'admin.news.types.planned',
+  'Дорожные ситуации': 'admin.news.types.road',
+  'Управление образования': 'admin.news.types.education',
+  'Мероприятия города': 'admin.news.types.cityEvents',
+};
 
 type NewsFormState = {
   title: string;
@@ -87,13 +103,19 @@ export default function NewsManageScreen() {
   }, [fetchNews]);
 
   const articleCountLabel = useMemo(
-    () => t('admin.articlesCount', { count: news.length, defaultValue: `${news.length} новостей` }),
+    () => t('admin.articlesCount', { count: news.length }),
     [news.length, t],
   );
 
   const updateForm = <K extends keyof NewsFormState>(key: K, value: NewsFormState[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
   };
+
+  const localizeNewsCategory = (category: NewsCategory) =>
+    t(NEWS_CATEGORY_TRANSLATION_KEYS[category] ?? 'admin.news.categories.roads');
+
+  const localizeNewsType = (type: NewsType) =>
+    t(NEWS_TYPE_TRANSLATION_KEYS[type] ?? 'admin.news.types.cityEvents');
 
   const toggleType = (type: NewsType) => {
     setForm((current) => {
@@ -111,12 +133,12 @@ export default function NewsManageScreen() {
 
   const handleCreate = async () => {
     if (!form.title.trim() || !form.content.trim()) {
-      Alert.alert(t('common.error'), 'Заполните заголовок и текст новости.');
+      Alert.alert(t('common.error'), t('admin.news.fillTitleAndText'));
       return;
     }
 
     if (form.types.length === 0) {
-      Alert.alert(t('common.error'), 'Выберите хотя бы один тип новости.');
+      Alert.alert(t('common.error'), t('admin.news.selectOneType'));
       return;
     }
 
@@ -136,20 +158,20 @@ export default function NewsManageScreen() {
         start_at: form.start_at || undefined,
         end_at: form.end_at || undefined,
       });
-      Alert.alert(t('common.success'), 'Новость опубликована.');
+      Alert.alert(t('common.success'), t('admin.news.published'));
       setShowCreate(false);
       setForm(initialForm);
       fetchNews();
     } catch (error) {
       console.error('Failed to create news', error);
-      Alert.alert(t('common.error'), 'Не удалось создать новость.');
+      Alert.alert(t('common.error'), t('admin.news.publishFailed'));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDelete = (id: string) => {
-    Alert.alert('Удалить новость', 'Эту новость нельзя будет восстановить.', [
+    Alert.alert(t('admin.news.deleteTitle'), t('admin.news.deleteConfirm'), [
       { text: t('common.cancel'), style: 'cancel' },
       {
         text: t('common.delete'),
@@ -160,7 +182,7 @@ export default function NewsManageScreen() {
             fetchNews();
           } catch (error) {
             console.error('Failed to delete news', error);
-            Alert.alert(t('common.error'), 'Не удалось удалить новость.');
+            Alert.alert(t('common.error'), t('admin.news.deleteFailed'));
           }
         },
       },
@@ -185,7 +207,9 @@ export default function NewsManageScreen() {
           <View style={styles.newsTop}>
             <View style={[styles.newsTypePill, { backgroundColor: `${primaryMeta.color}14` }]}>
               <MaterialCommunityIcons name={primaryMeta.icon} size={14} color={primaryMeta.color} />
-              <Text style={[styles.newsTypeText, { color: primaryMeta.color }]}>{primaryType}</Text>
+              <Text style={[styles.newsTypeText, { color: primaryMeta.color }]}>
+                {localizeNewsType(primaryType)}
+              </Text>
             </View>
             <Text style={styles.newsDate}>{format(new Date(item.created_at), 'dd.MM.yy')}</Text>
           </View>
@@ -202,10 +226,10 @@ export default function NewsManageScreen() {
               {types.slice(1).map((type) => {
                 const meta = getNewsTypeMeta(type);
                 return (
-                  <View key={`${item.id}-${type}`} style={styles.extraTypeItem}>
-                    <View style={[styles.extraTypeDot, { backgroundColor: meta.color }]} />
-                    <Text style={styles.extraTypeText}>{type}</Text>
-                  </View>
+                    <View key={`${item.id}-${type}`} style={styles.extraTypeItem}>
+                      <View style={[styles.extraTypeDot, { backgroundColor: meta.color }]} />
+                      <Text style={styles.extraTypeText}>{localizeNewsType(type)}</Text>
+                    </View>
                 );
               })}
             </View>
@@ -218,7 +242,7 @@ export default function NewsManageScreen() {
                 <Text style={styles.newsMetaText} numberOfLines={1}>{periodLabel}</Text>
               </View>
               <View style={styles.newsCategoryChip}>
-                <Text style={styles.newsCategoryChipText}>{category}</Text>
+                <Text style={styles.newsCategoryChipText}>{localizeNewsCategory(category)}</Text>
               </View>
             </View>
           ) : null}
@@ -242,9 +266,9 @@ export default function NewsManageScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
+        <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>{t('admin.manageNews')}</Text>
+          <Text style={styles.headerTitle}>{t('admin.news.title')}</Text>
           <Text style={styles.headerSub}>{articleCountLabel}</Text>
         </View>
         <TouchableOpacity style={styles.addBtn} onPress={() => setShowCreate(true)}>
@@ -277,7 +301,7 @@ export default function NewsManageScreen() {
             <TouchableOpacity onPress={() => setShowCreate(false)}>
               <Text style={styles.cancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Новая новость</Text>
+            <Text style={styles.modalTitle}>{t('admin.news.newArticle')}</Text>
             <TouchableOpacity onPress={handleCreate} disabled={isSubmitting}>
               <Text style={[styles.saveText, isSubmitting && { opacity: 0.5 }]}>
                 {t('common.save')}
@@ -286,7 +310,7 @@ export default function NewsManageScreen() {
           </View>
 
           <ScrollView style={styles.modalBody} contentContainerStyle={styles.modalBodyContent}>
-            <Text style={styles.inputLabel}>Категория</Text>
+            <Text style={styles.inputLabel}>{t('admin.news.categoryLabel')}</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -303,14 +327,14 @@ export default function NewsManageScreen() {
                     <Text
                       style={[styles.categoryOptionText, active && styles.categoryOptionTextActive]}
                     >
-                      {category}
+                      {localizeNewsCategory(category)}
                     </Text>
                   </TouchableOpacity>
                 );
               })}
             </ScrollView>
 
-            <Text style={styles.inputLabel}>Типы</Text>
+            <Text style={styles.inputLabel}>{t('admin.news.typesLabel')}</Text>
             <View style={styles.typeOptionsGrid}>
               {NEWS_TYPE_OPTIONS.map((option) => {
                 const active = form.types.includes(option.label);
@@ -331,9 +355,11 @@ export default function NewsManageScreen() {
                     </View>
                     <View style={styles.typeOptionTextWrap}>
                       <Text style={[styles.typeOptionText, active && { color: option.color }]}>
-                        {option.label}
+                        {localizeNewsType(option.label)}
                       </Text>
-                      <Text style={styles.typeOptionHint}>{option.defaultCategory}</Text>
+                      <Text style={styles.typeOptionHint}>
+                        {localizeNewsCategory(option.defaultCategory)}
+                      </Text>
                     </View>
                     {active ? (
                       <MaterialCommunityIcons name="check-circle" size={18} color={option.color} />
@@ -343,101 +369,101 @@ export default function NewsManageScreen() {
               })}
             </View>
 
-            <Text style={styles.inputLabel}>Заголовок</Text>
+            <Text style={styles.inputLabel}>{t('admin.news.titleLabel')}</Text>
             <TextInput
               style={styles.input}
               value={form.title}
               onChangeText={(value) => updateForm('title', value)}
-              placeholder="Введите заголовок"
+              placeholder={t('admin.news.titlePlaceholder')}
               placeholderTextColor="#94A3B8"
             />
 
-            <Text style={styles.inputLabel}>Заголовок RU</Text>
+            <Text style={styles.inputLabel}>{t('admin.news.titleRuLabel')}</Text>
             <TextInput
               style={styles.input}
               value={form.title_ru}
               onChangeText={(value) => updateForm('title_ru', value)}
-              placeholder="Русский заголовок"
+              placeholder={t('admin.news.titleRuPlaceholder')}
               placeholderTextColor="#94A3B8"
             />
 
-            <Text style={styles.inputLabel}>Заголовок KZ</Text>
+            <Text style={styles.inputLabel}>{t('admin.news.titleKzLabel')}</Text>
             <TextInput
               style={styles.input}
               value={form.title_kz}
               onChangeText={(value) => updateForm('title_kz', value)}
-              placeholder="Қазақша тақырып"
+              placeholder={t('admin.news.titleKzPlaceholder')}
               placeholderTextColor="#94A3B8"
             />
 
-            <Text style={styles.inputLabel}>Краткое описание</Text>
+            <Text style={styles.inputLabel}>{t('admin.news.summaryLabel')}</Text>
             <TextInput
               style={[styles.input, styles.textAreaSmall]}
               value={form.summary}
               onChangeText={(value) => updateForm('summary', value)}
-              placeholder="Короткое превью для карточки"
+              placeholder={t('admin.news.summaryPlaceholder')}
               placeholderTextColor="#94A3B8"
               multiline
               textAlignVertical="top"
             />
 
-            <Text style={styles.inputLabel}>Текст</Text>
+            <Text style={styles.inputLabel}>{t('admin.news.contentLabel')}</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
               value={form.content}
               onChangeText={(value) => updateForm('content', value)}
-              placeholder="Полный текст новости"
+              placeholder={t('admin.news.contentPlaceholder')}
               placeholderTextColor="#94A3B8"
               multiline
               textAlignVertical="top"
             />
 
-            <Text style={styles.inputLabel}>Текст RU</Text>
+            <Text style={styles.inputLabel}>{t('admin.news.contentRuLabel')}</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
               value={form.content_ru}
               onChangeText={(value) => updateForm('content_ru', value)}
-              placeholder="Русский текст"
+              placeholder={t('admin.news.contentRuPlaceholder')}
               placeholderTextColor="#94A3B8"
               multiline
               textAlignVertical="top"
             />
 
-            <Text style={styles.inputLabel}>Текст KZ</Text>
+            <Text style={styles.inputLabel}>{t('admin.news.contentKzLabel')}</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
               value={form.content_kz}
               onChangeText={(value) => updateForm('content_kz', value)}
-              placeholder="Қазақша мәтін"
+              placeholder={t('admin.news.contentKzPlaceholder')}
               placeholderTextColor="#94A3B8"
               multiline
               textAlignVertical="top"
             />
 
-            <Text style={styles.inputLabel}>Локация</Text>
+            <Text style={styles.inputLabel}>{t('admin.news.locationLabel')}</Text>
             <TextInput
               style={styles.input}
               value={form.location}
               onChangeText={(value) => updateForm('location', value)}
-              placeholder="Например: Район Алматы, ул. Абая 40"
+              placeholder={t('admin.news.locationPlaceholder')}
               placeholderTextColor="#94A3B8"
             />
 
-            <Text style={styles.inputLabel}>Начало периода</Text>
+            <Text style={styles.inputLabel}>{t('admin.news.periodStartLabel')}</Text>
             <TextInput
               style={styles.input}
               value={form.start_at}
               onChangeText={(value) => updateForm('start_at', value)}
-              placeholder="2026-05-02T12:00"
+              placeholder={t('admin.news.periodStartPlaceholder')}
               placeholderTextColor="#94A3B8"
             />
 
-            <Text style={styles.inputLabel}>Окончание периода</Text>
+            <Text style={styles.inputLabel}>{t('admin.news.periodEndLabel')}</Text>
             <TextInput
               style={styles.input}
               value={form.end_at}
               onChangeText={(value) => updateForm('end_at', value)}
-              placeholder="2026-05-02T18:00"
+              placeholder={t('admin.news.periodEndPlaceholder')}
               placeholderTextColor="#94A3B8"
             />
           </ScrollView>

@@ -34,11 +34,11 @@ export default function AdminLayout() {
         tabBarIcon: ({ color, size }) => <Ionicons name="people" size={size} color={color} />
       }} />
       <Tabs.Screen name="news-manage" options={{
-        title: t('nav.news'),
+        title: t('admin.news.title'),
         tabBarIcon: ({ color, size }) => <Ionicons name="newspaper" size={size} color={color} />
       }} />
       <Tabs.Screen name="profile" options={{
-        title: t('profile.title'),
+        title: t('admin.profile.title'),
         tabBarIcon: ({ color, size }) => <Ionicons name="person" size={size} color={color} />
       }} />
     </Tabs>

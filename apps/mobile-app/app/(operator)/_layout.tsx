@@ -30,7 +30,7 @@ export default function OperatorLayout() {
         tabBarIcon: ({ color, size }) => <Ionicons name="clipboard" size={size} color={color} />
       }} />
       <Tabs.Screen name="profile" options={{
-        title: t('profile.title'),
+        title: t('operator.profile.title'),
         tabBarIcon: ({ color, size }) => <Ionicons name="person" size={size} color={color} />
       }} />
     </Tabs>
