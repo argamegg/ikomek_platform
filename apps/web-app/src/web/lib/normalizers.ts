@@ -161,7 +161,7 @@ function localizedKeys(baseKey: string, locale: Locale) {
     return [`${baseKey}_kz`, `${baseKey}`];
   }
 
-  return [baseKey, `${baseKey}_ru`, `${baseKey}_kz`];
+  return [`${baseKey}_en`, baseKey, `${baseKey}_ru`, `${baseKey}_kz`];
 }
 
 export function unwrapPayload<T>(payload: unknown): T {

@@ -103,6 +103,23 @@ const REQUEST_REASON_TEMPLATES: Record<string, Array<{ id: string; name: string 
 
 const DEFAULT_PLACE_OPTIONS = ["apartment", "house", "office", "street", "park", "other"];
 
+function getCurrentLang(): string {
+  const lang =
+    session.getLocale() ||
+    (typeof navigator !== "undefined" ? navigator.language : "ru") ||
+    "ru";
+
+  if (lang.startsWith("kz") || lang.startsWith("kk")) {
+    return "kk";
+  }
+
+  if (lang.startsWith("en")) {
+    return "en";
+  }
+
+  return "ru";
+}
+
 export const queryKeys = {
   currentUser: ["current-user"] as const,
   categories: ["categories"] as const,
@@ -281,7 +298,7 @@ async function fileToDataUrl(file: File) {
 async function getAccessibleRequests(status?: RequestStatus) {
   try {
     const response = await platformClient.get("/operator/requests", {
-      params: status ? { status } : undefined,
+      params: { ...(status ? { status } : {}), lang: getCurrentLang() },
     });
     return normalizeList(response.data, normalizeRequest);
   } catch (error) {
@@ -290,7 +307,7 @@ async function getAccessibleRequests(status?: RequestStatus) {
     }
 
     const response = await platformClient.get("/requests/all", {
-      params: status ? { status } : undefined,
+      params: { ...(status ? { status } : {}), lang: getCurrentLang() },
     });
     return normalizeList(response.data, normalizeRequest);
   }
@@ -397,7 +414,9 @@ export const platformApi = {
   },
 
   async getNews(): Promise<NewsItem[]> {
-    const response = await platformClient.get(apiConfig.endpoints.news);
+    const response = await platformClient.get(apiConfig.endpoints.news, {
+      params: { lang: getCurrentLang() },
+    });
     return normalizeList(response.data, normalizeNews);
   },
 
@@ -422,13 +441,17 @@ export const platformApi = {
       return [];
     }
 
-    const response = await platformClient.get("/requests/all");
+    const response = await platformClient.get("/requests/all", {
+      params: { lang: getCurrentLang() },
+    });
     return normalizeList(response.data, normalizeRequest);
   },
 
   async getMyRequests(): Promise<CivicRequest[]> {
     try {
-      const response = await platformClient.get(apiConfig.endpoints.myRequests);
+      const response = await platformClient.get(apiConfig.endpoints.myRequests, {
+        params: { lang: getCurrentLang() },
+      });
       return normalizeList(response.data, normalizeRequest);
     } catch (error) {
       if (isUnauthorized(error)) {
@@ -453,7 +476,9 @@ export const platformApi = {
 
   async getRequestById(requestId: string): Promise<CivicRequest> {
     const [requestResponse, messagesResponse] = await Promise.all([
-      platformClient.get(`${apiConfig.endpoints.requests}/${requestId}`),
+      platformClient.get(`${apiConfig.endpoints.requests}/${requestId}`, {
+        params: { lang: getCurrentLang() },
+      }),
       platformClient.get(resolvePath(apiConfig.endpoints.requestMessages, { requestId })),
     ]);
 
@@ -477,6 +502,7 @@ export const platformApi = {
       reason: reasonLabel || "Submitted from web",
       description: payload.description,
       photos,
+      source_lang: getCurrentLang(),
     });
 
     return normalizeRequest(response.data);
@@ -581,13 +607,16 @@ export const platformApi = {
           ? "warning"
           : "information";
     const content = payload.body || payload.summary;
+    const sourceLang = getCurrentLang();
     const response = await platformClient.post("/admin/news", {
       title: payload.title,
-      title_ru: payload.title,
-      title_kz: payload.title,
+      title_ru: sourceLang === "ru" ? payload.title : undefined,
+      title_kz: sourceLang === "kk" ? payload.title : undefined,
+      title_en: sourceLang === "en" ? payload.title : undefined,
       content,
-      content_ru: content,
-      content_kz: content,
+      content_ru: sourceLang === "ru" ? content : undefined,
+      content_kz: sourceLang === "kk" ? content : undefined,
+      content_en: sourceLang === "en" ? content : undefined,
       category: payload.category,
       types: payload.types,
       type: primaryType,
@@ -596,6 +625,7 @@ export const platformApi = {
       location: payload.location,
       start_at: payload.startAt,
       end_at: payload.endAt,
+      source_lang: sourceLang,
     });
     return normalizeNews(response.data);
   },

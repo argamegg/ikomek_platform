@@ -22,14 +22,14 @@ export function DashboardPage() {
     queryKey: queryKeys.currentUser,
     queryFn: platformApi.getCurrentUser,
   });
-  const myRequestsQuery = useQuery({ queryKey: queryKeys.myRequests, queryFn: platformApi.getMyRequests });
+  const myRequestsQuery = useQuery({ queryKey: [...queryKeys.myRequests, i18n.language], queryFn: platformApi.getMyRequests });
   const savedLocationsQuery = useQuery({
     queryKey: queryKeys.savedLocations,
     queryFn: platformApi.getSavedLocations,
   });
-  const alertsQuery = useQuery({ queryKey: queryKeys.alerts, queryFn: platformApi.getAlerts });
+  const alertsQuery = useQuery({ queryKey: [...queryKeys.alerts, i18n.language], queryFn: platformApi.getAlerts });
   const notificationsQuery = useQuery({
-    queryKey: queryKeys.notifications,
+    queryKey: [...queryKeys.notifications, i18n.language],
     queryFn: platformApi.getNotifications,
   });
 

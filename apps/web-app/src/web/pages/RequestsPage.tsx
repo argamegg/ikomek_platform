@@ -25,7 +25,7 @@ export function RequestsPage() {
   const [status, setStatus] = useState<FilterMode>("all");
   const deferredSearch = useDeferredValue(search);
   const requestsQuery = useQuery({
-    queryKey: queryKeys.myRequests,
+    queryKey: [...queryKeys.myRequests, i18n.language],
     queryFn: platformApi.getMyRequests,
   });
 

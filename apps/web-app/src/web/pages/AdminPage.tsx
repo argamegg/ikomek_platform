@@ -54,13 +54,13 @@ function formatPreviewPeriod(startAt?: string, endAt?: string) {
 }
 
 export function AdminPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<NewsCreateInput>(initialForm);
 
   const metricsQuery = useQuery({ queryKey: queryKeys.metrics, queryFn: platformApi.getMetrics });
-  const newsQuery = useQuery({ queryKey: queryKeys.news, queryFn: platformApi.getNews });
+  const newsQuery = useQuery({ queryKey: [...queryKeys.news, i18n.language], queryFn: platformApi.getNews });
 
   const createNewsMutation = useMutation({
     mutationFn: platformApi.createNews,

@@ -24,7 +24,7 @@ export function ProfilePage() {
     queryFn: platformApi.getSavedLocations,
   });
   const notificationsQuery = useQuery({
-    queryKey: queryKeys.notifications,
+    queryKey: [...queryKeys.notifications, i18n.language],
     queryFn: platformApi.getNotifications,
   });
   const districtsQuery = useQuery({ queryKey: queryKeys.districts, queryFn: platformApi.getDistricts });

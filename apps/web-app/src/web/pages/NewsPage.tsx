@@ -65,14 +65,14 @@ function formatNewsCreatedLabel(
 }
 
 export function NewsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [categoryFilter, setCategoryFilter] = useState<typeof ALL_CATEGORIES | NewsCategory>(
     ALL_CATEGORIES,
   );
   const [typeFilters, setTypeFilters] = useState<NewsType[]>([]);
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
-  const alertsQuery = useQuery({ queryKey: queryKeys.alerts, queryFn: platformApi.getAlerts });
-  const newsQuery = useQuery({ queryKey: queryKeys.news, queryFn: platformApi.getNews });
+  const alertsQuery = useQuery({ queryKey: [...queryKeys.alerts, i18n.language], queryFn: platformApi.getAlerts });
+  const newsQuery = useQuery({ queryKey: [...queryKeys.news, i18n.language], queryFn: platformApi.getNews });
 
   const items = useMemo(() => {
     const deduped = [...(alertsQuery.data ?? []), ...(newsQuery.data ?? [])].reduce<NewsItem[]>(

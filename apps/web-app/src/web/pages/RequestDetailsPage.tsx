@@ -23,7 +23,7 @@ export function RequestDetailsPage() {
   const { requestId = "" } = useParams();
   const { t, i18n } = useTranslation();
   const requestQuery = useQuery({
-    queryKey: queryKeys.request(requestId),
+    queryKey: [...queryKeys.request(requestId), i18n.language],
     queryFn: () => platformApi.getRequestById(requestId),
     enabled: Boolean(requestId),
   });

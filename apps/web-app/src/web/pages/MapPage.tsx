@@ -17,7 +17,7 @@ import {
 import { platformApi, queryKeys } from "../services/platformApi";
 
 export function MapPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [mode, setMode] = useState<MapMode>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const currentUserQuery = useQuery({
@@ -25,10 +25,10 @@ export function MapPage() {
     queryFn: platformApi.getCurrentUser,
   });
   const publicRequestsQuery = useQuery({
-    queryKey: queryKeys.publicRequests,
+    queryKey: [...queryKeys.publicRequests, i18n.language],
     queryFn: platformApi.getPublicRequests,
   });
-  const myRequestsQuery = useQuery({ queryKey: queryKeys.myRequests, queryFn: platformApi.getMyRequests });
+  const myRequestsQuery = useQuery({ queryKey: [...queryKeys.myRequests, i18n.language], queryFn: platformApi.getMyRequests });
   const districtsQuery = useQuery({ queryKey: queryKeys.districts, queryFn: platformApi.getDistricts });
 
   const allRequests = useMemo(() => {

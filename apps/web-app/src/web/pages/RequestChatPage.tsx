@@ -19,7 +19,7 @@ export function RequestChatPage() {
   const [attachment, setAttachment] = useState<File | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
   const requestQuery = useQuery({
-    queryKey: queryKeys.request(requestId),
+    queryKey: [...queryKeys.request(requestId), i18n.language],
     queryFn: () => platformApi.getRequestById(requestId),
     enabled: Boolean(requestId),
     refetchInterval: 20_000,
@@ -47,7 +47,7 @@ export function RequestChatPage() {
     onSuccess: async () => {
       setMessage("");
       setAttachment(null);
-      await queryClient.invalidateQueries({ queryKey: queryKeys.request(requestId) });
+      await queryClient.invalidateQueries({ queryKey: [...queryKeys.request(requestId), i18n.language] });
       toast.success("Message sent");
     },
     onError: (error) => toast.error(getErrorMessage(error)),

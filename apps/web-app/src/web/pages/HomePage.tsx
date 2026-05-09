@@ -76,7 +76,7 @@ export function HomePage() {
     return typeof value === "string" && value.trim().length > 0 ? value : fallback;
   };
   const publicRequestsQuery = useQuery({
-    queryKey: queryKeys.publicRequests,
+    queryKey: [...queryKeys.publicRequests, i18n.language],
     queryFn: platformApi.getPublicRequests,
   });
   const alertsQuery = useQuery({

@@ -26,7 +26,7 @@ export function OperatorPage() {
   const [departmentName, setDepartmentName] = useState("");
   const [internalNote, setInternalNote] = useState("");
   const requestsQuery = useQuery({
-    queryKey: queryKeys.allRequests(),
+    queryKey: [...queryKeys.allRequests(), i18n.language],
     queryFn: () => platformApi.getAllRequests(),
   });
   const metricsQuery = useQuery({ queryKey: queryKeys.metrics, queryFn: platformApi.getMetrics });

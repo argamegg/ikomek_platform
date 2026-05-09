@@ -25,6 +25,7 @@ from email.utils import formataddr
 
 from geo import REQUEST_OUT_OF_ZONE_ERROR, is_within_astana_request_zone
 from news_fixtures import build_news_fixtures
+from services.translation import translate_to_all_languages
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -149,6 +150,7 @@ class RequestCreate(BaseModel):
     reason: str
     description: str
     photos: List[str] = []
+    source_lang: Optional[str] = "ru"
 
 class RequestModel(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -161,7 +163,11 @@ class RequestModel(BaseModel):
     place_type: Optional[str] = None
     problem_type: str
     reason: str
-    description: str
+    description: Optional[str] = None
+    description_ru: Optional[str] = None
+    description_kz: Optional[str] = None
+    description_en: Optional[str] = None
+    source_lang: Optional[str] = "ru"
     photos: List[str] = []
     status: str = "pending"
     priority: str = "normal"  # normal, urgent
@@ -190,12 +196,15 @@ class MessageCreate(BaseModel):
 
 class NewsItem(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    title: str
-    title_ru: str
-    title_kz: str
-    content: str
-    content_ru: str
-    content_kz: str
+    title: Optional[str] = None
+    title_ru: Optional[str] = None
+    title_kz: Optional[str] = None
+    title_en: Optional[str] = None
+    content: Optional[str] = None
+    content_ru: Optional[str] = None
+    content_kz: Optional[str] = None
+    content_en: Optional[str] = None
+    source_lang: Optional[str] = "ru"
     category: str
     types: List[str] = []
     summary: Optional[str] = None
@@ -209,12 +218,15 @@ class NewsItem(BaseModel):
     is_active: bool = True
 
 class NewsCreate(BaseModel):
-    title: str
-    title_ru: str
-    title_kz: str
-    content: str
-    content_ru: str
-    content_kz: str
+    title: Optional[str] = None
+    title_ru: Optional[str] = None
+    title_kz: Optional[str] = None
+    title_en: Optional[str] = None
+    content: Optional[str] = None
+    content_ru: Optional[str] = None
+    content_kz: Optional[str] = None
+    content_en: Optional[str] = None
+    source_lang: Optional[str] = "ru"
     category: str
     types: List[str] = []
     summary: Optional[str] = None
@@ -262,6 +274,50 @@ def normalize_language(language: Optional[str]) -> str:
     if language in ["ru", "kz", "en"]:
         return language
     return "ru"
+
+def normalize_content_language(language: Optional[str]) -> str:
+    if language in ["kk", "kz"]:
+        return "kz"
+    if language == "en":
+        return "en"
+    return "ru"
+
+def normalize_translation_language(language: Optional[str]) -> str:
+    if language in ["kk", "kz"]:
+        return "kk"
+    if language == "en":
+        return "en"
+    return "ru"
+
+def localize_news_document(news: dict, lang: Optional[str]) -> dict:
+    content_lang = normalize_content_language(lang)
+
+    if content_lang == "kz":
+        news["title"] = news.get("title_kz") or news.get("title_ru") or news.get("title_en") or news.get("title")
+        news["content"] = news.get("content_kz") or news.get("content_ru") or news.get("content_en") or news.get("content")
+        news["summary"] = news.get("summary_kz") or news.get("summary_ru") or news.get("summary_en") or news.get("summary") or news.get("content")
+    elif content_lang == "en":
+        news["title"] = news.get("title_en") or news.get("title_ru") or news.get("title_kz") or news.get("title")
+        news["content"] = news.get("content_en") or news.get("content_ru") or news.get("content_kz") or news.get("content")
+        news["summary"] = news.get("summary_en") or news.get("summary_ru") or news.get("summary_kz") or news.get("summary") or news.get("content")
+    else:
+        news["title"] = news.get("title_ru") or news.get("title") or news.get("title_en") or news.get("title_kz")
+        news["content"] = news.get("content_ru") or news.get("content") or news.get("content_en") or news.get("content_kz")
+        news["summary"] = news.get("summary_ru") or news.get("summary") or news.get("summary_en") or news.get("summary_kz") or news.get("content")
+
+    return news
+
+def localize_request_document(request: dict, lang: Optional[str]) -> dict:
+    content_lang = normalize_content_language(lang)
+
+    if content_lang == "kz":
+        request["description"] = request.get("description_kz") or request.get("description_ru") or request.get("description_en") or request.get("description")
+    elif content_lang == "en":
+        request["description"] = request.get("description_en") or request.get("description_ru") or request.get("description_kz") or request.get("description")
+    else:
+        request["description"] = request.get("description_ru") or request.get("description") or request.get("description_en") or request.get("description_kz")
+
+    return request
 
 def seconds_until(value: Optional[datetime]) -> int:
     if not value:
@@ -697,7 +753,16 @@ async def create_request(request_data: RequestCreate, current_user: dict = Depen
 
     category = next((c for c in CATEGORIES if c["id"] == request_data.category_id), None)
     category_name = category["name_ru"] if category else "Другое"
-    
+    request_dict = request_data.dict()
+    source_lang = normalize_translation_language(request_dict.get("source_lang", "ru"))
+    description = request_dict.get("description", "")
+
+    if description:
+        translations = await translate_to_all_languages(description, source_lang)
+        request_dict["description_ru"] = translations["ru"]
+        request_dict["description_kz"] = translations["kk"]
+        request_dict["description_en"] = translations["en"]
+
     request_obj = RequestModel(
         user_id=current_user["id"],
         category_id=request_data.category_id,
@@ -708,21 +773,26 @@ async def create_request(request_data: RequestCreate, current_user: dict = Depen
         place_type=request_data.place_type,
         problem_type=request_data.problem_type,
         reason=request_data.reason,
-        description=request_data.description,
+        description=description,
+        description_ru=request_dict.get("description_ru"),
+        description_kz=request_dict.get("description_kz"),
+        description_en=request_dict.get("description_en"),
+        source_lang=source_lang,
         photos=request_data.photos
     )
     await db.requests.insert_one(request_obj.dict())
     return request_obj
 
 @api_router.get("/requests", response_model=List[RequestModel])
-async def get_user_requests(current_user: dict = Depends(get_current_user)):
+async def get_user_requests(lang: str = "ru", current_user: dict = Depends(get_current_user)):
     requests = await db.requests.find({"user_id": current_user["id"]}).sort("created_at", -1).to_list(100)
-    return [RequestModel(**req) for req in requests]
+    return [RequestModel(**localize_request_document(req, lang)) for req in requests]
 
 @api_router.get("/requests/all", response_model=List[RequestModel])
 async def get_all_requests(
     category: Optional[str] = None,
     status: Optional[str] = None,
+    lang: str = "ru",
     current_user: dict = Depends(get_current_user)
 ):
     query = {}
@@ -732,14 +802,14 @@ async def get_all_requests(
         query["status"] = status
     
     requests = await db.requests.find(query).sort("created_at", -1).to_list(500)
-    return [RequestModel(**req) for req in requests]
+    return [RequestModel(**localize_request_document(req, lang)) for req in requests]
 
 @api_router.get("/requests/{request_id}", response_model=RequestModel)
-async def get_request(request_id: str, current_user: dict = Depends(get_current_user)):
+async def get_request(request_id: str, lang: str = "ru", current_user: dict = Depends(get_current_user)):
     request = await db.requests.find_one({"id": request_id})
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
-    return RequestModel(**request)
+    return RequestModel(**localize_request_document(request, lang))
 
 # ================================
 # REQUESTS ENDPOINTS - OPERATOR
@@ -751,6 +821,7 @@ async def get_operator_requests(
     status: Optional[str] = None,
     priority: Optional[str] = None,
     district: Optional[str] = None,
+    lang: str = "ru",
     current_user: dict = Depends(require_role([ROLE_OPERATOR, ROLE_ADMIN]))
 ):
     query = {}
@@ -764,7 +835,7 @@ async def get_operator_requests(
         query["district"] = district
     
     requests = await db.requests.find(query).sort("created_at", -1).to_list(500)
-    return [RequestModel(**req) for req in requests]
+    return [RequestModel(**localize_request_document(req, lang)) for req in requests]
 
 @api_router.put("/operator/requests/{request_id}")
 async def update_request_operator(
@@ -828,24 +899,72 @@ async def send_message(request_id: str, message_data: MessageCreate, current_use
 # ================================
 
 @api_router.get("/news", response_model=List[NewsItem])
-async def get_news(category: Optional[str] = None):
+async def get_news(category: Optional[str] = None, lang: str = "ru"):
     query = {"is_active": True}
     if category:
         query["category"] = category
     news = await db.news.find(query).sort("created_at", -1).to_list(50)
-    return [NewsItem(**item) for item in news]
+    return [NewsItem(**localize_news_document(item, lang)) for item in news]
 
 @api_router.get("/news/{news_id}", response_model=NewsItem)
-async def get_news_item(news_id: str):
+async def get_news_item(news_id: str, lang: str = "ru"):
     news = await db.news.find_one({"id": news_id})
     if not news:
         raise HTTPException(status_code=404, detail="News not found")
-    return NewsItem(**news)
+    return NewsItem(**localize_news_document(news, lang))
 
 @api_router.post("/admin/news", response_model=NewsItem)
 async def create_news(news_data: NewsCreate, current_user: dict = Depends(require_role([ROLE_ADMIN]))):
-    news_item = NewsItem(**news_data.dict())
-    await db.news.insert_one(news_item.dict())
+    news_dict = news_data.dict()
+    source_lang = normalize_translation_language(news_dict.get("source_lang", "ru"))
+
+    if source_lang == "ru":
+        source_title = news_dict.get("title_ru") or news_dict.get("title") or ""
+        source_content = news_dict.get("content_ru") or news_dict.get("content") or ""
+        source_summary = news_dict.get("summary_ru") or news_dict.get("summary") or ""
+    elif source_lang == "kk":
+        source_title = news_dict.get("title_kz") or news_dict.get("title") or ""
+        source_content = news_dict.get("content_kz") or news_dict.get("content") or ""
+        source_summary = news_dict.get("summary_kz") or news_dict.get("summary") or ""
+    else:
+        source_title = news_dict.get("title_en") or news_dict.get("title") or ""
+        source_content = news_dict.get("content_en") or news_dict.get("content") or ""
+        source_summary = news_dict.get("summary_en") or news_dict.get("summary") or ""
+
+    if source_title:
+        title_translations = await translate_to_all_languages(source_title, source_lang)
+        if not news_dict.get("title_ru"):
+            news_dict["title_ru"] = title_translations["ru"]
+        if not news_dict.get("title_kz"):
+            news_dict["title_kz"] = title_translations["kk"]
+        if not news_dict.get("title_en"):
+            news_dict["title_en"] = title_translations["en"]
+
+    if source_content:
+        content_translations = await translate_to_all_languages(source_content, source_lang)
+        if not news_dict.get("content_ru"):
+            news_dict["content_ru"] = content_translations["ru"]
+        if not news_dict.get("content_kz"):
+            news_dict["content_kz"] = content_translations["kk"]
+        if not news_dict.get("content_en"):
+            news_dict["content_en"] = content_translations["en"]
+
+    if source_summary:
+        summary_translations = await translate_to_all_languages(source_summary, source_lang)
+        if not news_dict.get("summary_ru"):
+            news_dict["summary_ru"] = summary_translations["ru"]
+        if not news_dict.get("summary_kz"):
+            news_dict["summary_kz"] = summary_translations["kk"]
+        if not news_dict.get("summary_en"):
+            news_dict["summary_en"] = summary_translations["en"]
+
+    news_dict["title"] = source_title
+    news_dict["content"] = source_content
+    news_dict["summary"] = source_summary or source_content[:180]
+    news_dict["source_lang"] = source_lang
+
+    news_item = NewsItem(**news_dict)
+    await db.news.insert_one(news_dict)
     return news_item
 
 @api_router.delete("/admin/news/{news_id}")

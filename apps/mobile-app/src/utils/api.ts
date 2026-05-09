@@ -1,6 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
+import i18n from '../i18n';
 
 const API_URL = Constants.expoConfig?.extra?.backendUrl || process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
@@ -11,6 +12,13 @@ const api = axios.create({
     'Content-Type': 'application/json'
   }
 });
+
+function getCurrentLang(): string {
+  const lang = i18n.language;
+  if (lang.startsWith('kz') || lang === 'kk') return 'kk';
+  if (lang.startsWith('en')) return 'en';
+  return 'ru';
+}
 
 api.interceptors.request.use(
   async (config) => {
@@ -72,6 +80,10 @@ export interface Request {
   problem_type: string;
   reason: string;
   description: string;
+  description_ru?: string;
+  description_kz?: string;
+  description_en?: string;
+  source_lang?: string;
   photos: string[];
   status: 'pending' | 'in_progress' | 'closed';
   priority?: string;
@@ -118,9 +130,12 @@ export interface NewsItem {
   title: string;
   title_ru: string;
   title_kz: string;
+  title_en?: string;
   content: string;
   content_ru: string;
   content_kz: string;
+  content_en?: string;
+  source_lang?: string;
   category: NewsCategory | 'critical' | 'warning' | 'info' | string;
   types?: NewsType[] | string[];
   type?: NewsType | string;
@@ -187,15 +202,15 @@ export const apiService = {
     reason: string;
     description: string;
     photos?: string[];
-  }) => api.post<Request>('/requests', data),
-  getUserRequests: () => api.get<Request[]>('/requests'),
+  }) => api.post<Request>('/requests', { ...data, source_lang: getCurrentLang() }),
+  getUserRequests: () => api.get<Request[]>('/requests', { params: { lang: getCurrentLang() } }),
   getAllRequests: (params?: { category?: string; status?: string }) =>
-    api.get<Request[]>('/requests/all', { params }),
-  getRequest: (id: string) => api.get<Request>(`/requests/${id}`),
+    api.get<Request[]>('/requests/all', { params: { ...params, lang: getCurrentLang() } }),
+  getRequest: (id: string) => api.get<Request>(`/requests/${id}`, { params: { lang: getCurrentLang() } }),
 
   // Requests - Operator
   getOperatorRequests: (params?: { category?: string; status?: string; priority?: string; district?: string }) =>
-    api.get<Request[]>('/operator/requests', { params }),
+    api.get<Request[]>('/operator/requests', { params: { ...params, lang: getCurrentLang() } }),
   updateRequestOperator: (id: string, data: {
     status: string;
     resolution_notes?: string;
@@ -217,13 +232,13 @@ export const apiService = {
     api.post<Message>(`/requests/${requestId}/messages`, { content }),
 
   // News
-  getNews: (category?: string) => api.get<NewsItem[]>('/news', { params: { category } }),
-  getNewsItem: (id: string) => api.get<NewsItem>(`/news/${id}`),
+  getNews: (category?: string) => api.get<NewsItem[]>('/news', { params: { category, lang: getCurrentLang() } }),
+  getNewsItem: (id: string) => api.get<NewsItem>(`/news/${id}`, { params: { lang: getCurrentLang() } }),
 
   // Admin - News
   createNews: (data: {
-    title: string; title_ru: string; title_kz: string;
-    content: string; content_ru: string; content_kz: string;
+    title: string; title_ru: string; title_kz: string; title_en?: string;
+    content: string; content_ru: string; content_kz: string; content_en?: string;
     category: string;
     types: string[];
     image?: string;
@@ -231,7 +246,15 @@ export const apiService = {
     start_at?: string;
     end_at?: string;
     summary?: string;
-  }) => api.post<NewsItem>('/admin/news', data),
+  }) => {
+    const source_lang = getCurrentLang();
+    return api.post<NewsItem>('/admin/news', {
+      ...data,
+      title_en: data.title_en || (source_lang === 'en' ? data.title : undefined),
+      content_en: data.content_en || (source_lang === 'en' ? data.content : undefined),
+      source_lang,
+    });
+  },
   deleteNews: (id: string) => api.delete(`/admin/news/${id}`),
 
   // Admin - Users
