@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   headerBlock: {
-    gap: 14,
+    gap: 4,
     paddingBottom: 18,
   },
   headerTitle: {
@@ -298,6 +298,7 @@ const styles = StyleSheet.create({
   },
   filtersRow: {
     gap: 10,
+    marginTop: 10,
     paddingRight: 8,
   },
   filterChip: {
