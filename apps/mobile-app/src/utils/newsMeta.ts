@@ -56,6 +56,24 @@ export const NEWS_CATEGORY_OPTIONS: NewsCategory[] = [
   'Благоустройство',
 ];
 
+export const typeKeyMap: Record<string, string> = {
+  'Аварийные работы': 'news.types.emergency',
+  'Погодные условия': 'news.types.weather',
+  'Плановые работы': 'news.types.planned',
+  'Дорожные ситуации': 'news.types.road',
+  'Управление образования': 'news.types.education',
+  'Мероприятия города': 'news.types.events',
+};
+
+export const categoryKeyMap: Record<string, string> = {
+  'Дороги': 'news.categories.roads',
+  'Коммунальные услуги': 'news.categories.utilities',
+  'Транспорт': 'news.categories.transport',
+  'Образование': 'news.categories.education',
+  'Погода': 'news.categories.weather',
+  'Благоустройство': 'news.categories.improvement',
+};
+
 const LEGACY_NEWS_TYPE_MAP: Record<string, NewsType> = {
   critical: 'Аварийные работы',
   warning: 'Плановые работы',

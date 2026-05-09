@@ -5,12 +5,14 @@ import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import type { NewsItem } from '../utils/api';
 import {
+  categoryKeyMap,
   getBorderColor,
   getNewsCategory,
   getNewsPeriod,
   getNewsTypeMeta,
   getNewsTypes,
   NEWS_CATEGORY_COLOR,
+  typeKeyMap,
 } from '../utils/newsMeta';
 import { getNewsCardSizes, useResponsive } from '../utils/responsive';
 
@@ -57,7 +59,7 @@ function formatPeriodLabel(start?: string, end?: string) {
 }
 
 export function NewsCard({ news, onPress }: NewsCardProps) {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { isTablet } = useResponsive();
   const sizes = useMemo(() => getNewsCardSizes(isTablet), [isTablet]);
   const styles = useMemo(() => createStyles(sizes), [sizes]);
@@ -91,7 +93,7 @@ export function NewsCard({ news, onPress }: NewsCardProps) {
               </View>
               <View style={styles.typeBlockMeta}>
                 <Text style={[styles.typeLabel, { color: meta.color }]} numberOfLines={1}>
-                  {type}
+                  {t(typeKeyMap[type] ?? type)}
                 </Text>
                 {index === 0 ? (
                   <Text style={styles.dateLabel}>{formattedCreatedAt}</Text>
@@ -126,7 +128,7 @@ export function NewsCard({ news, onPress }: NewsCardProps) {
             <View style={styles.footerSpacer} />
           )}
           <View style={styles.categoryChip}>
-            <Text style={styles.categoryChipText}>{category}</Text>
+            <Text style={styles.categoryChipText}>{t(categoryKeyMap[category] ?? category)}</Text>
           </View>
         </View>
       </TouchableOpacity>

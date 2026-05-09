@@ -18,33 +18,18 @@ import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { apiService, NewsCategory, NewsItem, NewsType } from '../../src/utils/api';
 import {
+  categoryKeyMap,
   getBorderColor,
   getNewsCategory,
   getNewsPeriod,
   getNewsTypeMeta,
   getNewsTypes,
-  NEWS_CATEGORY_COLOR,
   NEWS_CATEGORY_OPTIONS,
   NEWS_TYPE_OPTIONS,
+  typeKeyMap,
 } from '../../src/utils/newsMeta';
 
 const ORANGE = '#FB8C00';
-const NEWS_CATEGORY_TRANSLATION_KEYS: Record<NewsCategory, string> = {
-  'Дороги': 'admin.news.categories.roads',
-  'Коммунальные услуги': 'admin.news.categories.utilities',
-  'Транспорт': 'admin.news.categories.transport',
-  'Образование': 'admin.news.categories.education',
-  'Погода': 'admin.news.categories.weather',
-  'Благоустройство': 'admin.news.categories.improvement',
-};
-const NEWS_TYPE_TRANSLATION_KEYS: Record<NewsType, string> = {
-  'Аварийные работы': 'admin.news.types.emergency',
-  'Погодные условия': 'admin.news.types.weather',
-  'Плановые работы': 'admin.news.types.planned',
-  'Дорожные ситуации': 'admin.news.types.road',
-  'Управление образования': 'admin.news.types.education',
-  'Мероприятия города': 'admin.news.types.cityEvents',
-};
 
 type NewsFormState = {
   title: string;
@@ -110,12 +95,6 @@ export default function NewsManageScreen() {
   const updateForm = <K extends keyof NewsFormState>(key: K, value: NewsFormState[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
   };
-
-  const localizeNewsCategory = (category: NewsCategory) =>
-    t(NEWS_CATEGORY_TRANSLATION_KEYS[category] ?? 'admin.news.categories.roads');
-
-  const localizeNewsType = (type: NewsType) =>
-    t(NEWS_TYPE_TRANSLATION_KEYS[type] ?? 'admin.news.types.cityEvents');
 
   const toggleType = (type: NewsType) => {
     setForm((current) => {
@@ -208,7 +187,7 @@ export default function NewsManageScreen() {
             <View style={[styles.newsTypePill, { backgroundColor: `${primaryMeta.color}14` }]}>
               <MaterialCommunityIcons name={primaryMeta.icon} size={14} color={primaryMeta.color} />
               <Text style={[styles.newsTypeText, { color: primaryMeta.color }]}>
-                {localizeNewsType(primaryType)}
+                {t(typeKeyMap[primaryType] ?? primaryType)}
               </Text>
             </View>
             <Text style={styles.newsDate}>{format(new Date(item.created_at), 'dd.MM.yy')}</Text>
@@ -228,7 +207,7 @@ export default function NewsManageScreen() {
                 return (
                     <View key={`${item.id}-${type}`} style={styles.extraTypeItem}>
                       <View style={[styles.extraTypeDot, { backgroundColor: meta.color }]} />
-                      <Text style={styles.extraTypeText}>{localizeNewsType(type)}</Text>
+                      <Text style={styles.extraTypeText}>{t(typeKeyMap[type] ?? type)}</Text>
                     </View>
                 );
               })}
@@ -242,7 +221,7 @@ export default function NewsManageScreen() {
                 <Text style={styles.newsMetaText} numberOfLines={1}>{periodLabel}</Text>
               </View>
               <View style={styles.newsCategoryChip}>
-                <Text style={styles.newsCategoryChipText}>{localizeNewsCategory(category)}</Text>
+                <Text style={styles.newsCategoryChipText}>{t(categoryKeyMap[category] ?? category)}</Text>
               </View>
             </View>
           ) : null}
@@ -327,7 +306,7 @@ export default function NewsManageScreen() {
                     <Text
                       style={[styles.categoryOptionText, active && styles.categoryOptionTextActive]}
                     >
-                      {localizeNewsCategory(category)}
+                      {category}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -355,11 +334,9 @@ export default function NewsManageScreen() {
                     </View>
                     <View style={styles.typeOptionTextWrap}>
                       <Text style={[styles.typeOptionText, active && { color: option.color }]}>
-                        {localizeNewsType(option.label)}
+                        {option.label}
                       </Text>
-                      <Text style={styles.typeOptionHint}>
-                        {localizeNewsCategory(option.defaultCategory)}
-                      </Text>
+                      <Text style={styles.typeOptionHint}>{option.defaultCategory}</Text>
                     </View>
                     {active ? (
                       <MaterialCommunityIcons name="check-circle" size={18} color={option.color} />

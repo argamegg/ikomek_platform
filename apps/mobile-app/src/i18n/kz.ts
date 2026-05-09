@@ -104,6 +104,22 @@ export const kz = {
     warning: 'Назар аударыңыз',
     info: 'Ақпарат',
     noNews: 'Жаңалықтар жоқ',
+    types: {
+      emergency: 'Авариялық жұмыстар',
+      weather: 'Ауа райы жағдайлары',
+      planned: 'Жоспарлы жұмыстар',
+      road: 'Жол жағдайлары',
+      education: 'Білім басқармасы',
+      events: 'Қала іс-шаралары',
+    },
+    categories: {
+      roads: 'Жолдар',
+      utilities: 'Коммуналдық қызметтер',
+      transport: 'Көлік',
+      education: 'Білім',
+      weather: 'Ауа райы',
+      improvement: 'Абаттандыру',
+    },
   },
 
   // Map

@@ -7,6 +7,7 @@ import { Card } from "../components/ui/Card";
 import { Modal } from "../components/ui/Modal";
 import { PageHeader } from "../components/ui/PageHeader";
 import { formatDate } from "../lib/format";
+import { categoryKeyMap, typeKeyMap } from "../lib/normalizers";
 import {
   getBorderColor,
   formatNewsRelativeTime,
@@ -20,7 +21,7 @@ import {
 } from "../lib/newsMeta";
 import { platformApi, queryKeys } from "../services/platformApi";
 
-const ALL_CATEGORIES = "Все";
+const ALL_CATEGORIES = "__all__";
 
 function formatNewsPeriod(item: NewsItem, locale: "en" | "ru" | "kz") {
   const start = item.startAt || item.publishedAt;
@@ -130,14 +131,16 @@ export function NewsPage() {
                   type="button"
                   className={`news-type-filter${active ? " is-active" : ""}`}
                   onClick={() => toggleType(option.label)}
-                >
-                  <span
-                    className="news-type-filter__icon"
-                    style={{ backgroundColor: `${option.color}16`, color: option.color }}
                   >
-                    <Icon size={18} />
+                    <span
+                      className="news-type-filter__icon"
+                      style={{ backgroundColor: `${option.color}16`, color: option.color }}
+                    >
+                      <Icon size={18} />
+                    </span>
+                  <span className="news-type-filter__label">
+                    {t(typeKeyMap[option.label] ?? option.label)}
                   </span>
-                  <span className="news-type-filter__label">{option.label}</span>
                 </button>
               );
             })}
@@ -158,7 +161,9 @@ export function NewsPage() {
                     className={`news-category-pill${active ? " is-active" : ""}`}
                     onClick={() => setCategoryFilter(category)}
                   >
-                    {category}
+                    {category === ALL_CATEGORIES
+                      ? t("common.all")
+                      : t(categoryKeyMap[category] ?? category)}
                   </button>
                 );
               })}
@@ -199,7 +204,7 @@ export function NewsPage() {
                           </span>
                           <div className="news-card-type-meta">
                             <span className="type-name" style={{ color: meta.color }}>
-                              {type}
+                              {t(typeKeyMap[type] ?? type)}
                             </span>
                             {index === 0 ? <span className="type-date">{createdAtLabel}</span> : null}
                           </div>
@@ -220,7 +225,9 @@ export function NewsPage() {
                     ) : (
                       <span className="news-card__meta-spacer" aria-hidden="true" />
                     )}
-                    <span className="news-category-chip">{category}</span>
+                    <span className="news-category-chip">
+                      {t(categoryKeyMap[category] ?? category)}
+                    </span>
                   </div>
                 </Card>
               );
@@ -261,7 +268,9 @@ export function NewsPage() {
                     <Clock3 size={15} />
                     {formatNewsRelativeTime(selectedNews.publishedAt || selectedNews.startAt, "ru")}
                   </span>
-                  <span className="news-category-chip">{category}</span>
+                  <span className="news-category-chip">
+                    {t(categoryKeyMap[category] ?? category)}
+                  </span>
                 </div>
                 <div className="news-type-chips">
                   {types.map((type) => {
@@ -274,7 +283,7 @@ export function NewsPage() {
                         style={{ backgroundColor: `${meta.color}14`, color: meta.color }}
                       >
                         <Icon size={14} />
-                        {type}
+                        {t(typeKeyMap[type] ?? type)}
                       </span>
                     );
                   })}

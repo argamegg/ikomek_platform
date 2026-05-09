@@ -21,6 +21,24 @@ import type {
 import { getNewsCategory, getNewsTypes } from "./newsMeta";
 import { session } from "./session";
 
+export const typeKeyMap: Record<string, string> = {
+  "Аварийные работы": "news.types.emergency",
+  "Погодные условия": "news.types.weather",
+  "Плановые работы": "news.types.planned",
+  "Дорожные ситуации": "news.types.road",
+  "Управление образования": "news.types.education",
+  "Мероприятия города": "news.types.events",
+};
+
+export const categoryKeyMap: Record<string, string> = {
+  "Дороги": "news.categories.roads",
+  "Коммунальные услуги": "news.categories.utilities",
+  "Транспорт": "news.categories.transport",
+  "Образование": "news.categories.education",
+  "Погода": "news.categories.weather",
+  "Благоустройство": "news.categories.improvement",
+};
+
 type JsonRecord = Record<string, unknown>;
 
 function isRecord(value: unknown): value is JsonRecord {

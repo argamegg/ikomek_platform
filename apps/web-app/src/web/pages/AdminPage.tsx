@@ -8,6 +8,7 @@ import { Card } from "../components/ui/Card";
 import { Input, Textarea } from "../components/ui/Input";
 import { Modal } from "../components/ui/Modal";
 import { PageHeader } from "../components/ui/PageHeader";
+import { categoryKeyMap, typeKeyMap } from "../lib/normalizers";
 import { getErrorMessage, platformApi, queryKeys } from "../services/platformApi";
 import {
   getBorderColor,
@@ -131,7 +132,9 @@ export function AdminPage() {
                       <Icon size={18} />
                     </span>
                     <div>
-                      <strong style={{ color: primaryMeta.color }}>{types[0]}</strong>
+                      <strong style={{ color: primaryMeta.color }}>
+                        {t(typeKeyMap[types[0]] ?? types[0])}
+                      </strong>
                       <time>{(item.publishedAt || item.startAt || "").slice(0, 10)}</time>
                     </div>
                   </div>
@@ -141,7 +144,9 @@ export function AdminPage() {
               {period ? (
                 <div className="news-card__meta-list">
                   <span>{period}</span>
-                  <span className="news-category-chip">{category}</span>
+                  <span className="news-category-chip">
+                    {t(categoryKeyMap[category] ?? category)}
+                  </span>
                 </div>
               ) : null}
             </Card>

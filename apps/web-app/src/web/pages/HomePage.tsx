@@ -27,6 +27,7 @@ import { Modal } from "../components/ui/Modal";
 import { Skeleton } from "../components/ui/Skeleton";
 import { IssueMap } from "../components/maps/IssueMap";
 import { formatDate, formatRelativeTime, getStatusTone } from "../lib/format";
+import { categoryKeyMap, typeKeyMap } from "../lib/normalizers";
 import {
   getBorderColor,
   getNewsCategory,
@@ -524,13 +525,13 @@ export function HomePage() {
                           }}
                         >
                           <Icon size={14} />
-                          {types[0]}
+                          {t(typeKeyMap[types[0]] ?? types[0])}
                         </span>
                         <span
                           className="home-hero__signal-category"
                           style={{ backgroundColor: NEWS_CATEGORY_COLOR }}
                         >
-                          {category}
+                          {t(categoryKeyMap[category] ?? category)}
                         </span>
                       </div>
                       <strong>{item.title}</strong>
@@ -801,7 +802,7 @@ export function HomePage() {
                               </span>
                               <div className="news-card-type-meta">
                                 <span className="type-name" style={{ color: meta.color }}>
-                                  {type}
+                                  {t(typeKeyMap[type] ?? type)}
                                 </span>
                                 {index === 0 ? <span className="type-date">{createdAtLabel}</span> : null}
                               </div>
@@ -826,7 +827,9 @@ export function HomePage() {
                         ) : (
                           <span className="home-news__meta-spacer" aria-hidden="true" />
                         )}
-                        <span className="news-category-chip">{category}</span>
+                        <span className="news-category-chip">
+                          {t(categoryKeyMap[category] ?? category)}
+                        </span>
                       </div>
                     </div>
                   </motion.article>

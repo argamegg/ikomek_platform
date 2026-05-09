@@ -104,6 +104,22 @@ export const en = {
     warning: 'Warning',
     info: 'Info',
     noNews: 'No news available',
+    types: {
+      emergency: 'Emergency Works',
+      weather: 'Weather Conditions',
+      planned: 'Planned Works',
+      road: 'Road Situations',
+      education: 'Education Department',
+      events: 'City Events',
+    },
+    categories: {
+      roads: 'Roads',
+      utilities: 'Utilities',
+      transport: 'Transport',
+      education: 'Education',
+      weather: 'Weather',
+      improvement: 'Urban Improvement',
+    },
   },
 
   // Map

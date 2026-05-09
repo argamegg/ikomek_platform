@@ -18,6 +18,7 @@ import { NewsCard } from '../../src/components/NewsCard';
 import { useAuth } from '../../src/context/AuthContext';
 import { apiService, NewsItem } from '../../src/utils/api';
 import {
+  categoryKeyMap,
   formatNewsRelativeTime,
   getBorderColor,
   getNewsCategory,
@@ -25,11 +26,11 @@ import {
   getNewsPeriod,
   getNewsTypeMeta,
   getNewsTypes,
-  NEWS_CATEGORY_COLOR,
   NEWS_CATEGORY_OPTIONS,
+  typeKeyMap,
 } from '../../src/utils/newsMeta';
 
-const ALL_CATEGORY = 'Все';
+const ALL_CATEGORY = '__all__';
 const ORANGE = '#FB8C00';
 
 function getLocalizedText(item: NewsItem, field: 'title' | 'content', language: string) {
@@ -115,6 +116,9 @@ export default function NewsScreen() {
       >
         {categories.map((category) => {
           const active = category === selectedCategory;
+          const label = category === ALL_CATEGORY
+            ? t('common.all')
+            : t(categoryKeyMap[category] ?? category);
           return (
             <TouchableOpacity
               key={category}
@@ -123,7 +127,7 @@ export default function NewsScreen() {
               activeOpacity={0.9}
             >
               <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
-                {category}
+                {label}
               </Text>
             </TouchableOpacity>
           );
@@ -192,7 +196,9 @@ export default function NewsScreen() {
                 <Text style={styles.modalMetaText}>{formatNewsRelativeTime(selectedNews.created_at)}</Text>
               </View>
               <View style={styles.modalCategoryChip}>
-                <Text style={styles.modalCategoryChipText}>{category}</Text>
+                <Text style={styles.modalCategoryChipText}>
+                  {t(categoryKeyMap[category] ?? category)}
+                </Text>
               </View>
             </View>
 
@@ -205,7 +211,9 @@ export default function NewsScreen() {
                     style={[styles.modalTypeChip, { backgroundColor: `${meta.color}14` }]}
                   >
                     <MaterialCommunityIcons name={meta.icon} size={15} color={meta.color} />
-                    <Text style={[styles.modalTypeChipText, { color: meta.color }]}>{type}</Text>
+                    <Text style={[styles.modalTypeChipText, { color: meta.color }]}>
+                      {t(typeKeyMap[type] ?? type)}
+                    </Text>
                   </View>
                 );
               })}

@@ -481,6 +481,22 @@ const resources = {
       news: {
         title: "City news and alerts",
         description: "A polished editorial and alert experience for the existing city content stream.",
+        types: {
+          emergency: "Emergency Works",
+          weather: "Weather Conditions",
+          planned: "Planned Works",
+          road: "Road Situations",
+          education: "Education Department",
+          events: "City Events",
+        },
+        categories: {
+          roads: "Roads",
+          utilities: "Utilities",
+          transport: "Transport",
+          education: "Education",
+          weather: "Weather",
+          improvement: "Urban Improvement",
+        },
       },
       map: {
         title: "Live city map",
@@ -989,6 +1005,22 @@ const resources = {
       news: {
         title: "Городские новости и оповещения",
         description: "Аккуратный редакционный интерфейс для существующего городского контент-потока.",
+        types: {
+          emergency: "Аварийные работы",
+          weather: "Погодные условия",
+          planned: "Плановые работы",
+          road: "Дорожные ситуации",
+          education: "Управление образования",
+          events: "Мероприятия города",
+        },
+        categories: {
+          roads: "Дороги",
+          utilities: "Коммунальные услуги",
+          transport: "Транспорт",
+          education: "Образование",
+          weather: "Погода",
+          improvement: "Благоустройство",
+        },
       },
       map: {
         title: "Живая карта города",
@@ -1496,6 +1528,22 @@ const resources = {
       news: {
         title: "Қалалық жаңалықтар мен хабарламалар",
         description: "Қолданыстағы қалалық контент ағынына арналған ұқыпты редакциялық интерфейс.",
+        types: {
+          emergency: "Авариялық жұмыстар",
+          weather: "Ауа райы жағдайлары",
+          planned: "Жоспарлы жұмыстар",
+          road: "Жол жағдайлары",
+          education: "Білім басқармасы",
+          events: "Қала іс-шаралары",
+        },
+        categories: {
+          roads: "Жолдар",
+          utilities: "Коммуналдық қызметтер",
+          transport: "Көлік",
+          education: "Білім",
+          weather: "Ауа райы",
+          improvement: "Абаттандыру",
+        },
       },
       map: {
         title: "Қаланың тірі картасы",

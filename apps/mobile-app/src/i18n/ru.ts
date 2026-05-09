@@ -104,6 +104,22 @@ export const ru = {
     warning: 'Внимание',
     info: 'Информация',
     noNews: 'Нет новостей',
+    types: {
+      emergency: 'Аварийные работы',
+      weather: 'Погодные условия',
+      planned: 'Плановые работы',
+      road: 'Дорожные ситуации',
+      education: 'Управление образования',
+      events: 'Мероприятия города',
+    },
+    categories: {
+      roads: 'Дороги',
+      utilities: 'Коммунальные услуги',
+      transport: 'Транспорт',
+      education: 'Образование',
+      weather: 'Погода',
+      improvement: 'Благоустройство',
+    },
   },
 
   // Map
