@@ -21,6 +21,7 @@ import {
   type NewsFormSubmitOptions,
   type NewsFormValues,
 } from '../../src/components/NewsForm';
+import { NewsFilterSheet, type PeriodFilter, type SortFilter } from '../../src/components/NewsFilterSheet';
 import { apiService, type NewsItem } from '../../src/utils/api';
 import {
   categoryKeyMap,
@@ -30,17 +31,12 @@ import {
   getNewsTypeMeta,
   getNewsTypes,
   NEWS_CATEGORY_COLOR,
-  NEWS_CATEGORY_OPTIONS,
-  NEWS_TYPE_OPTIONS,
   typeKeyMap,
 } from '../../src/utils/newsMeta';
 
 const ORANGE = '#FB8C00';
 const ALL_FILTER = '__all__';
 const LIMIT = 20;
-
-type PeriodFilter = 'all' | 'active' | 'finished' | 'no_period';
-type SortFilter = 'date_desc' | 'date_asc';
 
 function toFormValue(item?: NewsItem | null): NewsFormValues {
   if (!item) {
@@ -70,21 +66,67 @@ function toFormValue(item?: NewsItem | null): NewsFormValues {
   };
 }
 
-function getTranslationStatusIcon(status?: string) {
+function getTranslationStatusMeta(status?: string) {
   if (status === 'translated') {
-    return { icon: 'check-circle', color: '#2E7D32', label: 'translated' };
+    return {
+      icon: 'check-circle',
+      color: '#43A047',
+      backgroundColor: '#E8F5E9',
+      key: 'translated',
+    };
   }
 
   if (status === 'failed') {
-    return { icon: 'alert-circle', color: '#F9A825', label: 'failed' };
+    return {
+      icon: 'alert-circle',
+      color: '#F9A825',
+      backgroundColor: '#FFF8E1',
+      key: 'failed',
+    };
   }
 
   if (status === 'skipped') {
-    return { icon: 'minus-circle', color: '#64748B', label: 'skipped' };
+    return {
+      icon: 'close-circle-outline',
+      color: '#9E9E9E',
+      backgroundColor: '#F5F5F5',
+      key: 'skipped',
+    };
   }
 
   return null;
 }
+
+const SearchBar = React.memo(function SearchBar({
+  value,
+  onChangeText,
+  onPressFilter,
+  hasActiveFilters,
+  placeholder,
+}: {
+  value: string;
+  onChangeText: (value: string) => void;
+  onPressFilter: () => void;
+  hasActiveFilters: boolean;
+  placeholder: string;
+}) {
+  return (
+    <View style={styles.searchWrap}>
+      <MaterialCommunityIcons name="magnify" size={20} color="#94A3B8" />
+      <TextInput
+        style={styles.searchInput}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor="#94A3B8"
+      />
+      <TouchableOpacity style={styles.filterButton} onPress={onPressFilter} activeOpacity={0.85}>
+        <MaterialCommunityIcons name="tune-variant" size={21} color="#475569" />
+        {hasActiveFilters ? <View style={styles.filterBadge} /> : null}
+      </TouchableOpacity>
+    </View>
+  );
+});
 
 export default function NewsManageScreen() {
   const { t } = useTranslation();
@@ -96,6 +138,7 @@ export default function NewsManageScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [editingNews, setEditingNews] = useState<NewsItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
@@ -151,6 +194,10 @@ export default function NewsManageScreen() {
   );
   const pageCount = Math.max(1, Math.ceil(total / LIMIT));
   const currentFormValue = useMemo(() => toFormValue(editingNews), [editingNews]);
+  const hasActiveFilters = selectedCategory !== ALL_FILTER
+    || selectedType !== ALL_FILTER
+    || selectedPeriod !== 'all'
+    || sort !== 'date_desc';
 
   const resetModal = () => {
     setEditingNews(null);
@@ -185,10 +232,7 @@ export default function NewsManageScreen() {
       return response.data;
     } catch (error) {
       console.error('Failed to preview translation', error);
-      Alert.alert(
-        t('common.error'),
-        t('admin.news.translationFailed', { defaultValue: 'Не удалось получить перевод. Можно опубликовать новость без перевода.' }),
-      );
+      Alert.alert(t('common.error'), t('admin.news.translationFailed'));
       throw error;
     } finally {
       setIsTranslating(false);
@@ -227,10 +271,7 @@ export default function NewsManageScreen() {
     try {
       if (editingNews) {
         await apiService.updateNews(editingNews.id, buildPayload(value, options));
-        Alert.alert(
-          t('common.success'),
-          t('admin.news.updated', { defaultValue: 'Новость обновлена.' }),
-        );
+        Alert.alert(t('common.success'), t('admin.news.updated'));
       } else {
         await apiService.createNews(buildPayload(value, options));
         Alert.alert(t('common.success'), t('admin.news.published'));
@@ -272,7 +313,7 @@ export default function NewsManageScreen() {
     const category = getNewsCategory(item);
     const period = getNewsPeriod(item);
     const borderColor = getBorderColor(period.start, period.end);
-    const statusMeta = getTranslationStatusIcon(item.translation_status);
+    const statusMeta = getTranslationStatusMeta(item.translation_status);
     const periodLabel = period.start
       ? `${format(new Date(period.start), 'dd.MM HH:mm')}${period.end ? ` - ${format(new Date(period.end), 'dd.MM HH:mm')}` : ''}`
       : '';
@@ -290,10 +331,10 @@ export default function NewsManageScreen() {
                 </Text>
               </View>
               {statusMeta ? (
-                <View style={[styles.translationBadge, { backgroundColor: `${statusMeta.color}18` }]}>
-                  <MaterialCommunityIcons name={statusMeta.icon as never} size={14} color={statusMeta.color} />
+                <View style={[styles.translationBadge, { backgroundColor: statusMeta.backgroundColor }]}>
+                  <MaterialCommunityIcons name={statusMeta.icon} size={15} color={statusMeta.color} style={styles.translationIcon} />
                   <Text style={[styles.translationBadgeText, { color: statusMeta.color }]}>
-                    {t(`admin.news.translationStatus.${statusMeta.label}`, { defaultValue: statusMeta.label })}
+                    {t(`news.translationStatus.${statusMeta.key}`)}
                   </Text>
                 </View>
               ) : null}
@@ -301,12 +342,8 @@ export default function NewsManageScreen() {
             <Text style={styles.newsDate}>{format(new Date(item.created_at), 'dd.MM.yy')}</Text>
           </View>
 
-          <Text style={styles.newsTitle} numberOfLines={2}>
-            {item.title}
-          </Text>
-          <Text style={styles.newsContent} numberOfLines={3}>
-            {item.summary || item.content}
-          </Text>
+          <Text style={styles.newsTitle} numberOfLines={2}>{item.title}</Text>
+          <Text style={styles.newsContent} numberOfLines={3}>{item.summary || item.content}</Text>
 
           {types.length > 1 ? (
             <View style={styles.extraTypesRow}>
@@ -355,142 +392,6 @@ export default function NewsManageScreen() {
     );
   };
 
-  const renderHeader = () => (
-    <View style={styles.headerContent}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>{t('admin.news.title')}</Text>
-          <Text style={styles.headerSub}>{articleCountLabel}</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() => {
-            setEditingNews(null);
-            setModalOpen(true);
-          }}
-        >
-          <MaterialCommunityIcons name="plus" size={24} color="#FFF" />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.searchWrap}>
-        <MaterialCommunityIcons name="magnify" size={20} color="#94A3B8" />
-        <TextInput
-          style={styles.searchInput}
-          value={searchInput}
-          onChangeText={setSearchInput}
-          placeholder={t('admin.news.searchPlaceholder', { defaultValue: 'Поиск по заголовку или тексту...' })}
-          placeholderTextColor="#94A3B8"
-        />
-      </View>
-
-      <Text style={styles.filterLabel}>{t('common.filter')}</Text>
-      <FlatList
-        horizontal
-        data={[ALL_FILTER, ...NEWS_CATEGORY_OPTIONS]}
-        keyExtractor={(item) => `category-${item}`}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filtersRow}
-        renderItem={({ item }) => {
-          const active = item === selectedCategory;
-          const label = item === ALL_FILTER
-            ? t('admin.news.allCategories', { defaultValue: 'Все категории' })
-            : t(categoryKeyMap[item] ?? item);
-
-          return (
-            <TouchableOpacity
-              style={[styles.filterChip, active && styles.filterChipActive]}
-              onPress={() => {
-                setPage(1);
-                setSelectedCategory(item);
-              }}
-            >
-              <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
-                {label}
-              </Text>
-            </TouchableOpacity>
-          );
-        }}
-      />
-
-      <FlatList
-        horizontal
-        data={[ALL_FILTER, ...NEWS_TYPE_OPTIONS.map((item) => item.label)]}
-        keyExtractor={(item) => `type-${item}`}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filtersRow}
-        renderItem={({ item }) => {
-          const active = item === selectedType;
-          const label = item === ALL_FILTER
-            ? t('admin.news.allTypes', { defaultValue: 'Все типы' })
-            : t(typeKeyMap[item] ?? item);
-
-          return (
-            <TouchableOpacity
-              style={[styles.filterChip, active && styles.filterChipActive]}
-              onPress={() => {
-                setPage(1);
-                setSelectedType(item);
-              }}
-            >
-              <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
-                {label}
-              </Text>
-            </TouchableOpacity>
-          );
-        }}
-      />
-
-      <View style={styles.shortFiltersRow}>
-        {([
-          { key: 'all', label: t('admin.news.periodAll', { defaultValue: 'Все периоды' }) },
-          { key: 'active', label: t('admin.news.periodActive', { defaultValue: 'Активные' }) },
-          { key: 'finished', label: t('admin.news.periodFinished', { defaultValue: 'Завершённые' }) },
-          { key: 'no_period', label: t('admin.news.periodNoPeriod', { defaultValue: 'Без периода' }) },
-        ] as { key: PeriodFilter; label: string }[]).map((item) => {
-          const active = item.key === selectedPeriod;
-          return (
-            <TouchableOpacity
-              key={item.key}
-              style={[styles.filterChip, active && styles.filterChipActive]}
-              onPress={() => {
-                setPage(1);
-                setSelectedPeriod(item.key);
-              }}
-            >
-              <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      <View style={styles.shortFiltersRow}>
-        {([
-          { key: 'date_desc', label: t('admin.news.sortNewest', { defaultValue: 'Сначала новые' }) },
-          { key: 'date_asc', label: t('admin.news.sortOldest', { defaultValue: 'Сначала старые' }) },
-        ] as { key: SortFilter; label: string }[]).map((item) => {
-          const active = item.key === sort;
-          return (
-            <TouchableOpacity
-              key={item.key}
-              style={[styles.filterChip, active && styles.filterChipActive]}
-              onPress={() => {
-                setPage(1);
-                setSort(item.key);
-              }}
-            >
-              <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-    </View>
-  );
-
   if (isLoading) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -501,11 +402,36 @@ export default function NewsManageScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={styles.headerContent}>
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.headerTitle}>{t('admin.news.title')}</Text>
+            <Text style={styles.headerSub}>{articleCountLabel}</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={() => {
+              setEditingNews(null);
+              setModalOpen(true);
+            }}
+          >
+            <MaterialCommunityIcons name="plus" size={24} color="#FFF" />
+          </TouchableOpacity>
+        </View>
+
+        <SearchBar
+          value={searchInput}
+          onChangeText={setSearchInput}
+          onPressFilter={() => setFilterSheetOpen(true)}
+          hasActiveFilters={hasActiveFilters}
+          placeholder={t('admin.news.searchPlaceholder')}
+        />
+      </View>
+
       <FlatList
         data={news}
         keyExtractor={(item) => item.id}
         renderItem={renderCard}
-        ListHeaderComponent={renderHeader}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -541,15 +467,38 @@ export default function NewsManageScreen() {
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <MaterialCommunityIcons name="newspaper-variant-outline" size={52} color="#CBD5E1" />
-            <Text style={styles.emptyTitle}>{t('news.noNews', { defaultValue: 'Нет новостей' })}</Text>
-            <Text style={styles.emptyText}>
-              {t('admin.news.emptyFiltered', { defaultValue: 'Попробуйте изменить фильтры или поисковый запрос.' })}
-            </Text>
+            <Text style={styles.emptyTitle}>{t('news.noNews')}</Text>
+            <Text style={styles.emptyText}>{t('admin.news.emptyFiltered')}</Text>
           </View>
         }
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         showsVerticalScrollIndicator={false}
+      />
+
+      <NewsFilterSheet
+        visible={filterSheetOpen}
+        selectedCategory={selectedCategory}
+        selectedType={selectedType}
+        selectedPeriod={selectedPeriod}
+        selectedSort={sort}
+        categoryAllLabel={t('admin.news.allCategories')}
+        typeAllLabel={t('admin.news.allTypes')}
+        onClose={() => setFilterSheetOpen(false)}
+        onReset={() => {
+          setPage(1);
+          setSelectedCategory(ALL_FILTER);
+          setSelectedType(ALL_FILTER);
+          setSelectedPeriod('all');
+          setSort('date_desc');
+        }}
+        onApply={({ category, type, period, sort: nextSort }) => {
+          setPage(1);
+          setSelectedCategory(category);
+          setSelectedType(type);
+          setSelectedPeriod(period);
+          setSort(nextSort);
+        }}
       />
 
       <Modal visible={modalOpen} animationType="slide" presentationStyle="pageSheet">
@@ -559,14 +508,14 @@ export default function NewsManageScreen() {
               <Text style={styles.cancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <Text style={styles.modalTitle}>
-              {editingNews ? t('common.edit') : t('admin.news.newArticle')}
+              {editingNews ? t('admin.news.editArticleTitle') : t('admin.news.newArticle')}
             </Text>
             <View style={{ width: 58 }} />
           </View>
 
           <NewsForm
             initialValue={currentFormValue}
-            submitLabel={editingNews ? t('common.save') : t('admin.news.publish', { defaultValue: 'Опубликовать' })}
+            submitLabel={editingNews ? t('common.save') : t('admin.news.publish')}
             isSubmitting={isSubmitting}
             isTranslating={isTranslating}
             onCancel={resetModal}
@@ -590,14 +539,15 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 8,
     paddingBottom: 16,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingHorizontal: 4,
   },
   headerTitle: {
     fontSize: 28,
@@ -630,7 +580,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginHorizontal: 16,
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: 18,
@@ -644,42 +593,22 @@ const styles = StyleSheet.create({
     color: '#111827',
     paddingVertical: 0,
   },
-  filterLabel: {
-    marginHorizontal: 16,
-    fontSize: 12,
-    color: '#94A3B8',
-    fontWeight: '700',
-    textTransform: 'uppercase',
+  filterButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F8FAFC',
   },
-  filtersRow: {
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingRight: 24,
-  },
-  shortFiltersRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    paddingHorizontal: 16,
-  },
-  filterChip: {
+  filterBadge: {
+    position: 'absolute',
+    top: 7,
+    right: 7,
+    width: 8,
+    height: 8,
     borderRadius: 999,
-    borderWidth: 1.5,
-    borderColor: ORANGE,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: 'rgba(255,255,255,0.88)',
-  },
-  filterChipActive: {
     backgroundColor: ORANGE,
-  },
-  filterChipText: {
-    fontSize: 13,
-    color: ORANGE,
-    fontWeight: '700',
-  },
-  filterChipTextActive: {
-    color: '#FFFFFF',
   },
   newsCard: {
     backgroundColor: '#FFFFFF',
@@ -736,6 +665,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
+  },
+  translationIcon: {
+    marginRight: 0,
   },
   translationBadgeText: {
     fontSize: 12,

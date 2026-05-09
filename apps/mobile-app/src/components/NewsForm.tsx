@@ -224,7 +224,7 @@ export function NewsForm({
         >
           {isTranslating ? <ActivityIndicator size="small" color={ORANGE} /> : null}
           <Text style={styles.secondaryButtonText}>
-            {translatedVisible ? t('admin.news.retranslate', { defaultValue: 'Перевести заново' }) : t('admin.news.translate', { defaultValue: 'Перевести' })}
+            {translatedVisible ? t('admin.news.retranslate') : t('admin.news.translate')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -234,9 +234,7 @@ export function NewsForm({
           }}
           disabled={isSubmitting || isTranslating}
         >
-          <Text style={styles.ghostButtonText}>
-            {t('admin.news.publishWithoutTranslation', { defaultValue: 'Опубликовать без перевода' })}
-          </Text>
+          <Text style={styles.ghostButtonText}>{t('admin.news.publishWithoutTranslation')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -260,7 +258,7 @@ export function NewsForm({
           </View>
 
           <Text style={styles.sectionLabel}>
-            {t('admin.news.localizedTitleLabel', { lang: getLanguageCode(activeTab).toUpperCase(), defaultValue: 'Локализованный заголовок' })}
+            {t('admin.news.localizedTitleLabel', { lang: getLanguageCode(activeTab).toUpperCase() })}
           </Text>
           <TextInput
             style={styles.input}
@@ -271,7 +269,7 @@ export function NewsForm({
           />
 
           <Text style={styles.sectionLabel}>
-            {t('admin.news.localizedContentLabel', { lang: getLanguageCode(activeTab).toUpperCase(), defaultValue: 'Локализованный текст' })}
+            {t('admin.news.localizedContentLabel', { lang: getLanguageCode(activeTab).toUpperCase() })}
           </Text>
           <TextInput
             style={[styles.input, styles.textArea]}

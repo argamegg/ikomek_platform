@@ -163,13 +163,13 @@ export function NewsForm({
       }}
     >
       <Input
-        label={t("admin.news.titleLabel", { defaultValue: "Заголовок новости" })}
+        label={t("admin.news.titleLabel")}
         value={value.title}
         onChange={(event) => updateValue("title", event.target.value)}
       />
 
       <Textarea
-        label={t("admin.news.contentLabel", { defaultValue: "Текст новости" })}
+        label={t("admin.news.contentLabel")}
         rows={6}
         value={value.body}
         onChange={(event) => updateValue("body", event.target.value)}
@@ -177,9 +177,7 @@ export function NewsForm({
 
       <div className="news-form__actions">
         <Button type="button" variant="secondary" isLoading={isTranslating} onClick={() => void handleTranslate()}>
-          {translatedVisible
-            ? t("admin.news.retranslate", { defaultValue: "Перевести заново" })
-            : t("admin.news.translate", { defaultValue: "Перевести" })}
+          {translatedVisible ? t("admin.news.retranslate") : t("admin.news.translate")}
         </Button>
         <Button
           type="button"
@@ -195,7 +193,7 @@ export function NewsForm({
             )
           }
         >
-          {t("admin.news.publishWithoutTranslation", { defaultValue: "Опубликовать без перевода" })}
+          {t("admin.news.publishWithoutTranslation")}
         </Button>
       </div>
 
@@ -215,16 +213,14 @@ export function NewsForm({
           </div>
           <Input
             label={t("admin.news.localizedTitleLabel", {
-              lang: activeTab.toUpperCase(),
-              defaultValue: `Заголовок ${activeTab.toUpperCase()}`,
+                              lang: activeTab.toUpperCase(),
             })}
             value={String(value[localizedFields.title] ?? "")}
             onChange={(event) => updateValue(localizedFields.title, event.target.value)}
           />
           <Textarea
             label={t("admin.news.localizedContentLabel", {
-              lang: activeTab.toUpperCase(),
-              defaultValue: `Текст ${activeTab.toUpperCase()}`,
+                              lang: activeTab.toUpperCase(),
             })}
             rows={6}
             value={String(value[localizedFields.body] ?? "")}
@@ -234,14 +230,14 @@ export function NewsForm({
       ) : null}
 
       <Textarea
-        label={t("admin.news.summaryLabel", { defaultValue: "Краткое описание" })}
+        label={t("admin.news.summaryLabel")}
         rows={3}
         value={value.summary}
         onChange={(event) => updateValue("summary", event.target.value)}
       />
 
       <div className="news-admin-section">
-        <label>{t("admin.news.categoryLabel", { defaultValue: "Категория" })}</label>
+        <label>{t("admin.news.categoryLabel")}</label>
         <div className="news-admin-categories">
           {NEWS_CATEGORY_OPTIONS.map((category) => (
             <button
@@ -257,7 +253,7 @@ export function NewsForm({
       </div>
 
       <div className="news-admin-section">
-        <label>{t("admin.news.typesLabel", { defaultValue: "Типы" })}</label>
+        <label>{t("admin.news.typesLabel")}</label>
         <div className="news-admin-types">
           {NEWS_TYPE_OPTIONS.map((option) => {
             const Icon = option.icon;
@@ -290,18 +286,18 @@ export function NewsForm({
       </div>
 
       <Input
-        label={t("admin.news.locationLabel", { defaultValue: "Локация" })}
+        label={t("admin.news.locationLabel")}
         value={value.location}
         onChange={(event) => updateValue("location", event.target.value)}
       />
       <Input
-        label={t("admin.news.periodStartLabel", { defaultValue: "Начало периода" })}
+        label={t("admin.news.periodStartLabel")}
         type="datetime-local"
         value={value.startAt}
         onChange={(event) => updateValue("startAt", event.target.value)}
       />
       <Input
-        label={t("admin.news.periodEndLabel", { defaultValue: "Окончание периода" })}
+        label={t("admin.news.periodEndLabel")}
         type="datetime-local"
         value={value.endAt ?? ""}
         onChange={(event) => updateValue("endAt", event.target.value)}

@@ -26,11 +26,15 @@ const LIMIT = 20;
 
 function getTranslationStatusMeta(status?: string) {
   if (status === "translated") {
-    return { icon: "✅", key: "translated" };
+    return { icon: "✅", key: "translated", className: "news-status-pill--translated" };
   }
 
   if (status === "failed") {
-    return { icon: "⚠️", key: "failed" };
+    return { icon: "⚠️", key: "failed", className: "news-status-pill--failed" };
+  }
+
+  if (status === "skipped") {
+    return { icon: "⊘", key: "skipped", className: "news-status-pill--skipped" };
   }
 
   return null;
@@ -106,7 +110,7 @@ export function AdminPage() {
         queryClient.invalidateQueries({ queryKey: queryKeys.news }),
         queryClient.invalidateQueries({ queryKey: queryKeys.alerts }),
       ]);
-      toast.success(t("admin.news.created", { defaultValue: "Новость опубликована" }));
+      toast.success(t("admin.news.created"));
       setModalOpen(false);
       setEditingNews(null);
     },
@@ -121,7 +125,7 @@ export function AdminPage() {
         queryClient.invalidateQueries({ queryKey: queryKeys.news }),
         queryClient.invalidateQueries({ queryKey: queryKeys.alerts }),
       ]);
-      toast.success(t("admin.news.updated", { defaultValue: "Новость обновлена" }));
+      toast.success(t("admin.news.updated"));
       setModalOpen(false);
       setEditingNews(null);
     },
@@ -135,7 +139,7 @@ export function AdminPage() {
         queryClient.invalidateQueries({ queryKey: queryKeys.news }),
         queryClient.invalidateQueries({ queryKey: queryKeys.alerts }),
       ]);
-      toast.success(t("admin.news.deleted", { defaultValue: "Новость удалена" }));
+      toast.success(t("admin.news.deleted"));
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   });
@@ -147,12 +151,12 @@ export function AdminPage() {
 
   const handleSubmit = async (value: NewsCreateInput, options: { skipTranslation?: boolean }) => {
     if (!value.title.trim() || !value.body.trim()) {
-      toast.error(t("admin.news.fillTitleAndText", { defaultValue: "Заполните заголовок и текст новости." }));
+      toast.error(t("admin.news.fillTitleAndText"));
       return;
     }
 
     if (value.types.length === 0) {
-      toast.error(t("admin.news.selectOneType", { defaultValue: "Выберите хотя бы один тип новости." }));
+      toast.error(t("admin.news.selectOneType"));
       return;
     }
 
@@ -189,11 +193,11 @@ export function AdminPage() {
       />
       <div className="stats-grid">
         {[
-          { label: "Total requests", value: metricsQuery.data?.totalRequests ?? 0 },
-          { label: "Active requests", value: metricsQuery.data?.activeRequests ?? 0 },
-          { label: "Pending requests", value: metricsQuery.data?.pendingRequests ?? 0 },
+          { label: t("admin.stats.totalRequests"), value: metricsQuery.data?.totalRequests ?? 0 },
+          { label: t("admin.stats.activeRequests"), value: metricsQuery.data?.activeRequests ?? 0 },
+          { label: t("admin.stats.pendingRequests"), value: metricsQuery.data?.pendingRequests ?? 0 },
           {
-            label: "Top category",
+            label: t("admin.stats.topCategory"),
             value: metricsQuery.data?.topCategory
               ? localizeRequestCategory(metricsQuery.data.topCategory, t)
               : "—",
@@ -211,10 +215,10 @@ export function AdminPage() {
           <Input
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
-            placeholder={t("admin.news.searchPlaceholder", { defaultValue: "Поиск..." })}
+            placeholder={t("admin.news.searchPlaceholder")}
           />
           <Select value={category || "all"} onChange={(event) => updateParams({ category: event.target.value, page: "1" })}>
-            <option value="all">{t("admin.news.allCategories", { defaultValue: "Все категории" })}</option>
+            <option value="all">{t("admin.news.allCategories")}</option>
             {NEWS_CATEGORY_OPTIONS.map((item) => (
               <option key={item} value={item}>
                 {t(categoryKeyMap[item] ?? item)}
@@ -222,7 +226,7 @@ export function AdminPage() {
             ))}
           </Select>
           <Select value={type || "all"} onChange={(event) => updateParams({ type: event.target.value, page: "1" })}>
-            <option value="all">{t("admin.news.allTypes", { defaultValue: "Все типы" })}</option>
+            <option value="all">{t("admin.news.allTypes")}</option>
             {NEWS_TYPE_OPTIONS.map((item) => (
               <option key={item.label} value={item.label}>
                 {t(typeKeyMap[item.label] ?? item.label)}
@@ -230,14 +234,14 @@ export function AdminPage() {
             ))}
           </Select>
           <Select value={period} onChange={(event) => updateParams({ period: event.target.value, page: "1" })}>
-            <option value="all">{t("admin.news.periodAll", { defaultValue: "Все периоды" })}</option>
-            <option value="active">{t("admin.news.periodActive", { defaultValue: "Активные" })}</option>
-            <option value="finished">{t("admin.news.periodFinished", { defaultValue: "Завершённые" })}</option>
-            <option value="no_period">{t("admin.news.periodNoPeriod", { defaultValue: "Без периода" })}</option>
+            <option value="all">{t("admin.news.periodAll")}</option>
+            <option value="active">{t("admin.news.periodActive")}</option>
+            <option value="finished">{t("admin.news.periodFinished")}</option>
+            <option value="no_period">{t("admin.news.periodNoPeriod")}</option>
           </Select>
           <Select value={sort} onChange={(event) => updateParams({ sort: event.target.value, page: "1" })}>
-            <option value="date_desc">{t("admin.news.sortNewest", { defaultValue: "Сначала новые" })}</option>
-            <option value="date_asc">{t("admin.news.sortOldest", { defaultValue: "Сначала старые" })}</option>
+            <option value="date_desc">{t("admin.news.sortNewest")}</option>
+            <option value="date_asc">{t("admin.news.sortOldest")}</option>
           </Select>
         </div>
       </Card>
@@ -273,11 +277,9 @@ export function AdminPage() {
                   </div>
                 </div>
                 {statusMeta ? (
-                  <span className="news-status-pill">
+                  <span className={`news-status-pill ${statusMeta.className}`}>
                     {statusMeta.icon}
-                    {t(`admin.news.translationStatus.${statusMeta.key}`, {
-                      defaultValue: statusMeta.key,
-                    })}
+                    {t(`news.translationStatus.${statusMeta.key}`)}
                   </span>
                 ) : null}
               </div>
@@ -299,7 +301,7 @@ export function AdminPage() {
                     setModalOpen(true);
                   }}
                 >
-                  {t("common.edit", { defaultValue: "Редактировать" })}
+                  {t("common.edit")}
                 </Button>
                 <Button
                   type="button"
@@ -319,8 +321,8 @@ export function AdminPage() {
 
       {!newsQuery.isLoading && previewItems.length === 0 ? (
         <Card className="news-empty-state" hover={false}>
-          <h3>{t("news.noResults", { defaultValue: "Ничего не найдено" })}</h3>
-          <p>{t("news.emptyFiltered", { defaultValue: "Измените фильтры или поисковый запрос." })}</p>
+          <h3>{t("news.noResults")}</h3>
+          <p>{t("news.emptyFiltered")}</p>
         </Card>
       ) : null}
 
@@ -350,10 +352,8 @@ export function AdminPage() {
           setModalOpen(false);
           setEditingNews(null);
         }}
-        title={editingNews ? t("common.update", { defaultValue: "Редактировать новость" }) : t("admin.publish")}
-        description={t("admin.news.editorDescription", {
-          defaultValue: "Создайте или обновите новость, затем при необходимости отредактируйте переводы.",
-        })}
+        title={editingNews ? t("admin.news.editArticleTitle") : t("admin.publish")}
+        description={t("admin.news.editorDescription")}
       >
         <NewsForm
           initialValue={formInitialValue}

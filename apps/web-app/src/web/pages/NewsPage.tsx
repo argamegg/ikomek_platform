@@ -130,10 +130,10 @@ export function NewsPage() {
           <Input
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
-            placeholder={t("news.searchPlaceholder", { defaultValue: "Поиск..." })}
+            placeholder={t("news.searchPlaceholder")}
           />
           <Select value={category || "all"} onChange={(event) => updateParams({ category: event.target.value, page: "1" })}>
-            <option value="all">{t("news.allCategories", { defaultValue: "Все категории" })}</option>
+            <option value="all">{t("news.allCategories")}</option>
             {NEWS_CATEGORY_OPTIONS.map((item) => (
               <option key={item} value={item}>
                 {t(categoryKeyMap[item] ?? item)}
@@ -141,7 +141,7 @@ export function NewsPage() {
             ))}
           </Select>
           <Select value={type || "all"} onChange={(event) => updateParams({ type: event.target.value, page: "1" })}>
-            <option value="all">{t("news.allTypes", { defaultValue: "Все типы" })}</option>
+            <option value="all">{t("news.allTypes")}</option>
             {NEWS_TYPE_OPTIONS.map((item) => (
               <option key={item.label} value={item.label}>
                 {t(typeKeyMap[item.label] ?? item.label)}
@@ -149,14 +149,14 @@ export function NewsPage() {
             ))}
           </Select>
           <Select value={period} onChange={(event) => updateParams({ period: event.target.value, page: "1" })}>
-            <option value="all">{t("news.periodAll", { defaultValue: "Все периоды" })}</option>
-            <option value="active">{t("news.periodActive", { defaultValue: "Активные" })}</option>
-            <option value="finished">{t("news.periodFinished", { defaultValue: "Завершённые" })}</option>
-            <option value="no_period">{t("news.periodNoPeriod", { defaultValue: "Без периода" })}</option>
+            <option value="all">{t("news.periodAll")}</option>
+            <option value="active">{t("news.periodActive")}</option>
+            <option value="finished">{t("news.periodFinished")}</option>
+            <option value="no_period">{t("news.periodNoPeriod")}</option>
           </Select>
           <Select value={sort} onChange={(event) => updateParams({ sort: event.target.value, page: "1" })}>
-            <option value="date_desc">{t("news.sortNewest", { defaultValue: "Сначала новые" })}</option>
-            <option value="date_asc">{t("news.sortOldest", { defaultValue: "Сначала старые" })}</option>
+            <option value="date_desc">{t("news.sortNewest")}</option>
+            <option value="date_asc">{t("news.sortOldest")}</option>
           </Select>
         </div>
       </Card>
@@ -227,8 +227,8 @@ export function NewsPage() {
 
       {!newsQuery.isLoading && items.length === 0 ? (
         <Card className="news-empty-state" hover={false}>
-          <h3>{t("news.noResults", { defaultValue: "Ничего не найдено" })}</h3>
-          <p>{t("news.emptyFiltered", { defaultValue: "Снимите часть фильтров или измените поисковый запрос." })}</p>
+          <h3>{t("news.noResults")}</h3>
+          <p>{t("news.emptyFiltered")}</p>
         </Card>
       ) : null}
 
@@ -255,7 +255,7 @@ export function NewsPage() {
       <Modal
         open={Boolean(selectedNews)}
         onClose={() => setSelectedNews(null)}
-        title={selectedNews?.title ?? "Новость"}
+        title={selectedNews?.title ?? t("news.modalTitle")}
       >
         {selectedNews ? (
           (() => {

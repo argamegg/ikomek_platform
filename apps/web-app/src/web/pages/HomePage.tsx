@@ -773,7 +773,7 @@ export function HomePage() {
           <Input
             value={newsSearchInput}
             onChange={(event) => setNewsSearchInput(event.target.value)}
-            placeholder={t("news.searchPlaceholder", { defaultValue: "Поиск..." })}
+            placeholder={t("news.searchPlaceholder")}
           />
         </div>
 
@@ -855,8 +855,8 @@ export function HomePage() {
 
         {!newsPreviewQuery.isLoading && previewNewsItems.length === 0 ? (
           <Card className="news-empty-state" hover={false}>
-            <h3>{t("news.noResults", { defaultValue: "Ничего не найдено" })}</h3>
-            <p>{t("news.emptyFiltered", { defaultValue: "Измените поисковый запрос." })}</p>
+            <h3>{t("news.noResults")}</h3>
+            <p>{t("news.emptyFiltered")}</p>
           </Card>
         ) : null}
       </motion.section>
