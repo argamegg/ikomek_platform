@@ -6,11 +6,9 @@ import type { NewsItem } from "../../types/platform";
 import { Card } from "../components/ui/Card";
 import { Modal } from "../components/ui/Modal";
 import { PageHeader } from "../components/ui/PageHeader";
-import { formatDate } from "../lib/format";
-import { categoryKeyMap, typeKeyMap } from "../lib/normalizers";
+import { categoryKeyMap, formatNewsDate, formatNewsPeriod, typeKeyMap } from "../lib/normalizers";
 import {
   getBorderColor,
-  formatNewsRelativeTime,
   getNewsCategory,
   getNewsTypeMeta,
   getNewsTypes,
@@ -23,40 +21,51 @@ import { platformApi, queryKeys } from "../services/platformApi";
 
 const ALL_CATEGORIES = "__all__";
 
-function formatNewsPeriod(item: NewsItem, locale: "en" | "ru" | "kz") {
+function getPreviewText(item: NewsItem) {
+  return item.summary?.trim() || item.body?.trim() || "";
+}
+
+function formatNewsPeriodRange(item: NewsItem) {
   const start = item.startAt || item.publishedAt;
   if (!start) {
     return "";
   }
 
-  const startDate = new Date(start.endsWith("Z") ? start : `${start}Z`);
-  const startLabel = Number.isNaN(startDate.getTime())
-    ? ""
-    : new Intl.DateTimeFormat(locale === "kz" ? "kk-KZ" : locale === "ru" ? "ru-RU" : "en-US", {
-        day: "2-digit",
-        month: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      }).format(startDate);
-  const endDate = item.endAt ? new Date(item.endAt.endsWith("Z") ? item.endAt : `${item.endAt}Z`) : null;
-  const endLabel =
-    endDate && !Number.isNaN(endDate.getTime())
-      ? new Intl.DateTimeFormat(locale === "kz" ? "kk-KZ" : locale === "ru" ? "ru-RU" : "en-US", {
-          day: "2-digit",
-          month: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-        }).format(endDate)
-      : "";
+  const startLabel = formatNewsPeriod(start);
+  const endLabel = item.endAt ? formatNewsPeriod(item.endAt) : "";
   return endLabel ? `${startLabel} - ${endLabel}` : startLabel;
 }
 
-function getPreviewText(item: NewsItem) {
-  return item.summary?.trim() || item.body?.trim() || "";
+function formatNewsCreatedLabel(
+  value: string,
+  t: (key: string, options?: Record<string, unknown>) => string,
+) {
+  if (!value) {
+    return t("news.createdJustNow");
+  }
+
+  const normalized = value.endsWith("Z") ? value : `${value}Z`;
+  const timestamp = new Date(normalized).getTime();
+  if (Number.isNaN(timestamp)) {
+    return t("news.createdJustNow");
+  }
+
+  const diffMinutes = Math.max(0, Math.round((Date.now() - timestamp) / 60000));
+  if (diffMinutes < 60) {
+    return t("news.createdJustNow");
+  }
+
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 24) {
+    return t("news.createdHoursAgo", { count: diffHours });
+  }
+
+  const diffDays = Math.round(diffHours / 24);
+  return t("news.createdAgo", { count: diffDays });
 }
 
 export function NewsPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [categoryFilter, setCategoryFilter] = useState<typeof ALL_CATEGORIES | NewsCategory>(
     ALL_CATEGORIES,
   );
@@ -104,8 +113,6 @@ export function NewsPage() {
       current.includes(type) ? current.filter((item) => item !== type) : [...current, type],
     );
   };
-
-  const activeLocale = (i18n.language || "ru") as "en" | "ru" | "kz";
 
   return (
     <div className="page-stack">
@@ -175,9 +182,9 @@ export function NewsPage() {
               const types = getNewsTypes(item);
               const category = getNewsCategory(item);
               const preview = getPreviewText(item);
-              const period = formatNewsPeriod(item, activeLocale);
+              const period = formatNewsPeriodRange(item);
               const borderColor = getBorderColor(item.startAt, item.endAt);
-              const createdAtLabel = formatDate(item.publishedAt || item.startAt, activeLocale);
+              const createdAtLabel = formatNewsDate(item.publishedAt || item.startAt || "");
 
               return (
                 <Card
@@ -247,13 +254,12 @@ export function NewsPage() {
         open={Boolean(selectedNews)}
         onClose={() => setSelectedNews(null)}
         title={selectedNews?.title ?? "Новость"}
-        description={selectedNews ? formatNewsRelativeTime(selectedNews.publishedAt || selectedNews.startAt, "ru") : ""}
       >
         {selectedNews ? (
           (() => {
             const types = getNewsTypes(selectedNews);
             const category = getNewsCategory(selectedNews);
-            const period = formatNewsPeriod(selectedNews, activeLocale);
+            const period = formatNewsPeriodRange(selectedNews);
             const accentColor = getBorderColor(selectedNews.startAt, selectedNews.endAt);
 
             return (
@@ -266,7 +272,7 @@ export function NewsPage() {
                 <div className="news-detail__meta">
                   <span>
                     <Clock3 size={15} />
-                    {formatNewsRelativeTime(selectedNews.publishedAt || selectedNews.startAt, "ru")}
+                    {formatNewsCreatedLabel(selectedNews.publishedAt || selectedNews.startAt || "", t)}
                   </span>
                   <span className="news-category-chip">
                     {t(categoryKeyMap[category] ?? category)}
@@ -295,13 +301,13 @@ export function NewsPage() {
                   <div className="news-detail__extras">
                     {period ? (
                       <div className="news-detail__info">
-                        <strong>Период</strong>
+                        <strong>{t("news.period")}</strong>
                         <span>{period}</span>
                       </div>
                     ) : null}
                     {selectedNews.location ? (
                       <div className="news-detail__info">
-                        <strong>Локация</strong>
+                        <strong>{t("news.location")}</strong>
                         <span>{selectedNews.location}</span>
                       </div>
                     ) : null}

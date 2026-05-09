@@ -39,6 +39,43 @@ export const categoryKeyMap: Record<string, string> = {
   "Благоустройство": "news.categories.improvement",
 };
 
+function toUtcDate(dateStr: string) {
+  return new Date(dateStr.endsWith("Z") ? dateStr : `${dateStr}Z`);
+}
+
+export function formatNewsDate(dateStr: string): string {
+  if (!dateStr) {
+    return "—";
+  }
+
+  const date = toUtcDate(dateStr);
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const year = date.getUTCFullYear();
+  return `${day}.${month}.${year}`;
+}
+
+export function formatNewsPeriod(dateStr: string): string {
+  if (!dateStr) {
+    return "";
+  }
+
+  const date = toUtcDate(dateStr);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+  return `${day}.${month} ${hours}:${minutes}`;
+}
+
 type JsonRecord = Record<string, unknown>;
 
 function isRecord(value: unknown): value is JsonRecord {

@@ -8,7 +8,7 @@ import { Card } from "../components/ui/Card";
 import { Input, Textarea } from "../components/ui/Input";
 import { Modal } from "../components/ui/Modal";
 import { PageHeader } from "../components/ui/PageHeader";
-import { categoryKeyMap, typeKeyMap } from "../lib/normalizers";
+import { categoryKeyMap, formatNewsDate, typeKeyMap } from "../lib/normalizers";
 import { getErrorMessage, platformApi, queryKeys } from "../services/platformApi";
 import {
   getBorderColor,
@@ -135,7 +135,7 @@ export function AdminPage() {
                       <strong style={{ color: primaryMeta.color }}>
                         {t(typeKeyMap[types[0]] ?? types[0])}
                       </strong>
-                      <time>{(item.publishedAt || item.startAt || "").slice(0, 10)}</time>
+                      <time>{formatNewsDate(item.publishedAt || item.startAt || "")}</time>
                     </div>
                   </div>
               </div>

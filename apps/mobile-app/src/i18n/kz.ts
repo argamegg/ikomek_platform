@@ -104,6 +104,11 @@ export const kz = {
     warning: 'Назар аударыңыз',
     info: 'Ақпарат',
     noNews: 'Жаңалықтар жоқ',
+    createdAgo: '{{count}} күн бұрын жасалды',
+    createdHoursAgo: '{{count}} сағат бұрын жасалды',
+    createdJustNow: 'Жаңа ғана жасалды',
+    period: 'КЕЗЕҢ',
+    location: 'ОРНАЛАСУЫ',
     types: {
       emergency: 'Авариялық жұмыстар',
       weather: 'Ауа райы жағдайлары',

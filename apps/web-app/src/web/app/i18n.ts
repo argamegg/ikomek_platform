@@ -481,6 +481,11 @@ const resources = {
       news: {
         title: "City news and alerts",
         description: "A polished editorial and alert experience for the existing city content stream.",
+        createdAgo: "Created {{count}} d ago",
+        createdHoursAgo: "Created {{count}} h ago",
+        createdJustNow: "Just created",
+        period: "PERIOD",
+        location: "LOCATION",
         types: {
           emergency: "Emergency Works",
           weather: "Weather Conditions",
@@ -1005,6 +1010,11 @@ const resources = {
       news: {
         title: "Городские новости и оповещения",
         description: "Аккуратный редакционный интерфейс для существующего городского контент-потока.",
+        createdAgo: "Создано {{count}} д назад",
+        createdHoursAgo: "Создано {{count}} ч назад",
+        createdJustNow: "Только что создано",
+        period: "ПЕРИОД",
+        location: "ЛОКАЦИЯ",
         types: {
           emergency: "Аварийные работы",
           weather: "Погодные условия",
@@ -1528,6 +1538,11 @@ const resources = {
       news: {
         title: "Қалалық жаңалықтар мен хабарламалар",
         description: "Қолданыстағы қалалық контент ағынына арналған ұқыпты редакциялық интерфейс.",
+        createdAgo: "{{count}} күн бұрын жасалды",
+        createdHoursAgo: "{{count}} сағат бұрын жасалды",
+        createdJustNow: "Жаңа ғана жасалды",
+        period: "КЕЗЕҢ",
+        location: "ОРНАЛАСУЫ",
         types: {
           emergency: "Авариялық жұмыстар",
           weather: "Ауа райы жағдайлары",

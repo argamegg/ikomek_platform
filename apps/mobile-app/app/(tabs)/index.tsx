@@ -19,7 +19,6 @@ import { useAuth } from '../../src/context/AuthContext';
 import { apiService, NewsItem } from '../../src/utils/api';
 import {
   categoryKeyMap,
-  formatNewsRelativeTime,
   getBorderColor,
   getNewsCategory,
   getNewsLocation,
@@ -60,6 +59,26 @@ function formatDetailPeriod(start?: string, end?: string) {
   }
 
   return `${startLabel} - ${format(endDate, 'dd.MM.yyyy HH:mm')}`;
+}
+
+function formatNewsCreatedLabel(value: string, t: (key: string, options?: Record<string, unknown>) => string) {
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) {
+    return t('news.createdJustNow');
+  }
+
+  const diffMinutes = Math.max(0, Math.round((Date.now() - timestamp) / 60000));
+  if (diffMinutes < 60) {
+    return t('news.createdJustNow');
+  }
+
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 24) {
+    return t('news.createdHoursAgo', { count: diffHours });
+  }
+
+  const diffDays = Math.round(diffHours / 24);
+  return t('news.createdAgo', { count: diffDays });
 }
 
 export default function NewsScreen() {
@@ -193,7 +212,9 @@ export default function NewsScreen() {
             <View style={styles.modalMetaRow}>
               <View style={styles.modalTimeRow}>
                 <MaterialCommunityIcons name="clock-outline" size={15} color="#6B7280" />
-                <Text style={styles.modalMetaText}>{formatNewsRelativeTime(selectedNews.created_at)}</Text>
+                <Text style={styles.modalMetaText}>
+                  {formatNewsCreatedLabel(selectedNews.created_at, t)}
+                </Text>
               </View>
               <View style={styles.modalCategoryChip}>
                 <Text style={styles.modalCategoryChipText}>
@@ -223,14 +244,14 @@ export default function NewsScreen() {
 
             {periodLabel ? (
               <View style={styles.detailInfoCard}>
-                <Text style={styles.detailInfoLabel}>Период</Text>
+                <Text style={styles.detailInfoLabel}>{t('news.period')}</Text>
                 <Text style={styles.detailInfoValue}>{periodLabel}</Text>
               </View>
             ) : null}
 
             {location ? (
               <View style={styles.detailInfoCard}>
-                <Text style={styles.detailInfoLabel}>Локация</Text>
+                <Text style={styles.detailInfoLabel}>{t('news.location')}</Text>
                 <Text style={styles.detailInfoValue}>{location}</Text>
               </View>
             ) : null}

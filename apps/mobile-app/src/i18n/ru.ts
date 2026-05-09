@@ -104,6 +104,11 @@ export const ru = {
     warning: 'Внимание',
     info: 'Информация',
     noNews: 'Нет новостей',
+    createdAgo: 'Создано {{count}} д назад',
+    createdHoursAgo: 'Создано {{count}} ч назад',
+    createdJustNow: 'Только что создано',
+    period: 'ПЕРИОД',
+    location: 'ЛОКАЦИЯ',
     types: {
       emergency: 'Аварийные работы',
       weather: 'Погодные условия',

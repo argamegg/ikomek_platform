@@ -26,8 +26,8 @@ import { Badge } from "../components/ui/Badge";
 import { Modal } from "../components/ui/Modal";
 import { Skeleton } from "../components/ui/Skeleton";
 import { IssueMap } from "../components/maps/IssueMap";
-import { formatDate, formatRelativeTime, getStatusTone } from "../lib/format";
-import { categoryKeyMap, typeKeyMap } from "../lib/normalizers";
+import { formatRelativeTime, getStatusTone } from "../lib/format";
+import { categoryKeyMap, formatNewsDate, formatNewsPeriod, typeKeyMap } from "../lib/normalizers";
 import {
   getBorderColor,
   getNewsCategory,
@@ -302,17 +302,8 @@ export function HomePage() {
       return "";
     }
 
-    const locale = i18n.language === "kz" ? "kk-KZ" : i18n.language === "ru" ? "ru-RU" : "en-US";
-    const formatter = new Intl.DateTimeFormat(locale, {
-      day: "2-digit",
-      month: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    const startDate = new Date(start.endsWith("Z") ? start : `${start}Z`);
-    const startLabel = Number.isNaN(startDate.getTime()) ? "" : formatter.format(startDate);
-    const endDate = item.endAt ? new Date(item.endAt.endsWith("Z") ? item.endAt : `${item.endAt}Z`) : null;
-    const endLabel = endDate && !Number.isNaN(endDate.getTime()) ? formatter.format(endDate) : "";
+    const startLabel = formatNewsPeriod(start);
+    const endLabel = item.endAt ? formatNewsPeriod(item.endAt) : "";
     return endLabel ? `${startLabel} - ${endLabel}` : startLabel;
   };
 
@@ -768,10 +759,7 @@ export function HomePage() {
               const category = getNewsCategory(item);
               const period = getNewsPeriod(item);
               const borderColor = getBorderColor(item.startAt, item.endAt);
-              const createdAtLabel = formatDate(
-                item.publishedAt || item.startAt,
-                i18n.language as "en" | "ru" | "kz",
-              );
+              const createdAtLabel = formatNewsDate(item.publishedAt || item.startAt || "");
 
               return (
                 <Link key={item.id} to="/news" className="home-news__link">

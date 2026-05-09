@@ -104,6 +104,11 @@ export const en = {
     warning: 'Warning',
     info: 'Info',
     noNews: 'No news available',
+    createdAgo: 'Created {{count}} d ago',
+    createdHoursAgo: 'Created {{count}} h ago',
+    createdJustNow: 'Just created',
+    period: 'PERIOD',
+    location: 'LOCATION',
     types: {
       emergency: 'Emergency Works',
       weather: 'Weather Conditions',
