@@ -24,6 +24,7 @@ import {
   getNewsPeriod,
   getNewsTypeMeta,
   getNewsTypes,
+  NEWS_CATEGORY_COLOR,
   NEWS_CATEGORY_OPTIONS,
   NEWS_TYPE_OPTIONS,
   typeKeyMap,

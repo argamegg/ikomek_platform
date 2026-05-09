@@ -25,6 +25,7 @@ import {
   getNewsPeriod,
   getNewsTypeMeta,
   getNewsTypes,
+  NEWS_CATEGORY_COLOR,
   NEWS_CATEGORY_OPTIONS,
   typeKeyMap,
 } from '../../src/utils/newsMeta';
@@ -32,12 +33,24 @@ import {
 const ALL_CATEGORY = '__all__';
 const ORANGE = '#FB8C00';
 
+function normalizeLanguage(language?: string) {
+  if (!language) {
+    return 'ru';
+  }
+
+  if (language.startsWith('kz') || language.startsWith('kk')) {
+    return 'kz';
+  }
+
+  if (language.startsWith('ru')) {
+    return 'ru';
+  }
+
+  return 'en';
+}
+
 function getLocalizedText(item: NewsItem, field: 'title' | 'content', language: string) {
-  const normalized = language.startsWith('kz') || language.startsWith('kk')
-    ? 'kz'
-    : language.startsWith('ru')
-      ? 'ru'
-      : 'en';
+  const normalized = normalizeLanguage(language);
   const localizedField = normalized === 'en' ? field : `${field}_${normalized}`;
   return String((item as Record<string, unknown>)[localizedField] ?? item[field] ?? '');
 }
@@ -82,7 +95,7 @@ function formatNewsCreatedLabel(value: string, t: (key: string, options?: Record
 }
 
 export default function NewsScreen() {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const [news, setNews] = useState<NewsItem[]>([]);
@@ -90,7 +103,8 @@ export default function NewsScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>(ALL_CATEGORY);
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
-  const currentLanguage = user?.language || i18n.language || 'ru';
+  const currentLanguage = normalizeLanguage(user?.language || i18n.language || 'ru');
+  const t = useMemo(() => i18n.getFixedT(currentLanguage), [currentLanguage, i18n]);
 
   const fetchNews = useCallback(async () => {
     try {
