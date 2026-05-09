@@ -583,6 +583,7 @@ export const ru = {
       titlePlaceholder: 'Введите заголовок',
       localizedTitleLabel: 'Локализованный заголовок {{lang}}',
       localizedContentLabel: 'Локализованный текст {{lang}}',
+      localizedSummaryLabel: 'Локализованное краткое описание {{lang}}',
       translate: 'Перевести',
       retranslate: 'Перевести заново',
       publishWithoutTranslation: 'Опубликовать без перевода',

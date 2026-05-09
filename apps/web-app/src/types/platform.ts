@@ -191,9 +191,9 @@ export type NewsListResponse = {
 export type NewsTranslationPreview = {
   sourceLang: "ru" | "kk" | "en";
   translations: {
-    ru: { title: string; content: string };
-    kk: { title: string; content: string };
-    en: { title: string; content: string };
+    ru: { title: string; content: string; summary: string };
+    kk: { title: string; content: string; summary: string };
+    en: { title: string; content: string; summary: string };
   };
 };
 

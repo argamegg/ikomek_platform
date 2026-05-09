@@ -646,7 +646,7 @@ export const platformApi = {
     return normalizeNews(response.data);
   },
 
-  async previewNewsTranslation(payload: { title: string; content: string }): Promise<NewsTranslationPreview> {
+  async previewNewsTranslation(payload: { title: string; content: string; summary?: string }): Promise<NewsTranslationPreview> {
     const response = await platformClient.post("/admin/news/translate-preview", payload);
     const record =
       typeof response.data === "object" && response.data !== null
@@ -659,14 +659,17 @@ export const platformApi = {
         ru: {
           title: String((record.translations as Record<string, any> | undefined)?.ru?.title ?? ""),
           content: String((record.translations as Record<string, any> | undefined)?.ru?.content ?? ""),
+          summary: String((record.translations as Record<string, any> | undefined)?.ru?.summary ?? ""),
         },
         kk: {
           title: String((record.translations as Record<string, any> | undefined)?.kk?.title ?? ""),
           content: String((record.translations as Record<string, any> | undefined)?.kk?.content ?? ""),
+          summary: String((record.translations as Record<string, any> | undefined)?.kk?.summary ?? ""),
         },
         en: {
           title: String((record.translations as Record<string, any> | undefined)?.en?.title ?? ""),
           content: String((record.translations as Record<string, any> | undefined)?.en?.content ?? ""),
+          summary: String((record.translations as Record<string, any> | undefined)?.en?.summary ?? ""),
         },
       },
     };

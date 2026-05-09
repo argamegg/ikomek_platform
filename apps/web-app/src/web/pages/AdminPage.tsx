@@ -145,8 +145,8 @@ export function AdminPage() {
   });
 
   const previewTranslationMutation = useMutation({
-    mutationFn: ({ title, content }: { title: string; content: string }) =>
-      platformApi.previewNewsTranslation({ title, content }),
+    mutationFn: ({ title, content, summary }: { title: string; content: string; summary?: string }) =>
+      platformApi.previewNewsTranslation({ title, content, summary }),
   });
 
   const handleSubmit = async (value: NewsCreateInput, options: { skipTranslation?: boolean }) => {
@@ -365,7 +365,11 @@ export function AdminPage() {
             setEditingNews(null);
           }}
           onTranslate={(value) =>
-            previewTranslationMutation.mutateAsync({ title: value.title, content: value.body })
+            previewTranslationMutation.mutateAsync({
+              title: value.title,
+              content: value.body,
+              summary: value.summary || undefined,
+            })
           }
           onSubmit={handleSubmit}
         />

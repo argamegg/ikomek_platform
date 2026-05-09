@@ -583,6 +583,7 @@ export const en = {
       titlePlaceholder: 'Enter the title',
       localizedTitleLabel: 'Localized title {{lang}}',
       localizedContentLabel: 'Localized text {{lang}}',
+      localizedSummaryLabel: 'Localized summary {{lang}}',
       translate: 'Translate',
       retranslate: 'Translate again',
       publishWithoutTranslation: 'Publish without translation',

@@ -44,9 +44,9 @@ export type NewsFormSubmitOptions = {
 type TranslationPreview = {
   source_lang: 'ru' | 'kk' | 'en';
   translations: {
-    ru: { title: string; content: string };
-    kk: { title: string; content: string };
-    en: { title: string; content: string };
+    ru: { title: string; content: string; summary: string };
+    kk: { title: string; content: string; summary: string };
+    en: { title: string; content: string; summary: string };
   };
 };
 
@@ -96,20 +96,23 @@ function hasTranslatedValues(value: NewsFormValues) {
       value.title_en ||
       value.content_ru ||
       value.content_kz ||
-      value.content_en,
+      value.content_en ||
+      value.summary_ru ||
+      value.summary_kz ||
+      value.summary_en,
   );
 }
 
 function getTabFields(tab: (typeof TABS)[number]['key']) {
   if (tab === 'ru') {
-    return { title: 'title_ru', content: 'content_ru' } as const;
+    return { title: 'title_ru', content: 'content_ru', summary: 'summary_ru' } as const;
   }
 
   if (tab === 'kz') {
-    return { title: 'title_kz', content: 'content_kz' } as const;
+    return { title: 'title_kz', content: 'content_kz', summary: 'summary_kz' } as const;
   }
 
-  return { title: 'title_en', content: 'content_en' } as const;
+  return { title: 'title_en', content: 'content_en', summary: 'summary_en' } as const;
 }
 
 function getLanguageCode(tab: (typeof TABS)[number]['key']): 'ru' | 'kk' | 'en' {
@@ -186,6 +189,9 @@ export function NewsForm({
       content_ru: preview.translations.ru.content,
       content_kz: preview.translations.kk.content,
       content_en: preview.translations.en.content,
+      summary_ru: preview.translations.ru.summary,
+      summary_kz: preview.translations.kk.summary,
+      summary_en: preview.translations.en.summary,
       translation_status: 'translated',
     }));
   };
@@ -209,6 +215,17 @@ export function NewsForm({
         value={value.content}
         onChangeText={(text) => updateValue('content', text)}
         placeholder={t('admin.news.contentPlaceholder')}
+        placeholderTextColor="#94A3B8"
+        multiline
+        textAlignVertical="top"
+      />
+
+      <Text style={styles.sectionLabel}>{t('admin.news.summaryLabel')}</Text>
+      <TextInput
+        style={[styles.input, styles.summaryArea]}
+        value={value.summary}
+        onChangeText={(text) => updateValue('summary', text)}
+        placeholder={t('admin.news.summaryPlaceholder')}
         placeholderTextColor="#94A3B8"
         multiline
         textAlignVertical="top"
@@ -280,19 +297,21 @@ export function NewsForm({
             multiline
             textAlignVertical="top"
           />
+
+          <Text style={styles.sectionLabel}>
+            {t('admin.news.localizedSummaryLabel', { lang: getLanguageCode(activeTab).toUpperCase() })}
+          </Text>
+          <TextInput
+            style={[styles.input, styles.summaryArea]}
+            value={value[fields.summary]}
+            onChangeText={(text) => updateValue(fields.summary, text)}
+            placeholder={t('admin.news.summaryPlaceholder')}
+            placeholderTextColor="#94A3B8"
+            multiline
+            textAlignVertical="top"
+          />
         </>
       ) : null}
-
-      <Text style={styles.sectionLabel}>{t('admin.news.summaryLabel')}</Text>
-      <TextInput
-        style={[styles.input, styles.summaryArea]}
-        value={value.summary}
-        onChangeText={(text) => updateValue('summary', text)}
-        placeholder={t('admin.news.summaryPlaceholder')}
-        placeholderTextColor="#94A3B8"
-        multiline
-        textAlignVertical="top"
-      />
 
       <Text style={styles.sectionLabel}>{t('admin.news.categoryLabel')}</Text>
       <ScrollView

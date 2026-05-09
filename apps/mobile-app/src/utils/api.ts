@@ -165,9 +165,9 @@ export interface NewsListResponse {
 export interface NewsTranslationPreview {
   source_lang: 'ru' | 'kk' | 'en';
   translations: {
-    ru: { title: string; content: string };
-    kk: { title: string; content: string };
-    en: { title: string; content: string };
+    ru: { title: string; content: string; summary: string };
+    kk: { title: string; content: string; summary: string };
+    en: { title: string; content: string; summary: string };
   };
 }
 
@@ -276,7 +276,7 @@ export const apiService = {
     return api.get<NewsListResponse>('/news', { params: queryParams });
   },
   getNewsItem: (id: string) => api.get<NewsItem>(`/news/${id}`, { params: { lang: getCurrentLang() } }),
-  previewNewsTranslation: (data: { title: string; content: string }) =>
+  previewNewsTranslation: (data: { title: string; content: string; summary?: string }) =>
     api.post<NewsTranslationPreview>('/admin/news/translate-preview', data),
 
   // Admin - News

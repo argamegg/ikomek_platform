@@ -306,15 +306,15 @@ def localize_news_document(news: dict, lang: Optional[str]) -> dict:
     if content_lang == "kz":
         news["title"] = news.get("title_kz") or news.get("title_ru") or news.get("title_en") or news.get("title")
         news["content"] = news.get("content_kz") or news.get("content_ru") or news.get("content_en") or news.get("content")
-        news["summary"] = news.get("summary_kz") or news.get("summary_ru") or news.get("summary_en") or news.get("summary") or news.get("content")
+        news["summary"] = news.get("summary_kz") or news.get("summary_ru") or news.get("summary") or news.get("content")
     elif content_lang == "en":
         news["title"] = news.get("title_en") or news.get("title_ru") or news.get("title_kz") or news.get("title")
         news["content"] = news.get("content_en") or news.get("content_ru") or news.get("content_kz") or news.get("content")
-        news["summary"] = news.get("summary_en") or news.get("summary_ru") or news.get("summary_kz") or news.get("summary") or news.get("content")
+        news["summary"] = news.get("summary_en") or news.get("summary_ru") or news.get("summary") or news.get("content")
     else:
         news["title"] = news.get("title_ru") or news.get("title") or news.get("title_en") or news.get("title_kz")
         news["content"] = news.get("content_ru") or news.get("content") or news.get("content_en") or news.get("content_kz")
-        news["summary"] = news.get("summary_ru") or news.get("summary") or news.get("summary_en") or news.get("summary_kz") or news.get("content")
+        news["summary"] = news.get("summary_ru") or news.get("summary") or news.get("content")
 
     return news
 
@@ -979,10 +979,12 @@ async def translate_preview(
 ):
     title = (data.get("title") or "").strip()
     content = (data.get("content") or "").strip()
+    summary = (data.get("summary") or "").strip()
     source_lang = detect_language(f"{title} {content}".strip())
 
     title_translations = await translate_to_all_languages(title, source_lang)
     content_translations = await translate_to_all_languages(content, source_lang)
+    summary_translations = await translate_to_all_languages(summary, source_lang) if summary else {"ru": "", "kk": "", "en": ""}
 
     return {
         "source_lang": source_lang,
@@ -990,14 +992,17 @@ async def translate_preview(
             "ru": {
                 "title": title_translations["ru"],
                 "content": content_translations["ru"],
+                "summary": summary_translations["ru"],
             },
             "kk": {
                 "title": title_translations["kk"],
                 "content": content_translations["kk"],
+                "summary": summary_translations["kk"],
             },
             "en": {
                 "title": title_translations["en"],
                 "content": content_translations["en"],
+                "summary": summary_translations["en"],
             },
         },
     }
@@ -1019,7 +1024,6 @@ async def create_news(news_data: NewsCreate, current_user: dict = Depends(requir
         try:
             title_translations = await translate_to_all_languages(source_title, source_lang)
             content_translations = await translate_to_all_languages(source_content, source_lang)
-            summary_translations = await translate_to_all_languages(source_summary or source_content[:180], source_lang)
 
             news_dict["title_ru"] = title_translations["ru"]
             news_dict["title_kz"] = title_translations["kk"]
@@ -1027,9 +1031,11 @@ async def create_news(news_data: NewsCreate, current_user: dict = Depends(requir
             news_dict["content_ru"] = content_translations["ru"]
             news_dict["content_kz"] = content_translations["kk"]
             news_dict["content_en"] = content_translations["en"]
-            news_dict["summary_ru"] = summary_translations["ru"]
-            news_dict["summary_kz"] = summary_translations["kk"]
-            news_dict["summary_en"] = summary_translations["en"]
+            if source_summary:
+                summary_translations = await translate_to_all_languages(source_summary, source_lang)
+                news_dict["summary_ru"] = summary_translations["ru"]
+                news_dict["summary_kz"] = summary_translations["kk"]
+                news_dict["summary_en"] = summary_translations["en"]
             news_dict["translation_status"] = "translated"
         except Exception:
             news_dict["translation_status"] = "failed"

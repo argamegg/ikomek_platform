@@ -79,20 +79,23 @@ function hasTranslations(value: NewsCreateInput) {
       value.titleEn ||
       value.bodyRu ||
       value.bodyKz ||
-      value.bodyEn,
+      value.bodyEn ||
+      value.summaryRu ||
+      value.summaryKz ||
+      value.summaryEn,
   );
 }
 
 function getFields(tab: (typeof TABS)[number]["key"]) {
   if (tab === "ru") {
-    return { title: "titleRu", body: "bodyRu" } as const;
+    return { title: "titleRu", body: "bodyRu", summary: "summaryRu" } as const;
   }
 
   if (tab === "kz") {
-    return { title: "titleKz", body: "bodyKz" } as const;
+    return { title: "titleKz", body: "bodyKz", summary: "summaryKz" } as const;
   }
 
-  return { title: "titleEn", body: "bodyEn" } as const;
+  return { title: "titleEn", body: "bodyEn", summary: "summaryEn" } as const;
 }
 
 export function NewsForm({
@@ -144,6 +147,9 @@ export function NewsForm({
       bodyRu: preview.translations.ru.content,
       bodyKz: preview.translations.kk.content,
       bodyEn: preview.translations.en.content,
+      summaryRu: preview.translations.ru.summary,
+      summaryKz: preview.translations.kk.summary,
+      summaryEn: preview.translations.en.summary,
       translationStatus: "translated",
     }));
   };
@@ -173,6 +179,13 @@ export function NewsForm({
         rows={6}
         value={value.body}
         onChange={(event) => updateValue("body", event.target.value)}
+      />
+
+      <Textarea
+        label={t("admin.news.summaryLabel")}
+        rows={3}
+        value={value.summary}
+        onChange={(event) => updateValue("summary", event.target.value)}
       />
 
       <div className="news-form__actions">
@@ -226,15 +239,16 @@ export function NewsForm({
             value={String(value[localizedFields.body] ?? "")}
             onChange={(event) => updateValue(localizedFields.body, event.target.value)}
           />
+          <Textarea
+            label={t("admin.news.localizedSummaryLabel", {
+                              lang: activeTab.toUpperCase(),
+            })}
+            rows={3}
+            value={String(value[localizedFields.summary] ?? "")}
+            onChange={(event) => updateValue(localizedFields.summary, event.target.value)}
+          />
         </>
       ) : null}
-
-      <Textarea
-        label={t("admin.news.summaryLabel")}
-        rows={3}
-        value={value.summary}
-        onChange={(event) => updateValue("summary", event.target.value)}
-      />
 
       <div className="news-admin-section">
         <label>{t("admin.news.categoryLabel")}</label>

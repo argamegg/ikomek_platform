@@ -583,6 +583,7 @@ export const kz = {
       titlePlaceholder: 'Тақырыпты енгізіңіз',
       localizedTitleLabel: 'Локализацияланған тақырып {{lang}}',
       localizedContentLabel: 'Локализацияланған мәтін {{lang}}',
+      localizedSummaryLabel: 'Локализацияланған қысқаша сипаттама {{lang}}',
       translate: 'Аудару',
       retranslate: 'Қайта аудару',
       publishWithoutTranslation: 'Аудармасыз жариялау',

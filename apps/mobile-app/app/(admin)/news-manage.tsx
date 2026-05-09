@@ -228,6 +228,7 @@ export default function NewsManageScreen() {
       const response = await apiService.previewNewsTranslation({
         title: value.title,
         content: value.content,
+        summary: value.summary || undefined,
       });
       return response.data;
     } catch (error) {
