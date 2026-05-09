@@ -47,9 +47,18 @@ function formatPeriodLabel(start?: string, end?: string) {
 
   const startDate = new Date(start.endsWith('Z') ? start : `${start}Z`);
   const endDate = end ? new Date(end.endsWith('Z') ? end : `${end}Z`) : null;
-  const startLabel = Number.isNaN(startDate.getTime()) ? '' : format(startDate, 'dd.MM HH:mm');
+
+  const formatCardPeriod = (value: Date) => {
+    const day = String(value.getUTCDate()).padStart(2, '0');
+    const month = String(value.getUTCMonth() + 1).padStart(2, '0');
+    const hours = String(value.getUTCHours()).padStart(2, '0');
+    const minutes = String(value.getUTCMinutes()).padStart(2, '0');
+    return `${day}.${month} ${hours}:${minutes}`;
+  };
+
+  const startLabel = Number.isNaN(startDate.getTime()) ? '' : formatCardPeriod(startDate);
   const endLabel =
-    endDate && !Number.isNaN(endDate.getTime()) ? format(endDate, 'dd.MM HH:mm') : '';
+    endDate && !Number.isNaN(endDate.getTime()) ? formatCardPeriod(endDate) : '';
 
   if (!startLabel) {
     return '';
