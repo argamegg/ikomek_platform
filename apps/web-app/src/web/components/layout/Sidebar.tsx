@@ -104,12 +104,10 @@ export function Sidebar({ currentUser, collapsed, isCompact, mobileOpen, onClose
           <div className="sidebar__brand-mark">
             <img src="/appicon1.svg" alt="iKomek" width={54} height={54} />
           </div>
-          {!isCollapsed ? (
-            <div>
-              <strong>{t("brand.name")}</strong>
-              <span>{t("brand.tagline")}</span>
-            </div>
-          ) : null}
+          <div className="sidebar__brand-copy">
+            <strong>{t("brand.name")}</strong>
+            <span>{t("brand.tagline")}</span>
+          </div>
         </div>
         <nav className="sidebar__nav">
           {sections.map((section) => (
@@ -129,7 +127,7 @@ export function Sidebar({ currentUser, collapsed, isCompact, mobileOpen, onClose
                     onClick={isCompact ? onCloseMobile : undefined}
                   >
                     <Icon size={18} />
-                    {!isCollapsed ? <span>{item.label}</span> : null}
+                    <span>{item.label}</span>
                   </NavLink>
                 );
               })}
@@ -140,7 +138,7 @@ export function Sidebar({ currentUser, collapsed, isCompact, mobileOpen, onClose
           <span className="sidebar__footer-label">
             {isCollapsed ? "-" : currentUser ? t("shell.userProfile") : t("shell.status")}
           </span>
-          {!isCollapsed ? <p>{currentUser ? currentUser.name : t("shell.guest")}</p> : null}
+          <p>{currentUser ? currentUser.name : t("shell.guest")}</p>
         </div>
       </aside>
     </>

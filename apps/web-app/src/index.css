@@ -155,6 +155,8 @@ button {
 }
 
 .sidebar {
+  --sidebar-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --sidebar-speed: 0.34s;
   position: sticky;
   top: 0;
   z-index: 40;
@@ -166,7 +168,14 @@ button {
   padding: 24px 18px 18px;
   border-right: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.72);
-  transition: width 0.24s ease, transform 0.24s ease, opacity 0.24s ease;
+  overflow: hidden;
+  transition:
+    width var(--sidebar-speed) var(--sidebar-ease),
+    padding var(--sidebar-speed) var(--sidebar-ease),
+    gap var(--sidebar-speed) var(--sidebar-ease),
+    transform var(--sidebar-speed) var(--sidebar-ease),
+    opacity 0.24s ease;
+  will-change: width;
 }
 
 .sidebar__brand,
@@ -180,11 +189,25 @@ button {
   align-items: center;
   gap: 14px;
   padding: 10px;
+  transition:
+    gap var(--sidebar-speed) var(--sidebar-ease),
+    padding var(--sidebar-speed) var(--sidebar-ease);
 }
 
 .sidebar__brand strong,
 .sidebar__link span {
   display: block;
+}
+
+.sidebar__brand-copy {
+  max-width: 180px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition:
+    max-width var(--sidebar-speed) var(--sidebar-ease),
+    opacity 0.2s ease,
+    transform var(--sidebar-speed) var(--sidebar-ease);
 }
 
 .sidebar__brand span,
@@ -209,8 +232,15 @@ button {
 }
 
 .sidebar--collapsed .sidebar__brand {
+  gap: 0;
   justify-content: center;
   padding: 10px 0;
+}
+
+.sidebar--collapsed .sidebar__brand-copy {
+  max-width: 0;
+  opacity: 0;
+  transform: translateX(-8px);
 }
 
 .sidebar__nav {
@@ -218,12 +248,14 @@ button {
   flex: 1;
   flex-direction: column;
   gap: 18px;
+  transition: gap var(--sidebar-speed) var(--sidebar-ease);
 }
 
 .sidebar__section {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  transition: gap var(--sidebar-speed) var(--sidebar-ease);
 }
 
 .sidebar__section-title {
@@ -235,6 +267,10 @@ button {
   letter-spacing: 0.05em;
   line-height: 1;
   text-transform: uppercase;
+  white-space: nowrap;
+  transition:
+    padding var(--sidebar-speed) var(--sidebar-ease),
+    opacity 0.2s ease;
 }
 
 .sidebar__link {
@@ -244,7 +280,28 @@ button {
   gap: 12px;
   padding: 12px 14px;
   color: var(--text-soft);
-  transition: background-color 0.22s ease, color 0.22s ease, transform 0.22s ease;
+  transition:
+    justify-content var(--sidebar-speed) var(--sidebar-ease),
+    gap var(--sidebar-speed) var(--sidebar-ease),
+    padding var(--sidebar-speed) var(--sidebar-ease),
+    background-color 0.22s ease,
+    color 0.22s ease,
+    transform 0.22s ease;
+}
+
+.sidebar__link svg {
+  flex: 0 0 auto;
+}
+
+.sidebar__link span {
+  max-width: 180px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition:
+    max-width var(--sidebar-speed) var(--sidebar-ease),
+    opacity 0.18s ease,
+    transform var(--sidebar-speed) var(--sidebar-ease);
 }
 
 .sidebar__link:hover,
@@ -268,7 +325,22 @@ button {
 
 .sidebar__footer {
   padding: 14px;
+  overflow: hidden;
   background: rgba(15, 23, 42, 0.035);
+  transition:
+    padding var(--sidebar-speed) var(--sidebar-ease),
+    background-color 0.22s ease;
+}
+
+.sidebar__footer p {
+  max-width: 180px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition:
+    max-width var(--sidebar-speed) var(--sidebar-ease),
+    opacity 0.18s ease,
+    transform var(--sidebar-speed) var(--sidebar-ease);
 }
 
 .sidebar--collapsed .sidebar__footer {
@@ -286,9 +358,24 @@ button {
   padding: 12px;
 }
 
+.sidebar--collapsed .sidebar__link span,
+.sidebar--collapsed .sidebar__footer p {
+  max-width: 0;
+  opacity: 0;
+  transform: translateX(-8px);
+}
+
 .sidebar--collapsed .sidebar__link:hover,
 .sidebar--collapsed .sidebar__link--active {
   transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .sidebar *,
+  .sidebar-overlay {
+    transition-duration: 0.01ms !important;
+  }
 }
 
 .sidebar-overlay {
