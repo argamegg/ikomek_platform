@@ -27,81 +27,62 @@ type NavItem = {
   to: string;
   label: string;
   icon: typeof Home;
-  requiresAuth?: boolean;
-  roles?: string[];
-  hiddenForRoles?: string[];
+};
+
+type NavSection = {
+  title: string;
+  items: NavItem[];
 };
 
 export function Sidebar({ currentUser, collapsed, isCompact, mobileOpen, onCloseMobile }: SidebarProps) {
   const { t } = useTranslation();
+  const isCollapsed = collapsed && !isCompact;
+  const isAdmin = currentUser?.roles.includes("admin") ?? false;
+  const isOperator = currentUser?.roles.includes("operator") ?? false;
 
-  const items: NavItem[] = [
+  const mainItems: NavItem[] = [
     { to: "/", label: t("nav.home"), icon: Home },
-    {
-      to: "/dashboard",
-      label: t("nav.dashboard"),
-      icon: LayoutDashboard,
-      requiresAuth: true,
-      hiddenForRoles: ["operator", "admin"],
-    },
-    {
-      to: "/requests",
-      label: t("nav.requests"),
-      icon: Files,
-      requiresAuth: true,
-      hiddenForRoles: ["operator", "admin"],
-    },
-    {
-      to: "/requests/new",
-      label: t("nav.newRequest"),
-      icon: FilePlus2,
-      requiresAuth: true,
-      hiddenForRoles: ["operator", "admin"],
-    },
     { to: "/news", label: t("nav.news"), icon: Bell },
     { to: "/map", label: t("nav.map"), icon: Map },
-    {
-      to: "/profile",
-      label: t("nav.profile"),
-      icon: Settings2,
-      requiresAuth: true,
-      hiddenForRoles: ["operator", "admin"],
-    },
-    {
-      to: "/operator",
-      label: t("nav.operator"),
-      icon: Workflow,
-      requiresAuth: true,
-      roles: ["operator", "admin"],
-    },
-    {
-      to: "/admin",
-      label: t("nav.admin"),
-      icon: Shield,
-      requiresAuth: true,
-      roles: ["admin"],
-    },
-    { to: "/auth", label: t("nav.auth"), icon: LogIn },
   ];
 
-  const allowedItems = items.filter((item) => {
-    if (item.requiresAuth && !currentUser) {
-      return false;
-    }
+  const sections: NavSection[] = [
+    { title: t("nav.sections.main"), items: mainItems },
+  ];
 
-    if (item.roles && !item.roles.some((role) => currentUser?.roles.includes(role))) {
-      return false;
-    }
+  if (currentUser && !isOperator && !isAdmin) {
+    sections.push({
+      title: t("nav.sections.personal"),
+      items: [
+        { to: "/dashboard", label: t("nav.dashboard"), icon: LayoutDashboard },
+        { to: "/requests", label: t("nav.requests"), icon: Files },
+        { to: "/requests/new", label: t("nav.newRequest"), icon: FilePlus2 },
+      ],
+    });
+  }
 
-    if (item.hiddenForRoles && item.hiddenForRoles.some((role) => currentUser?.roles.includes(role))) {
-      return false;
-    }
+  if (currentUser && isOperator && !isAdmin) {
+    sections.push({
+      title: t("nav.sections.workplace"),
+      items: [{ to: "/operator", label: t("nav.operator"), icon: Workflow }],
+    });
+  }
 
-    if (item.to === "/auth" && currentUser) {
-      return false;
-    }
+  if (currentUser && isAdmin) {
+    sections.push({
+      title: t("nav.sections.management"),
+      items: [
+        { to: "/admin", label: t("nav.admin"), icon: Shield },
+        { to: "/operator", label: t("nav.operator"), icon: Workflow },
+      ],
+    });
+  }
 
-    return true;
+  sections.push({
+    title: t("nav.sections.system"),
+    items: currentUser
+      ? [{ to: "/profile", label: t("nav.settings"), icon: Settings2 }]
+      : [{ to: "/auth", label: t("nav.auth"), icon: LogIn }],
   });
 
   return (
@@ -113,7 +94,7 @@ export function Sidebar({ currentUser, collapsed, isCompact, mobileOpen, onClose
       <aside
         className={cn(
           "sidebar",
-          collapsed && !isCompact && "sidebar--collapsed",
+          isCollapsed && "sidebar--collapsed",
           isCompact && "sidebar--compact",
           isCompact && mobileOpen && "sidebar--mobile-open",
         )}
@@ -123,7 +104,7 @@ export function Sidebar({ currentUser, collapsed, isCompact, mobileOpen, onClose
           <div className="sidebar__brand-mark">
             <img src="/appicon1.svg" alt="iKomek" width={54} height={54} />
           </div>
-          {!collapsed || isCompact ? (
+          {!isCollapsed ? (
             <div>
               <strong>{t("brand.name")}</strong>
               <span>{t("brand.tagline")}</span>
@@ -131,28 +112,35 @@ export function Sidebar({ currentUser, collapsed, isCompact, mobileOpen, onClose
           ) : null}
         </div>
         <nav className="sidebar__nav">
-          {allowedItems.map((item) => {
-            const Icon = item.icon;
+          {sections.map((section) => (
+            <div className="sidebar__section" key={section.title}>
+              <span className="sidebar__section-title">{isCollapsed ? "-" : section.title}</span>
+              {section.items.map((item) => {
+                const Icon = item.icon;
 
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.to !== "/operator" && item.to !== "/admin"}
-                className={({ isActive }) =>
-                  cn("sidebar__link", isActive && "sidebar__link--active")
-                }
-                onClick={isCompact ? onCloseMobile : undefined}
-              >
-                <Icon size={18} />
-                {!collapsed || isCompact ? <span>{item.label}</span> : null}
-              </NavLink>
-            );
-          })}
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.to !== "/operator" && item.to !== "/admin"}
+                    className={({ isActive }) =>
+                      cn("sidebar__link", isActive && "sidebar__link--active")
+                    }
+                    onClick={isCompact ? onCloseMobile : undefined}
+                  >
+                    <Icon size={18} />
+                    {!isCollapsed ? <span>{item.label}</span> : null}
+                  </NavLink>
+                );
+              })}
+            </div>
+          ))}
         </nav>
         <div className="sidebar__footer">
-          <span className="sidebar__footer-label">{t("shell.status")}</span>
-          {!collapsed || isCompact ? <p>{currentUser ? t("shell.connected") : t("shell.guest")}</p> : null}
+          <span className="sidebar__footer-label">
+            {isCollapsed ? "-" : currentUser ? t("shell.userProfile") : t("shell.status")}
+          </span>
+          {!isCollapsed ? <p>{currentUser ? currentUser.name : t("shell.guest")}</p> : null}
         </div>
       </aside>
     </>
