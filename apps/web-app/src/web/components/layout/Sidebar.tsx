@@ -1,6 +1,5 @@
 import {
   Bell,
-  Compass,
   FilePlus2,
   Files,
   Home,
@@ -122,7 +121,7 @@ export function Sidebar({ currentUser, collapsed, isCompact, mobileOpen, onClose
       >
         <div className="sidebar__brand">
           <div className="sidebar__brand-mark">
-            <Compass size={18} />
+            <img src="/appicon1.svg" alt="iKomek" width={54} height={54} />
           </div>
           {!collapsed || isCompact ? (
             <div>

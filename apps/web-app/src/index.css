@@ -196,13 +196,16 @@ button {
 
 .sidebar__brand-mark {
   display: grid;
-  height: 42px;
-  width: 42px;
+  height: 54px;
+  width: 54px;
   place-items: center;
-  border-radius: 14px;
-  background: linear-gradient(135deg, var(--primary), #ff934d);
-  color: #fff;
-  box-shadow: 0 14px 30px rgba(255, 107, 0, 0.28);
+}
+
+.sidebar__brand-mark img {
+  display: block;
+  height: 54px;
+  width: 54px;
+  object-fit: contain;
 }
 
 .sidebar__nav {
