@@ -39,6 +39,14 @@ export function Sidebar({ currentUser, collapsed, isCompact, mobileOpen, onClose
   const isCollapsed = collapsed && !isCompact;
   const isAdmin = currentUser?.roles.includes("admin") ?? false;
   const isOperator = currentUser?.roles.includes("operator") ?? false;
+  const userInitials =
+    currentUser?.name
+      .split(" ")
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "IK";
+  const userRoleLabel = currentUser ? t(`roles.${currentUser.primaryRole}`, currentUser.primaryRole) : t("shell.guest");
 
   const mainItems: NavItem[] = [
     { to: "/", label: t("nav.home"), icon: Home },
@@ -135,10 +143,16 @@ export function Sidebar({ currentUser, collapsed, isCompact, mobileOpen, onClose
           ))}
         </nav>
         <div className="sidebar__footer">
-          <span className="sidebar__footer-label">
-            {isCollapsed ? "-" : currentUser ? t("shell.userProfile") : t("shell.status")}
-          </span>
-          <p>{currentUser ? currentUser.name : t("shell.guest")}</p>
+          <span className="sidebar__footer-label">{isCollapsed ? "-" : t("shell.account")}</span>
+          <div className="sidebar__account">
+            <div className="sidebar__account-avatar">
+              {currentUser?.avatarUrl ? <img src={currentUser.avatarUrl} alt="" /> : <span>{userInitials}</span>}
+            </div>
+            <div className="sidebar__account-copy">
+              <strong>{currentUser ? currentUser.name : t("shell.guest")}</strong>
+              <span>{userRoleLabel}</span>
+            </div>
+          </div>
         </div>
       </aside>
     </>

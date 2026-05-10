@@ -211,8 +211,7 @@ button {
 }
 
 .sidebar__brand span,
-.sidebar__footer-label,
-.sidebar__footer p {
+.sidebar__footer-label {
   color: var(--text-faint);
   font-size: 0.85rem;
 }
@@ -324,15 +323,57 @@ button {
 }
 
 .sidebar__footer {
-  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 2px 4px 6px;
   overflow: hidden;
-  background: rgba(15, 23, 42, 0.035);
   transition:
+    gap var(--sidebar-speed) var(--sidebar-ease),
     padding var(--sidebar-speed) var(--sidebar-ease),
     background-color 0.22s ease;
 }
 
-.sidebar__footer p {
+.sidebar__footer-label {
+  display: block;
+  line-height: 1;
+  transition:
+    opacity 0.18s ease,
+    text-align var(--sidebar-speed) var(--sidebar-ease);
+}
+
+.sidebar__account {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.sidebar__account-avatar {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(255, 107, 0, 0.18), rgba(15, 23, 42, 0.08));
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 800;
+  transition:
+    width var(--sidebar-speed) var(--sidebar-ease),
+    height var(--sidebar-speed) var(--sidebar-ease),
+    flex-basis var(--sidebar-speed) var(--sidebar-ease);
+}
+
+.sidebar__account-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sidebar__account-copy {
   max-width: 180px;
   min-width: 0;
   overflow: hidden;
@@ -343,7 +384,28 @@ button {
     transform var(--sidebar-speed) var(--sidebar-ease);
 }
 
+.sidebar__account-copy strong,
+.sidebar__account-copy span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar__account-copy strong {
+  color: var(--text);
+  font-size: 0.94rem;
+  font-weight: 800;
+}
+
+.sidebar__account-copy span {
+  margin-top: 3px;
+  color: var(--text-faint);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
 .sidebar--collapsed .sidebar__footer {
+  gap: 12px;
   padding: 10px;
 }
 
@@ -359,10 +421,24 @@ button {
 }
 
 .sidebar--collapsed .sidebar__link span,
-.sidebar--collapsed .sidebar__footer p {
+.sidebar--collapsed .sidebar__account-copy {
   max-width: 0;
   opacity: 0;
   transform: translateX(-8px);
+}
+
+.sidebar--collapsed .sidebar__footer-label {
+  text-align: center;
+}
+
+.sidebar--collapsed .sidebar__account {
+  justify-content: center;
+}
+
+.sidebar--collapsed .sidebar__account-avatar {
+  width: 38px;
+  height: 38px;
+  flex-basis: 38px;
 }
 
 .sidebar--collapsed .sidebar__link:hover,

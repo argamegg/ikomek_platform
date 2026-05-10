@@ -65,11 +65,18 @@ const resources = {
         },
       },
       shell: {
+        account: "Account",
         status: "Shared backend connection",
         connected: "Live against the existing FastAPI platform",
         guest: "Guest mode",
         userProfile: "User profile",
         welcome: "One platform for residents, operators, and the city team.",
+      },
+      roles: {
+        admin: "Administrator",
+        operator: "Operator",
+        citizen: "Resident",
+        executor: "Executor",
       },
       home: {
         badge: "Shared mobile + web platform",
@@ -843,11 +850,18 @@ const resources = {
         },
       },
       shell: {
+        account: "Аккаунт",
         status: "Подключение к shared backend",
         connected: "Работает с существующей FastAPI платформой",
         guest: "Гостевой режим",
         userProfile: "Профиль пользователя",
         welcome: "Одна платформа для жителей, операторов и администрации.",
+      },
+      roles: {
+        admin: "Администратор",
+        operator: "Оператор",
+        citizen: "Житель",
+        executor: "Исполнитель",
       },
       home: {
         badge: "Единая mobile + web платформа",
@@ -1625,11 +1639,18 @@ const resources = {
         },
       },
       shell: {
+        account: "Аккаунт",
         status: "Ортақ backend байланысы",
         connected: "Қолданыстағы FastAPI платформасымен жұмыс істейді",
         guest: "Қонақ режимі",
         userProfile: "Пайдаланушы профилі",
         welcome: "Тұрғындарға, операторларға және әкімдікке арналған бір платформа.",
+      },
+      roles: {
+        admin: "Әкімші",
+        operator: "Оператор",
+        citizen: "Тұрғын",
+        executor: "Орындаушы",
       },
       home: {
         badge: "Біртұтас mobile + web платформа",
