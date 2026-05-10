@@ -29,6 +29,7 @@ export function Header({
   const isAdmin = currentUser?.roles.includes("admin") ?? false;
   const showCitizenActions = Boolean(currentUser) && !isOperator && !isAdmin;
   const accountPath = isAdmin ? "/admin" : isOperator ? "/operator" : "/profile";
+  const userRoleLabel = currentUser ? t(`roles.${currentUser.primaryRole}`, currentUser.primaryRole) : "";
 
   return (
     <header className={cn("topbar", isCompact && "topbar--compact")}>
@@ -102,7 +103,7 @@ export function Header({
               </span>
               <span className="topbar__profile-copy">
                 <strong>{currentUser.name}</strong>
-                <small>{currentUser.primaryRole}</small>
+                <small>{userRoleLabel}</small>
               </span>
             </Link>
             <Button type="button" variant="ghost" size="sm" className="topbar__logout" onClick={onLogout}>
