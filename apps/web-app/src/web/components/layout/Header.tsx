@@ -10,7 +10,6 @@ import { Input } from "../ui/Input";
 type HeaderProps = {
   currentUser: User | null;
   isCompact: boolean;
-  onToggleSidebar: () => void;
   onToggleMobileSidebar: () => void;
   mobileSidebarOpen: boolean;
   onLogout: () => void;
@@ -19,7 +18,6 @@ type HeaderProps = {
 export function Header({
   currentUser,
   isCompact,
-  onToggleSidebar,
   onToggleMobileSidebar,
   mobileSidebarOpen,
   onLogout,
@@ -43,16 +41,6 @@ export function Header({
           aria-label="Toggle navigation"
         >
           {mobileSidebarOpen ? <X size={18} /> : <Menu size={18} />}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="topbar__menu topbar__menu--desktop"
-          onClick={onToggleSidebar}
-          aria-label="Collapse sidebar"
-        >
-          <Menu size={18} />
         </Button>
       </div>
       <div className="topbar__search">

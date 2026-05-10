@@ -178,10 +178,40 @@ button {
   will-change: width;
 }
 
+.sidebar:not(.sidebar--collapsed) {
+  overflow: visible;
+}
+
 .sidebar__brand,
 .sidebar__link,
 .sidebar__footer {
   border-radius: var(--radius-md);
+}
+
+.sidebar__collapse-button {
+  position: absolute;
+  top: 28px;
+  right: 18px;
+  z-index: 1;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition:
+    right var(--sidebar-speed) var(--sidebar-ease),
+    color 0.18s ease,
+    background-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.sidebar__collapse-button:hover {
+  background: rgba(15, 23, 42, 0.05);
+  color: var(--text);
 }
 
 .sidebar__brand {
@@ -234,6 +264,14 @@ button {
   gap: 0;
   justify-content: center;
   padding: 10px 0;
+}
+
+.sidebar--collapsed .sidebar__collapse-button {
+  position: static;
+  order: -1;
+  align-self: center;
+  flex: 0 0 auto;
+  margin-bottom: -8px;
 }
 
 .sidebar--collapsed .sidebar__brand-copy {

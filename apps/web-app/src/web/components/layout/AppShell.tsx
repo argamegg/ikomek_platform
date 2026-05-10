@@ -82,12 +82,12 @@ export function AppShell({ children }: PropsWithChildren) {
         isCompact={isCompactShell}
         mobileOpen={mobileSidebarOpen}
         onCloseMobile={() => setMobileSidebarOpen(false)}
+        onToggleSidebar={() => setCollapsed((value) => !value)}
       />
       <div className="app-frame__content">
         <Header
           currentUser={shellState.currentUser}
           isCompact={isCompactShell}
-          onToggleSidebar={() => setCollapsed((value) => !value)}
           onToggleMobileSidebar={() => setMobileSidebarOpen((value) => !value)}
           mobileSidebarOpen={mobileSidebarOpen}
           onLogout={() => void handleLogout()}

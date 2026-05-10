@@ -6,6 +6,8 @@ import {
   LayoutDashboard,
   LogIn,
   Map,
+  PanelLeftClose,
+  PanelLeftOpen,
   Settings2,
   Shield,
   Workflow,
@@ -21,6 +23,7 @@ type SidebarProps = {
   isCompact: boolean;
   mobileOpen: boolean;
   onCloseMobile: () => void;
+  onToggleSidebar: () => void;
 };
 
 type NavItem = {
@@ -34,7 +37,14 @@ type NavSection = {
   items: NavItem[];
 };
 
-export function Sidebar({ currentUser, collapsed, isCompact, mobileOpen, onCloseMobile }: SidebarProps) {
+export function Sidebar({
+  currentUser,
+  collapsed,
+  isCompact,
+  mobileOpen,
+  onCloseMobile,
+  onToggleSidebar,
+}: SidebarProps) {
   const { t } = useTranslation();
   const isCollapsed = collapsed && !isCompact;
   const isAdmin = currentUser?.roles.includes("admin") ?? false;
@@ -106,8 +116,18 @@ export function Sidebar({ currentUser, collapsed, isCompact, mobileOpen, onClose
           isCompact && "sidebar--compact",
           isCompact && mobileOpen && "sidebar--mobile-open",
         )}
-        style={!isCompact ? { width: collapsed ? 94 : 280 } : undefined}
+        style={!isCompact ? { width: collapsed ? 94 : 320 } : undefined}
       >
+        {!isCompact ? (
+          <button
+            type="button"
+            className="sidebar__collapse-button"
+            onClick={onToggleSidebar}
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {isCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
+        ) : null}
         <div className="sidebar__brand">
           <div className="sidebar__brand-mark">
             <img src="/appicon1.svg" alt="iKomek" width={54} height={54} />
