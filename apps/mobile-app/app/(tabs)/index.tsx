@@ -323,8 +323,10 @@ export default function NewsScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.headerBlock}>
-        <Text style={styles.headerTitle}>{t('news.title')}</Text>
-        <Text style={styles.headerSubtitle}>{t('news.subtitle')}</Text>
+        <View style={styles.headerTextBlock}>
+          <Text style={styles.headerTitle}>{t('news.title')}</Text>
+          <Text style={styles.headerSubtitle}>{t('news.subtitle')}</Text>
+        </View>
         <SearchBar
           value={searchInput}
           onChangeText={setSearchInput}
@@ -420,8 +422,11 @@ const styles = StyleSheet.create({
   headerBlock: {
     gap: 12,
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: 20,
     paddingBottom: 18,
+  },
+  headerTextBlock: {
+    gap: 4,
   },
   headerTitle: {
     fontSize: 30,
