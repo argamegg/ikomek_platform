@@ -508,20 +508,17 @@ button {
 }
 
 .topbar {
-  position: sticky;
-  top: 0;
-  z-index: 25;
+  position: fixed;
+  top: 16px;
+  right: 24px;
+  z-index: 50;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 16px;
-  width: var(--container);
-  margin: 16px auto 0;
-  padding: 14px 18px;
-  border: 1px solid var(--border);
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.78);
-  box-shadow: var(--shadow-sm);
+  width: auto;
+  margin: 0;
+  padding: 0;
 }
 
 .topbar__search .field,
@@ -544,6 +541,10 @@ button {
   justify-content: flex-start;
 }
 
+.topbar__right {
+  justify-content: flex-end;
+}
+
 .topbar__search {
   min-width: 0;
   width: 100%;
@@ -558,11 +559,14 @@ button {
   align-items: center;
   gap: 10px;
   min-width: 0;
+  border: 0;
   padding: 6px 10px 6px 6px;
   border-radius: 999px;
   background: rgba(15, 23, 42, 0.04);
   color: var(--text);
   cursor: pointer;
+  font: inherit;
+  text-align: left;
 }
 
 .topbar__logout {
@@ -580,6 +584,56 @@ button {
 
 .topbar__profile-copy {
   min-width: 0;
+}
+
+.topbar__profile-menu {
+  position: relative;
+}
+
+.topbar__profile-chevron {
+  flex: 0 0 auto;
+  color: var(--text-soft);
+  transition: transform 0.18s ease;
+}
+
+.topbar__profile-chevron--open {
+  transform: rotate(180deg);
+}
+
+.topbar__profile-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 50;
+  min-width: 190px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--shadow-sm);
+}
+
+.topbar__profile-dropdown a,
+.topbar__profile-dropdown button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: transparent;
+  color: var(--text-soft);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.topbar__profile-dropdown a:hover,
+.topbar__profile-dropdown button:hover {
+  background: rgba(15, 23, 42, 0.05);
+  color: var(--text);
 }
 
 .topbar__profile strong,
@@ -627,7 +681,7 @@ button {
 
 .page-shell {
   flex: 1;
-  padding: 28px 0 40px;
+  padding: 72px 0 40px;
 }
 
 .page-shell__inner {
@@ -4400,14 +4454,6 @@ button {
     gap: 24px;
   }
 
-  .topbar__profile > span:last-child {
-    max-width: 100px;
-  }
-
-  .topbar__profile small {
-    display: none;
-  }
-
   .language-switcher {
     padding-inline: 8px;
   }
@@ -4482,7 +4528,7 @@ button {
   }
 
   .topbar__profile {
-    max-width: 44px;
+    max-width: none;
     padding: 4px;
     justify-content: center;
   }
@@ -4513,7 +4559,8 @@ button {
   }
 
   .topbar__profile-copy {
-    display: none;
+    display: block;
+    max-width: 92px;
   }
 
   .topbar__avatar {
