@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional
 import uuid
 from datetime import datetime, timedelta
+from dateutil import parser as dateparser
 import jwt
 from passlib.context import CryptContext
 import base64
@@ -927,7 +928,8 @@ async def get_news(
     limit: int = 20,
 ):
     query = {"is_active": True}
-    now = datetime.utcnow().isoformat()
+    now = datetime.utcnow()
+    now_str = now.isoformat()
 
     if category:
         query["category"] = category
@@ -936,14 +938,39 @@ async def get_news(
         query["types"] = {"$in": [type]}
 
     if period == "active":
-        query["start_at"] = {"$lte": now}
-        query["end_at"] = {"$gte": now}
+        query["$and"] = [
+            {"start_at": {"$exists": True}},
+            {"end_at": {"$exists": True}},
+            {"start_at": {"$ne": None}},
+            {"end_at": {"$ne": None}},
+            {
+                "$or": [
+                    {
+                        "$and": [
+                            {"start_at": {"$lte": now}},
+                            {"end_at": {"$gte": now}},
+                        ],
+                    },
+                    {
+                        "$and": [
+                            {"start_at": {"$lte": now_str}},
+                            {"end_at": {"$gte": now_str}},
+                        ],
+                    },
+                ],
+            },
+        ]
     elif period == "finished":
-        query["end_at"] = {"$lt": now}
+        query["$or"] = [
+            {"end_at": {"$lt": now}},
+            {"end_at": {"$lt": now_str}},
+        ]
     elif period == "no_period":
         query["$or"] = [
             {"start_at": None},
             {"start_at": {"$exists": False}},
+            {"end_at": None},
+            {"end_at": {"$exists": False}},
         ]
 
     if search:
@@ -1069,6 +1096,12 @@ async def update_news(
         raise HTTPException(status_code=404, detail="News not found")
 
     update_data = {key: value for key, value in news_data.items() if value is not None}
+    for date_field in ["start_at", "end_at"]:
+        if date_field in update_data and isinstance(update_data[date_field], str):
+            try:
+                update_data[date_field] = dateparser.parse(update_data[date_field])
+            except Exception:
+                pass
     update_data["updated_at"] = datetime.utcnow()
     await db.news.update_one({"id": news_id}, {"$set": update_data})
     updated = await db.news.find_one({"id": news_id})
