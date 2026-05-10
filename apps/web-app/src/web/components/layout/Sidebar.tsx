@@ -99,7 +99,7 @@ export function Sidebar({
   sections.push({
     title: t("nav.sections.system"),
     items: currentUser
-      ? [{ to: "/profile", label: t("nav.settings"), icon: Settings2 }]
+      ? [{ to: "/settings", label: t("nav.settings"), icon: Settings2 }]
       : [{ to: "/auth", label: t("nav.auth"), icon: LogIn }],
   });
 

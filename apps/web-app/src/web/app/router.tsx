@@ -13,6 +13,7 @@ import { RequestChatPage } from "../pages/RequestChatPage";
 import { NewsPage } from "../pages/NewsPage";
 import { MapPage } from "../pages/MapPage";
 import { ProfilePage } from "../pages/ProfilePage";
+import SettingsPage from "../pages/SettingsPage";
 import { OperatorPage } from "../pages/OperatorPage";
 import { AdminPage } from "../pages/AdminPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
@@ -80,6 +81,7 @@ export function AppRouter() {
           <Route path="/news" element={<NewsPage />} />
           <Route path="/map" element={<MapPage />} />
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
           <Route
             path="/operator"
             element={
