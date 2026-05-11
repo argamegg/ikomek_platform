@@ -4,6 +4,8 @@ import type {
   AuthLoginInput,
   AuthRegistrationChallenge,
   AuthRegisterInput,
+  AIAssistantInput,
+  AIAssistantResponse,
   CivicRequest,
   District,
   EmailVerificationInput,
@@ -459,6 +461,12 @@ export const platformApi = {
   },
 
   async getMyRequests(): Promise<CivicRequest[]> {
+    const token = session.getToken();
+
+    if (!token) {
+      return [];
+    }
+
     try {
       const response = await platformClient.get(apiConfig.endpoints.myRequests, {
         params: { lang: getCurrentLang() },
@@ -544,6 +552,24 @@ export const platformApi = {
     return normalizeMessage(response.data);
   },
 
+  async askAIAssistant(payload: AIAssistantInput): Promise<AIAssistantResponse> {
+    const response = await platformClient.post("/ai/assistant", {
+      message: payload.message,
+      history: payload.history,
+      locale: payload.locale,
+    });
+    const record =
+      typeof response.data === "object" && response.data !== null
+        ? (response.data as Record<string, unknown>)
+        : {};
+
+    return {
+      reply: String(record.reply ?? ""),
+      configured: Boolean(record.configured),
+      model: String(record.model ?? ""),
+    };
+  },
+
   async getMetrics(): Promise<PlatformMetrics> {
     try {
       const response = await platformClient.get(apiConfig.endpoints.metrics);
@@ -559,6 +585,12 @@ export const platformApi = {
   },
 
   async getSavedLocations(): Promise<SavedLocation[]> {
+    const token = session.getToken();
+
+    if (!token) {
+      return [];
+    }
+
     try {
       const response = await platformClient.get(apiConfig.endpoints.savedLocations);
       return normalizeList(response.data, normalizeSavedLocation);

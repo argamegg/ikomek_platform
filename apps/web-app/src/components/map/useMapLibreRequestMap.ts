@@ -38,6 +38,14 @@ function setLayerVisibility(map: maplibregl.Map, layerId: string, isVisible: boo
   map.setLayoutProperty(layerId, "visibility", isVisible ? "visible" : "none");
 }
 
+function getInteractiveLayerIds(map: maplibregl.Map, clustered: boolean) {
+  const layerIds = clustered
+    ? [CLUSTER_LAYER_ID, UNCLUSTERED_LAYER_ID]
+    : [POINT_LAYER_ID];
+
+  return layerIds.filter((layerId) => map.getLayer(layerId));
+}
+
 function addMapLayers(map: maplibregl.Map, clustered: boolean) {
   map.addSource(RAW_SOURCE_ID, {
     type: "geojson",
@@ -260,10 +268,13 @@ export function useMapLibreRequestMap({
     mapRef.current = map;
 
     const handleClick = (event: maplibregl.MapMouseEvent) => {
+      const layers = getInteractiveLayerIds(map, clustered);
+      if (layers.length === 0) {
+        return;
+      }
+
       const features = map.queryRenderedFeatures(event.point, {
-        layers: clustered
-          ? [CLUSTER_LAYER_ID, UNCLUSTERED_LAYER_ID]
-          : [POINT_LAYER_ID],
+        layers,
       });
       const feature = features[0];
 
@@ -299,10 +310,14 @@ export function useMapLibreRequestMap({
 
     const handleMove = (event: maplibregl.MapMouseEvent) => {
       const canvas = map.getCanvas();
+      const layers = getInteractiveLayerIds(map, clustered);
+      if (layers.length === 0) {
+        canvas.style.cursor = "";
+        return;
+      }
+
       const features = map.queryRenderedFeatures(event.point, {
-        layers: clustered
-          ? [CLUSTER_LAYER_ID, UNCLUSTERED_LAYER_ID]
-          : [POINT_LAYER_ID],
+        layers,
       });
       canvas.style.cursor = features.length > 0 ? "pointer" : "";
     };

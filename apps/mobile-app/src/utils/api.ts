@@ -182,6 +182,17 @@ export interface Message {
   is_read: boolean;
 }
 
+export interface AIAssistantMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface AIAssistantResponse {
+  reply: string;
+  configured: boolean;
+  model: string;
+}
+
 export interface MapPoint {
   id: string;
   lat: number;
@@ -251,6 +262,10 @@ export const apiService = {
   getMessages: (requestId: string) => api.get<Message[]>(`/requests/${requestId}/messages`),
   sendMessage: (requestId: string, content: string) =>
     api.post<Message>(`/requests/${requestId}/messages`, { content }),
+
+  // AI Assistant
+  askAIAssistant: (data: { message: string; history: AIAssistantMessage[]; locale: string }) =>
+    api.post<AIAssistantResponse>('/ai/assistant', data),
 
   // News
   getNews: (params?: {

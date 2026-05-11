@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, ActivityIndicator, Animated, Easing, StyleSheet } from 'react-native';
 import { AppBackground } from '../src/components/AppBackground';
+import { AIAssistantWidget } from '../src/components/AIAssistantWidget';
 import { SplashVideo } from '../src/components/SplashVideo';
 import '../src/i18n';
 
@@ -143,6 +144,7 @@ function RootLayoutContent() {
           {splashContent}
         </Animated.View>
       ) : null}
+      {splashDismissed ? <AIAssistantWidget /> : null}
     </>
   );
 }

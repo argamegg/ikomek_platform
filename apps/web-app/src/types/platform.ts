@@ -304,6 +304,23 @@ export type RequestMessageInput = {
   attachment?: File | null;
 };
 
+export type AIAssistantChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export type AIAssistantInput = {
+  message: string;
+  history: AIAssistantChatMessage[];
+  locale: Locale;
+};
+
+export type AIAssistantResponse = {
+  reply: string;
+  configured: boolean;
+  model: string;
+};
+
 export type UserProfileUpdateInput = {
   name: string;
   phone: string;

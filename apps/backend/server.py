@@ -26,6 +26,7 @@ from email.utils import formataddr
 
 from geo import REQUEST_OUT_OF_ZONE_ERROR, is_within_astana_request_zone
 from news_fixtures import build_news_fixtures
+from services.ai_assistant import AIAssistantError, generate_ai_assistant_reply
 from services.translation import detect_language, translate_to_all_languages
 
 ROOT_DIR = Path(__file__).parent
@@ -54,12 +55,28 @@ SMTP_SENDER_EMAIL = os.environ.get("SMTP_SENDER_EMAIL", SMTP_USERNAME).strip()
 SMTP_SENDER_NAME = os.environ.get("SMTP_SENDER_NAME", "iKOMEK 109").strip()
 SMTP_USE_TLS = os.environ.get("SMTP_USE_TLS", "true").lower() == "true"
 SMTP_USE_SSL = os.environ.get("SMTP_USE_SSL", "false").lower() == "true"
+DEFAULT_CORS_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:8081",
+    "http://127.0.0.1:8081",
+]
+CORS_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get("CORS_ORIGINS", "").split(",")
+    if origin.strip()
+] or DEFAULT_CORS_ORIGINS
+CORS_ORIGIN_REGEX = os.environ.get(
+    "CORS_ORIGIN_REGEX",
+    r"https?://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+):\d+",
+).strip() or None
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Security
 security = HTTPBearer()
+optional_security = HTTPBearer(auto_error=False)
 
 # Create the main app
 app = FastAPI(title="iKomek 109 API")
@@ -194,6 +211,20 @@ class Message(BaseModel):
 
 class MessageCreate(BaseModel):
     content: str
+
+class AIAssistantMessage(BaseModel):
+    role: str
+    content: str
+
+class AIAssistantRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=2000)
+    history: List[AIAssistantMessage] = []
+    locale: Optional[str] = "ru"
+
+class AIAssistantResponse(BaseModel):
+    reply: str
+    configured: bool
+    model: str
 
 class NewsItem(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -444,6 +475,21 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+async def get_optional_current_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_security),
+):
+    if credentials is None:
+        return None
+
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            return None
+        return await db.users.find_one({"id": user_id})
+    except jwt.InvalidTokenError:
+        return None
 
 def require_role(allowed_roles: List[str]):
     async def role_checker(current_user: dict = Depends(get_current_user)):
@@ -911,6 +957,28 @@ async def send_message(request_id: str, message_data: MessageCreate, current_use
     )
     await db.messages.insert_one(message.dict())
     return message
+
+# ================================
+# AI ASSISTANT ENDPOINTS
+# ================================
+
+@api_router.post("/ai/assistant", response_model=AIAssistantResponse)
+async def ai_assistant(
+    payload: AIAssistantRequest,
+    current_user: Optional[dict] = Depends(get_optional_current_user),
+):
+    try:
+        reply, configured, model = await generate_ai_assistant_reply(
+            message=payload.message.strip(),
+            history=[item.dict() for item in payload.history],
+            locale=payload.locale,
+            user_role=current_user.get("role") if current_user else None,
+        )
+    except AIAssistantError as error:
+        logging.exception("AI assistant request failed")
+        raise HTTPException(status_code=502, detail=str(error)) from error
+
+    return AIAssistantResponse(reply=reply, configured=configured, model=model)
 
 # ================================
 # NEWS ENDPOINTS
@@ -1398,7 +1466,8 @@ app.include_router(api_router)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
+    allow_origin_regex=CORS_ORIGIN_REGEX,
     allow_methods=["*"],
     allow_headers=["*"],
 )

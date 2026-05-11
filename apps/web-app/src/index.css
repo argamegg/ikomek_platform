@@ -1972,6 +1972,181 @@ button {
   font-size: 0.82rem;
 }
 
+.ai-assistant {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 14px;
+  pointer-events: none;
+}
+
+.ai-assistant__toggle,
+.ai-assistant__header button,
+.ai-assistant__form button {
+  border: 0;
+  cursor: pointer;
+}
+
+.ai-assistant__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 72px;
+  height: 56px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #0f172a, #2563eb);
+  color: #ffffff;
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.24);
+  font-weight: 800;
+  pointer-events: auto;
+}
+
+.ai-assistant__panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(390px, calc(100vw - 32px));
+  height: min(560px, calc(100vh - 112px));
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow-lg);
+  pointer-events: auto;
+}
+
+.ai-assistant__header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ai-assistant__avatar {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(255, 107, 0, 0.16), rgba(37, 99, 235, 0.16));
+  color: var(--primary-strong);
+}
+
+.ai-assistant__header strong,
+.ai-assistant__header small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-assistant__header small {
+  color: var(--text-faint);
+  font-size: 0.78rem;
+}
+
+.ai-assistant__header button {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.06);
+  color: var(--text-soft);
+}
+
+.ai-assistant__messages {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px;
+}
+
+.ai-assistant__empty {
+  margin: auto;
+  color: var(--text-faint);
+  text-align: center;
+}
+
+.ai-assistant__message {
+  max-width: 86%;
+  padding: 11px 13px;
+  border-radius: 18px;
+  color: var(--text);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.ai-assistant__message--assistant {
+  align-self: flex-start;
+  border-bottom-left-radius: 6px;
+  background: rgba(15, 23, 42, 0.06);
+}
+
+.ai-assistant__message--user {
+  align-self: flex-end;
+  border-bottom-right-radius: 6px;
+  background: linear-gradient(135deg, rgba(255, 107, 0, 0.16), rgba(255, 107, 0, 0.26));
+}
+
+.ai-assistant__message--loading {
+  display: inline-flex;
+  width: 46px;
+  justify-content: center;
+}
+
+.ai-assistant__message--loading svg {
+  animation: spin 0.8s linear infinite;
+}
+
+.ai-assistant__form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  gap: 10px;
+  padding: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.ai-assistant__form input {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  outline: none;
+  background: rgba(248, 250, 252, 0.86);
+}
+
+.ai-assistant__form input:focus {
+  border-color: rgba(255, 107, 0, 0.55);
+  box-shadow: 0 0 0 4px rgba(255, 107, 0, 0.1);
+}
+
+.ai-assistant__form button {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.ai-assistant__form button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .empty-state {
   display: grid;
   place-items: center;
@@ -4085,6 +4260,23 @@ button {
 
   .chat-bubble {
     max-width: 92%;
+  }
+
+  .ai-assistant {
+    right: 16px;
+    bottom: 16px;
+  }
+
+  .ai-assistant__toggle {
+    width: 64px;
+    height: 52px;
+    border-radius: 16px;
+  }
+
+  .ai-assistant__panel {
+    width: calc(100vw - 32px);
+    height: min(540px, calc(100vh - 96px));
+    border-radius: 22px;
   }
 
   .home-hero,

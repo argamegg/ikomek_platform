@@ -6,6 +6,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { queryKeys, getErrorMessage, platformApi } from "../../services/platformApi";
+import { AIAssistantWidget } from "../AIAssistantWidget";
 import { Header } from "./Header";
 import { Sidebar } from "./Sidebar";
 
@@ -112,6 +113,7 @@ export function AppShell({ children }: PropsWithChildren) {
           </AnimatePresence>
         </main>
       </div>
+      <AIAssistantWidget />
     </div>
   );
 }
