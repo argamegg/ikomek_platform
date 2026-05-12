@@ -2475,7 +2475,7 @@ button {
   }
 }
 
-@media (max-width: 1366px) {
+@media (max-width: 1440px) {
   .page-shell {
     padding: 20px 0 calc(32px + var(--safe-bottom));
   }
@@ -2655,6 +2655,73 @@ button {
   }
 
   .home-hero__visual {
+    display: none;
+  }
+}
+
+@media (min-width: 1180px) and (max-width: 1440px) {
+  .home-landing {
+    gap: 56px;
+  }
+
+  .home-hero {
+    padding: clamp(34px, 3.4vw, 48px);
+  }
+
+  .home-hero__content {
+    grid-template-columns: minmax(0, 0.94fr) minmax(360px, 0.72fr);
+    gap: 32px;
+    align-items: center;
+  }
+
+  .home-hero__copy h1 {
+    max-width: 14ch;
+    margin-block: 14px;
+    font-size: clamp(3rem, 4.1vw, 4rem);
+    line-height: 1.02;
+  }
+
+  .home-hero__copy p {
+    max-width: 640px;
+    font-size: 1rem;
+    line-height: 1.55;
+  }
+
+  .home-hero__actions {
+    margin-top: 26px;
+  }
+
+  .home-hero__visual {
+    display: grid;
+    min-height: 0;
+    max-width: none;
+    padding: 18px;
+    gap: 14px;
+  }
+
+  .home-hero__visual-orbit {
+    display: none;
+  }
+
+  .home-hero__visual-panel,
+  .home-hero__visual-chip,
+  .home-hero__signal {
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  .home-hero__visual-panel strong,
+  .home-hero__visual-chip strong {
+    font-size: clamp(1.55rem, 2.5vw, 2rem);
+    line-height: 1.15;
+  }
+
+  .home-hero__visual-panel p {
+    font-size: 0.92rem;
+    line-height: 1.45;
+  }
+
+  .home-hero__visual-strip {
     display: none;
   }
 }
