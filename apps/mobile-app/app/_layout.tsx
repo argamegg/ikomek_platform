@@ -7,7 +7,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, ActivityIndicator, Animated, Easing, StyleSheet } from 'react-native';
 import { AppBackground } from '../src/components/AppBackground';
-import { AIAssistantWidget } from '../src/components/AIAssistantWidget';
+import { AIAssistantProvider } from '../src/components/AIAssistantWidget';
 import { SplashVideo } from '../src/components/SplashVideo';
 import '../src/i18n';
 
@@ -130,21 +130,22 @@ function RootLayoutContent() {
   return (
     <>
       <StatusBar style="dark" />
-      <Animated.View style={[styles.content, { opacity: contentOpacity }]}>
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}>
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="(operator)" options={{ headerShown: false }} />
-          <Stack.Screen name="(admin)" options={{ headerShown: false }} />
-          <Stack.Screen name="request" options={{ headerShown: false }} />
-        </Stack>
-      </Animated.View>
+      <AIAssistantProvider>
+        <Animated.View style={[styles.content, { opacity: contentOpacity }]}>
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}>
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="(operator)" options={{ headerShown: false }} />
+            <Stack.Screen name="(admin)" options={{ headerShown: false }} />
+            <Stack.Screen name="request" options={{ headerShown: false }} />
+          </Stack>
+        </Animated.View>
+      </AIAssistantProvider>
       {!splashDismissed ? (
         <Animated.View style={[styles.splashOverlay, { opacity: splashOpacity }]}>
           {splashContent}
         </Animated.View>
       ) : null}
-      {splashDismissed ? <AIAssistantWidget /> : null}
     </>
   );
 }

@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 import { apiService, MapPoint } from '../../src/utils/api';
 import { RequestsMap } from '../../src/components/RequestsMap';
 import { StatusBadge } from '../../src/components/StatusBadge';
+import { AIAssistantHeaderButton } from '../../src/components/AIAssistantWidget';
 import { localizeProblemType } from '../../src/utils/requestLocalization';
 
 const ORANGE = '#FF6B00';
@@ -101,13 +102,16 @@ export default function MapScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={[styles.header, { paddingHorizontal: horizontalPadding }]}>
         <Text style={styles.headerTitle} data-testid="map-title">{t('nav.map')}</Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={[styles.viewToggle, viewMode === 'map' && styles.viewToggleActive]} onPress={() => setViewMode('map')} data-testid="map-view-toggle">
-            <Ionicons name="map" size={18} color={viewMode === 'map' ? '#FFF' : '#64748B'} />
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.viewToggle, viewMode === 'list' && styles.viewToggleActive]} onPress={() => setViewMode('list')} data-testid="list-view-toggle">
-            <Ionicons name="list" size={18} color={viewMode === 'list' ? '#FFF' : '#64748B'} />
-          </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <AIAssistantHeaderButton />
+          <View style={styles.headerRight}>
+            <TouchableOpacity style={[styles.viewToggle, viewMode === 'map' && styles.viewToggleActive]} onPress={() => setViewMode('map')} data-testid="map-view-toggle">
+              <Ionicons name="map" size={18} color={viewMode === 'map' ? '#FFF' : '#64748B'} />
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.viewToggle, viewMode === 'list' && styles.viewToggleActive]} onPress={() => setViewMode('list')} data-testid="list-view-toggle">
+              <Ionicons name="list" size={18} color={viewMode === 'list' ? '#FFF' : '#64748B'} />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -224,6 +228,7 @@ const styles = StyleSheet.create({
   centered: { justifyContent: 'center', alignItems: 'center' },
   header: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, paddingBottom: 6, zIndex: 2 },
   headerTitle: { fontSize: 24, fontWeight: '800', color: '#111827', letterSpacing: -0.6 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerRight: { flexDirection: 'row', backgroundColor: 'rgba(255, 255, 255, 0.88)', borderRadius: 18, padding: 4, borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.06)' },
   viewToggle: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 14 },
   viewToggleActive: { backgroundColor: ORANGE },

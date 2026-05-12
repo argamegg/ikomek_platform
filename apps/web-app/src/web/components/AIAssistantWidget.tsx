@@ -176,7 +176,7 @@ export function AIAssistantWidget() {
         title={copy.label}
       >
         <MessageCircle size={22} />
-        <span>AI</span>
+        <span>109</span>
       </button>
     </div>
   );

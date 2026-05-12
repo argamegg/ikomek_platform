@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { apiService, Request, Message } from '../../src/utils/api';
+import { AIAssistantHeaderButton } from '../../src/components/AIAssistantWidget';
 import { RequestCard } from '../../src/components/RequestCard';
 import { StatusBadge } from '../../src/components/StatusBadge';
 import {
@@ -278,8 +279,11 @@ export default function RequestsScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>{t('myRequests.title')}</Text>
-        <Text style={styles.headerSubtitle}>{t('myRequests.totalRequestsCount', { count: requests.length })}</Text>
+        <View style={styles.headerTextBlock}>
+          <Text style={styles.headerTitle}>{t('myRequests.title')}</Text>
+          <Text style={styles.headerSubtitle}>{t('myRequests.totalRequestsCount', { count: requests.length })}</Text>
+        </View>
+        <AIAssistantHeaderButton />
       </View>
 
       <View style={styles.filterContainer}>
@@ -331,8 +335,14 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
     padding: 20,
     paddingBottom: 12
+  },
+  headerTextBlock: {
+    flex: 1,
   },
   headerTitle: {
     fontSize: 28,

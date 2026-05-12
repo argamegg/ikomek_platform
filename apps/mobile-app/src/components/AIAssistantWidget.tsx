@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -9,6 +9,8 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,6 +18,12 @@ import { useTranslation } from 'react-i18next';
 import { apiService, AIAssistantMessage, getApiErrorMessage } from '../utils/api';
 
 const ORANGE = '#FF6B00';
+
+type AIAssistantContextValue = {
+  openAssistant: () => void;
+};
+
+const AIAssistantContext = createContext<AIAssistantContextValue | null>(null);
 
 const COPY = {
   ru: {
@@ -50,7 +58,31 @@ function getLocale(language: string): 'ru' | 'kz' | 'en' {
   return 'ru';
 }
 
-export function AIAssistantWidget() {
+export function useAIAssistant() {
+  const context = useContext(AIAssistantContext);
+  if (!context) {
+    return { openAssistant: () => {} };
+  }
+  return context;
+}
+
+export function AIAssistantHeaderButton({ style }: { style?: StyleProp<ViewStyle> }) {
+  const { openAssistant } = useAIAssistant();
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.86}
+      accessibilityRole="button"
+      accessibilityLabel="109"
+      style={[styles.headerToggle, style]}
+      onPress={openAssistant}
+    >
+      <Ionicons name="chatbubble-ellipses-outline" size={20} color={ORANGE} />
+    </TouchableOpacity>
+  );
+}
+
+export function AIAssistantProvider({ children }: { children: React.ReactNode }) {
   const { i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const locale = getLocale(i18n.language);
@@ -106,14 +138,16 @@ export function AIAssistantWidget() {
   };
 
   return (
-    <View pointerEvents="box-none" style={styles.root}>
-      {isOpen ? (
-        <KeyboardAvoidingView
+    <AIAssistantContext.Provider value={{ openAssistant: () => setIsOpen(true) }}>
+      {children}
+      <View pointerEvents="box-none" style={styles.root}>
+        {isOpen ? (
+          <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           pointerEvents="box-none"
           style={[styles.panelWrap, { bottom: Math.max(insets.bottom, 12) + 72 }]}
-        >
-          <View style={styles.panel}>
+          >
+            <View style={styles.panel}>
             <View style={styles.header}>
               <View style={styles.avatar}>
                 <Ionicons name="sparkles-outline" size={20} color={ORANGE} />
@@ -163,19 +197,11 @@ export function AIAssistantWidget() {
                 <Ionicons name="send" size={18} color="#FFF" />
               </TouchableOpacity>
             </View>
-          </View>
-        </KeyboardAvoidingView>
-      ) : null}
-
-      <TouchableOpacity
-        activeOpacity={0.88}
-        style={[styles.toggle, { bottom: Math.max(insets.bottom, 12) + 12 }]}
-        onPress={() => setIsOpen((value) => !value)}
-      >
-        <Ionicons name="chatbubble-ellipses-outline" size={22} color="#FFF" />
-        <Text style={styles.toggleText}>AI</Text>
-      </TouchableOpacity>
-    </View>
+            </View>
+          </KeyboardAvoidingView>
+        ) : null}
+      </View>
+    </AIAssistantContext.Provider>
   );
 }
 
@@ -183,6 +209,21 @@ const styles = StyleSheet.create({
   root: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 12,
+  },
+  headerToggle: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderWidth: 1,
+    borderColor: 'rgba(15,23,42,0.06)',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
   panelWrap: {
     position: 'absolute',
@@ -302,27 +343,5 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     opacity: 0.45,
-  },
-  toggle: {
-    position: 'absolute',
-    right: 16,
-    width: 68,
-    height: 54,
-    borderRadius: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#0F172A',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.22,
-    shadowRadius: 22,
-    elevation: 8,
-  },
-  toggleText: {
-    color: '#FFF',
-    fontSize: 15,
-    fontWeight: '800',
   },
 });

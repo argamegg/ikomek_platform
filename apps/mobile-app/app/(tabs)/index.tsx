@@ -16,6 +16,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { NewsFilterSheet, type PeriodFilter, type SortFilter } from '../../src/components/NewsFilterSheet';
 import { NewsCard } from '../../src/components/NewsCard';
+import { AIAssistantHeaderButton } from '../../src/components/AIAssistantWidget';
 import { useAuth } from '../../src/context/AuthContext';
 import { apiService, type NewsItem } from '../../src/utils/api';
 import {
@@ -323,9 +324,12 @@ export default function NewsScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.headerBlock}>
-        <View style={styles.headerTextBlock}>
-          <Text style={styles.headerTitle}>{t('news.title')}</Text>
-          <Text style={styles.headerSubtitle}>{t('news.subtitle')}</Text>
+        <View style={styles.headerTop}>
+          <View style={styles.headerTextBlock}>
+            <Text style={styles.headerTitle}>{t('news.title')}</Text>
+            <Text style={styles.headerSubtitle}>{t('news.subtitle')}</Text>
+          </View>
+          <AIAssistantHeaderButton />
         </View>
         <SearchBar
           value={searchInput}
@@ -426,7 +430,13 @@ const styles = StyleSheet.create({
     paddingBottom: 18,
   },
   headerTextBlock: {
+    flex: 1,
     gap: 4,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
   },
   headerTitle: {
     fontSize: 30,

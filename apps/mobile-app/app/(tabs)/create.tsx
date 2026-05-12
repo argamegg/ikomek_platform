@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { REQUEST_CATEGORIES, localizeCategory } from '../../src/utils/requestLocalization';
+import { AIAssistantHeaderButton } from '../../src/components/AIAssistantWidget';
 
 export default function CreateScreen() {
   const { t } = useTranslation();
@@ -21,8 +22,11 @@ export default function CreateScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>{t('request.newRequest')}</Text>
-        <Text style={styles.headerSubtitle}>{t('request.selectCategory')}</Text>
+        <View style={styles.headerTextBlock}>
+          <Text style={styles.headerTitle}>{t('request.newRequest')}</Text>
+          <Text style={styles.headerSubtitle}>{t('request.selectCategory')}</Text>
+        </View>
+        <AIAssistantHeaderButton />
       </View>
 
       <ScrollView 
@@ -54,8 +58,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent'
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
     padding: 20,
     paddingBottom: 12
+  },
+  headerTextBlock: {
+    flex: 1
   },
   headerTitle: {
     fontSize: 28,
