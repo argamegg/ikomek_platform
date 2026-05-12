@@ -146,6 +146,5 @@ export function DashboardPage() {
         </Card>
       </div>
     </div>
-    console.log("Dashboard loaded");
   );
 }

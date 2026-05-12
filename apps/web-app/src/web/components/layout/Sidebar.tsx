@@ -112,7 +112,7 @@ export function Sidebar({ currentUser, collapsed, mobileOpen, onCloseMobile }: S
         onClick={onCloseMobile}
       />
       <motion.aside
-        animate={{ width: collapsed ? 94 : 280, x: mobileOpen ? 0 : undefined }}
+        animate={{ width: collapsed ? 94 : 280 }}
         transition={{ duration: 0.24 }}
         className={cn("sidebar", collapsed && "sidebar--collapsed", mobileOpen && "sidebar--mobile-open")}
       >
