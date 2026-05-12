@@ -567,6 +567,18 @@ export const platformApi = {
       reply: String(record.reply ?? ""),
       configured: Boolean(record.configured),
       model: String(record.model ?? ""),
+      actions: Array.isArray(record.actions)
+        ? record.actions
+            .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
+            .map((item) => ({
+              type: "navigate" as const,
+              label: String(item.label ?? ""),
+              web_path: typeof item.web_path === "string" ? item.web_path : null,
+              mobile_path: typeof item.mobile_path === "string" ? item.mobile_path : null,
+              request_id: typeof item.request_id === "string" ? item.request_id : null,
+            }))
+            .filter((item) => item.label.length > 0)
+        : [],
     };
   },
 
@@ -684,24 +696,34 @@ export const platformApi = {
       typeof response.data === "object" && response.data !== null
         ? (response.data as Record<string, unknown>)
         : {};
+    const translations =
+      typeof record.translations === "object" && record.translations !== null
+        ? (record.translations as Record<string, unknown>)
+        : {};
+    const readTranslation = (language: string, field: string) => {
+      const value = translations[language];
+      const languageRecord =
+        typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+      return String(languageRecord[field] ?? "");
+    };
 
     return {
       sourceLang: String(record.source_lang ?? record.sourceLang ?? "ru") as NewsTranslationPreview["sourceLang"],
       translations: {
         ru: {
-          title: String((record.translations as Record<string, any> | undefined)?.ru?.title ?? ""),
-          content: String((record.translations as Record<string, any> | undefined)?.ru?.content ?? ""),
-          summary: String((record.translations as Record<string, any> | undefined)?.ru?.summary ?? ""),
+          title: readTranslation("ru", "title"),
+          content: readTranslation("ru", "content"),
+          summary: readTranslation("ru", "summary"),
         },
         kk: {
-          title: String((record.translations as Record<string, any> | undefined)?.kk?.title ?? ""),
-          content: String((record.translations as Record<string, any> | undefined)?.kk?.content ?? ""),
-          summary: String((record.translations as Record<string, any> | undefined)?.kk?.summary ?? ""),
+          title: readTranslation("kk", "title"),
+          content: readTranslation("kk", "content"),
+          summary: readTranslation("kk", "summary"),
         },
         en: {
-          title: String((record.translations as Record<string, any> | undefined)?.en?.title ?? ""),
-          content: String((record.translations as Record<string, any> | undefined)?.en?.content ?? ""),
-          summary: String((record.translations as Record<string, any> | undefined)?.en?.summary ?? ""),
+          title: readTranslation("en", "title"),
+          content: readTranslation("en", "content"),
+          summary: readTranslation("en", "summary"),
         },
       },
     };

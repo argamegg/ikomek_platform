@@ -315,10 +315,19 @@ export type AIAssistantInput = {
   locale: Locale;
 };
 
+export type AIAssistantAction = {
+  type: "navigate";
+  label: string;
+  web_path?: string | null;
+  mobile_path?: string | null;
+  request_id?: string | null;
+};
+
 export type AIAssistantResponse = {
   reply: string;
   configured: boolean;
   model: string;
+  actions: AIAssistantAction[];
 };
 
 export type UserProfileUpdateInput = {

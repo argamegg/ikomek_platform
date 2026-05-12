@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { isAxiosError } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import i18n from '../i18n';
@@ -43,7 +43,7 @@ api.interceptors.response.use(
 );
 
 export function getApiErrorMessage(error: unknown, fallbackMessage: string): string {
-  if (axios.isAxiosError(error)) {
+  if (isAxiosError(error)) {
     const detail = error.response?.data?.detail;
     const message = error.response?.data?.message;
 
@@ -185,12 +185,22 @@ export interface Message {
 export interface AIAssistantMessage {
   role: 'user' | 'assistant';
   content: string;
+  actions?: AIAssistantAction[];
+}
+
+export interface AIAssistantAction {
+  type: 'navigate';
+  label: string;
+  web_path?: string | null;
+  mobile_path?: string | null;
+  request_id?: string | null;
 }
 
 export interface AIAssistantResponse {
   reply: string;
   configured: boolean;
   model: string;
+  actions: AIAssistantAction[];
 }
 
 export interface MapPoint {
@@ -265,7 +275,11 @@ export const apiService = {
 
   // AI Assistant
   askAIAssistant: (data: { message: string; history: AIAssistantMessage[]; locale: string }) =>
-    api.post<AIAssistantResponse>('/ai/assistant', data),
+    api.post<AIAssistantResponse>('/ai/assistant', {
+      message: data.message,
+      history: data.history.map(({ role, content }) => ({ role, content })),
+      locale: data.locale,
+    }),
 
   // News
   getNews: (params?: {

@@ -1,9 +1,14 @@
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Bot, LoaderCircle, MessageCircle, Send, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
-import type { AIAssistantChatMessage, Locale } from "../../types/platform";
+import type { AIAssistantAction, AIAssistantChatMessage, Locale } from "../../types/platform";
 import { getErrorMessage, platformApi } from "../services/platformApi";
+
+type AssistantMessage = AIAssistantChatMessage & {
+  actions?: AIAssistantAction[];
+};
 
 type AssistantCopy = {
   label: string;
@@ -61,13 +66,14 @@ function getLocale(language: string): Locale {
 
 export function AIAssistantWidget() {
   const { i18n } = useTranslation();
+  const navigate = useNavigate();
   const locale = getLocale(i18n.language);
   const copy = COPY[locale];
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [configured, setConfigured] = useState(true);
-  const [messages, setMessages] = useState<AIAssistantChatMessage[]>([
+  const [messages, setMessages] = useState<AssistantMessage[]>([
     { role: "assistant", content: copy.greeting },
   ]);
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -96,7 +102,7 @@ export function AIAssistantWidget() {
       return;
     }
 
-    const nextMessages: AIAssistantChatMessage[] = [...messages, { role: "user", content: message }];
+    const nextMessages: AssistantMessage[] = [...messages, { role: "user", content: message }];
     setMessages(nextMessages);
     setInput("");
     setIsSending(true);
@@ -104,11 +110,14 @@ export function AIAssistantWidget() {
     try {
       const response = await platformApi.askAIAssistant({
         message,
-        history,
+        history: history.map((item) => ({ role: item.role, content: item.content })),
         locale,
       });
       setConfigured(response.configured);
-      setMessages((current) => [...current, { role: "assistant", content: response.reply }]);
+      setMessages((current) => [
+        ...current,
+        { role: "assistant", content: response.reply, actions: response.actions },
+      ]);
     } catch (error) {
       toast.error(getErrorMessage(error));
       setMessages((current) => [
@@ -121,6 +130,14 @@ export function AIAssistantWidget() {
     } finally {
       setIsSending(false);
     }
+  }
+
+  function handleAction(action: AIAssistantAction) {
+    if (!action.web_path) {
+      return;
+    }
+    navigate(action.web_path);
+    setOpen(false);
   }
 
   return (
@@ -147,6 +164,20 @@ export function AIAssistantWidget() {
                 key={`${message.role}-${index}`}
               >
                 {message.content}
+                {message.actions?.length ? (
+                  <div className="ai-assistant__actions">
+                    {message.actions.map((action, actionIndex) => (
+                      <button
+                        type="button"
+                        key={`${action.label}-${actionIndex}`}
+                        onClick={() => handleAction(action)}
+                        disabled={!action.web_path}
+                      >
+                        {action.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
               </article>
             ))}
             {isSending ? (
