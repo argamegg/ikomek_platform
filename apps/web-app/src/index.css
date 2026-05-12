@@ -2455,7 +2455,7 @@ button {
   width: 100%;
 }
 
-@media (max-width: 1440px) {
+@media (max-width: 1180px) {
   .home-hero__content {
     grid-template-columns: 1fr;
   }
@@ -2732,32 +2732,65 @@ button {
   }
 
   .topbar {
-    grid-template-columns: 1fr;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
     margin-top: 8px;
     padding: 10px;
   }
 
   .topbar__left,
   .topbar__right {
-    justify-content: space-between;
+    display: contents;
+  }
+
+  .topbar__menu {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .language-switcher {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+  }
+
+  .topbar__cta,
+  .topbar__account {
+    grid-column: 4;
+    grid-row: 1;
+    justify-self: end;
+  }
+
+  .topbar__search {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .topbar__search .field {
+    width: 100%;
   }
 
   .topbar__right {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
   }
 
   .topbar__cta,
   .topbar__cta .ui-button-wrap,
   .topbar__cta .ui-button {
-    width: 100%;
+    width: auto;
+  }
+
+  .topbar__cta .ui-button {
+    padding-inline: 16px;
   }
 
   .topbar__account {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    width: 100%;
+    width: auto;
   }
 
   .topbar__profile {
@@ -3006,7 +3039,7 @@ button {
   }
 
   .topbar__search {
-    display: none;
+    display: flex;
   }
 
   .topbar__right {
@@ -3015,12 +3048,13 @@ button {
 
   .topbar__cta,
   .topbar__account {
-    width: 100%;
+    width: auto;
   }
 
   .language-switcher {
     justify-content: center;
-    min-width: 96px;
+    min-width: 86px;
+    padding-inline: 9px;
   }
 
   .topbar__account {
@@ -3030,7 +3064,7 @@ button {
   .topbar__logout,
   .topbar__logout .ui-button-wrap,
   .topbar__logout .ui-button {
-    width: 100%;
+    width: auto;
   }
 
   .sidebar {
@@ -3131,7 +3165,7 @@ button {
 
   .topbar {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
     gap: 8px;
     margin-top: 6px;
     padding: 8px 10px;
@@ -3145,21 +3179,30 @@ button {
   }
 
   .topbar__left {
-    display: grid;
-    grid-template-columns: auto;
-    gap: 8px;
-    justify-content: stretch;
+    display: contents;
   }
 
   .topbar__right {
-    display: grid;
-    grid-template-columns: auto minmax(92px, auto);
-    gap: 8px;
-    justify-content: flex-end;
+    display: contents;
   }
 
   .topbar__search {
-    display: none;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .topbar__search .field {
+    width: 100%;
+  }
+
+  .topbar__cta,
+  .topbar__account {
+    grid-column: 4;
+    grid-row: 1;
   }
 
   .topbar__account {
@@ -3179,6 +3222,9 @@ button {
   }
 
   .language-switcher {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
     min-width: 82px;
     padding-inline: 10px;
     justify-content: center;
@@ -3263,12 +3309,26 @@ button {
 
 @media (orientation: landscape) and (max-width: 940px) and (max-height: 430px) {
   .page-shell {
-    padding-top: 6px;
+    padding-top: 4px;
   }
 
   .topbar {
-    margin-top: 4px;
-    padding-block: 6px;
+    margin-top: 3px;
+    padding-block: 5px;
+  }
+
+  .topbar__search .field__control {
+    min-height: 38px;
+    padding-inline: 12px;
+  }
+
+  .topbar .ui-button {
+    min-height: 38px;
+    padding-inline: 12px;
+  }
+
+  .language-switcher select {
+    padding-block: 8px;
   }
 
   .home-landing__section,
@@ -3291,8 +3351,8 @@ button {
   .home-hero__copy h1,
   .home-section-heading h2,
   .home-cta__content h2 {
-    margin-block: 8px;
-    font-size: clamp(1.28rem, 3.5vw, 1.55rem);
+    margin-block: 7px;
+    font-size: clamp(1.2rem, 3.2vw, 1.42rem);
   }
 
   .home-hero__copy p {
@@ -3301,7 +3361,7 @@ button {
 
   .home-hero__actions {
     gap: 8px;
-    margin-top: 10px;
+    margin-top: 8px;
   }
 
   .home-hero__actions .ui-button {
