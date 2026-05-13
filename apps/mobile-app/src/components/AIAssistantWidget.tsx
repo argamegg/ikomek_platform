@@ -1,23 +1,29 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
+  Easing,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { apiService, AIAssistantMessage, getApiErrorMessage } from '../utils/api';
 
 const ORANGE = '#FF6B00';
+const ASSISTANT_ROUTES = new Set(['/', '/map', '/requests']);
 
 type AIAssistantContextValue = {
   openAssistant: () => void;
@@ -68,6 +74,11 @@ export function useAIAssistant() {
 
 export function AIAssistantHeaderButton({ style }: { style?: StyleProp<ViewStyle> }) {
   const { openAssistant } = useAIAssistant();
+  const pathname = usePathname();
+
+  if (!ASSISTANT_ROUTES.has(pathname)) {
+    return null;
+  }
 
   return (
     <TouchableOpacity
@@ -85,16 +96,54 @@ export function AIAssistantHeaderButton({ style }: { style?: StyleProp<ViewStyle
 export function AIAssistantProvider({ children }: { children: React.ReactNode }) {
   const { i18n } = useTranslation();
   const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
   const locale = getLocale(i18n.language);
   const copy = COPY[locale];
-  const [isOpen, setIsOpen] = useState(false);
+  const [panelVisible, setPanelVisible] = useState(false);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [configured, setConfigured] = useState(true);
+  const openProgress = useRef(new Animated.Value(0)).current;
   const [messages, setMessages] = useState<AIAssistantMessage[]>([
     { role: 'assistant', content: copy.greeting },
   ]);
   const scrollRef = useRef<ScrollView | null>(null);
+  const panelWidth = Math.min(width - 28, 380);
+  const panelHeight = Math.min(Math.round(height * 0.6), 480);
+  const panelTop = insets.top + 58;
+  const translateX = openProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [panelWidth / 2, 0],
+  });
+  const translateY = openProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-panelHeight / 2, 0],
+  });
+
+  const closeAssistant = useCallback(() => {
+    Animated.timing(openProgress, {
+      toValue: 0,
+      duration: 200,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) {
+        setPanelVisible(false);
+      }
+    });
+  }, [openProgress]);
+
+  const openAssistant = useCallback(() => {
+    setPanelVisible(true);
+    requestAnimationFrame(() => {
+      Animated.timing(openProgress, {
+        toValue: 1,
+        duration: 250,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    });
+  }, [openProgress]);
 
   useEffect(() => {
     setMessages((current) => {
@@ -105,7 +154,7 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
-  }, [messages, isOpen]);
+  }, [messages, panelVisible]);
 
   const sendMessage = async () => {
     const text = input.trim();
@@ -138,66 +187,85 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
   };
 
   return (
-    <AIAssistantContext.Provider value={{ openAssistant: () => setIsOpen(true) }}>
+    <AIAssistantContext.Provider value={{ openAssistant }}>
       {children}
       <View pointerEvents="box-none" style={styles.root}>
-        {isOpen ? (
+        {panelVisible ? (
           <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          pointerEvents="box-none"
-          style={[styles.panelWrap, { bottom: Math.max(insets.bottom, 12) + 72 }]}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            pointerEvents="box-none"
+            style={styles.panelLayer}
           >
-            <View style={styles.panel}>
-            <View style={styles.header}>
-              <View style={styles.avatar}>
-                <Ionicons name="sparkles-outline" size={20} color={ORANGE} />
+            <Pressable style={StyleSheet.absoluteFill} onPress={closeAssistant}>
+              <Animated.View style={[styles.backdrop, { opacity: openProgress }]} />
+            </Pressable>
+            <Animated.View
+              style={[
+                styles.panel,
+                {
+                  top: panelTop,
+                  right: 14,
+                  width: panelWidth,
+                  height: panelHeight,
+                  opacity: openProgress,
+                  transform: [
+                    { translateX },
+                    { translateY },
+                    { scale: openProgress.interpolate({ inputRange: [0, 1], outputRange: [0.18, 1] }) },
+                  ],
+                },
+              ]}
+            >
+              <View style={styles.header}>
+                <View style={styles.avatar}>
+                  <Ionicons name="sparkles-outline" size={20} color={ORANGE} />
+                </View>
+                <View style={styles.headerCopy}>
+                  <Text style={styles.title}>{copy.title}</Text>
+                  <Text style={styles.subtitle}>{configured ? copy.subtitle : copy.unconfigured}</Text>
+                </View>
+                <TouchableOpacity style={styles.iconButton} onPress={closeAssistant}>
+                  <Ionicons name="close" size={20} color="#475569" />
+                </TouchableOpacity>
               </View>
-              <View style={styles.headerCopy}>
-                <Text style={styles.title}>{copy.title}</Text>
-                <Text style={styles.subtitle}>{configured ? copy.subtitle : copy.unconfigured}</Text>
-              </View>
-              <TouchableOpacity style={styles.iconButton} onPress={() => setIsOpen(false)}>
-                <Ionicons name="close" size={20} color="#475569" />
-              </TouchableOpacity>
-            </View>
 
-            <ScrollView ref={scrollRef} style={styles.messages} contentContainerStyle={styles.messagesContent}>
-              {messages.map((message, index) => (
-                <View
-                  key={`${message.role}-${index}`}
-                  style={[
-                    styles.message,
-                    message.role === 'user' ? styles.userMessage : styles.assistantMessage,
-                  ]}
+              <ScrollView ref={scrollRef} style={styles.messages} contentContainerStyle={styles.messagesContent}>
+                {messages.map((message, index) => (
+                  <View
+                    key={`${message.role}-${index}`}
+                    style={[
+                      styles.message,
+                      message.role === 'user' ? styles.userMessage : styles.assistantMessage,
+                    ]}
+                  >
+                    <Text style={styles.messageText}>{message.content}</Text>
+                  </View>
+                ))}
+                {isSending ? (
+                  <View style={[styles.message, styles.assistantMessage, styles.loadingMessage]}>
+                    <ActivityIndicator size="small" color={ORANGE} />
+                  </View>
+                ) : null}
+              </ScrollView>
+
+              <View style={styles.inputRow}>
+                <TextInput
+                  style={styles.input}
+                  value={input}
+                  onChangeText={setInput}
+                  placeholder={copy.placeholder}
+                  placeholderTextColor="#94A3B8"
+                  multiline
+                />
+                <TouchableOpacity
+                  style={[styles.sendButton, (!input.trim() || isSending) && styles.sendButtonDisabled]}
+                  onPress={sendMessage}
+                  disabled={!input.trim() || isSending}
                 >
-                  <Text style={styles.messageText}>{message.content}</Text>
-                </View>
-              ))}
-              {isSending ? (
-                <View style={[styles.message, styles.assistantMessage, styles.loadingMessage]}>
-                  <ActivityIndicator size="small" color={ORANGE} />
-                </View>
-              ) : null}
-            </ScrollView>
-
-            <View style={styles.inputRow}>
-              <TextInput
-                style={styles.input}
-                value={input}
-                onChangeText={setInput}
-                placeholder={copy.placeholder}
-                placeholderTextColor="#94A3B8"
-                multiline
-              />
-              <TouchableOpacity
-                style={[styles.sendButton, (!input.trim() || isSending) && styles.sendButtonDisabled]}
-                onPress={sendMessage}
-                disabled={!input.trim() || isSending}
-              >
-                <Ionicons name="send" size={18} color="#FFF" />
-              </TouchableOpacity>
-            </View>
-            </View>
+                  <Ionicons name="send" size={18} color="#FFF" />
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
           </KeyboardAvoidingView>
         ) : null}
       </View>
@@ -208,7 +276,7 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
 const styles = StyleSheet.create({
   root: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 12,
+    zIndex: 30,
   },
   headerToggle: {
     width: 40,
@@ -225,14 +293,15 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 3,
   },
-  panelWrap: {
-    position: 'absolute',
-    left: 14,
-    right: 14,
+  panelLayer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15,23,42,0.12)',
   },
   panel: {
-    height: 480,
-    maxHeight: 520,
+    position: 'absolute',
     backgroundColor: 'rgba(255,255,255,0.98)',
     borderRadius: 24,
     borderWidth: 1,

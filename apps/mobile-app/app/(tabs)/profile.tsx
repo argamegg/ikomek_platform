@@ -15,7 +15,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/context/AuthContext';
 import { apiService, SavedLocation } from '../../src/utils/api';
-import { AIAssistantHeaderButton } from '../../src/components/AIAssistantWidget';
 
 const ORANGE = '#FF6B00';
 
@@ -126,7 +125,6 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>{t('profile.title')}</Text>
-          <AIAssistantHeaderButton />
         </View>
 
         {/* Profile Card */}
@@ -342,9 +340,6 @@ const styles = StyleSheet.create({
     padding: 16
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingVertical: 8,
     marginBottom: 8
   },
