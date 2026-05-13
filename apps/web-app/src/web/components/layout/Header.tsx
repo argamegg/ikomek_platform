@@ -1,4 +1,4 @@
-import { ChevronDown, Globe2, LogOut, Menu, UserRound, X } from "lucide-react";
+import { ChevronDown, Globe2, LogOut, PanelLeftClose, PanelLeftOpen, UserRound } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -33,11 +33,11 @@ export function Header({
           type="button"
           variant="ghost"
           size="sm"
-          className="topbar__menu topbar__menu--mobile"
+          className={cn("topbar__menu topbar__menu--mobile", mobileSidebarOpen && "topbar__menu--hidden")}
           onClick={onToggleMobileSidebar}
           aria-label="Toggle navigation"
         >
-          {mobileSidebarOpen ? <X size={18} /> : <Menu size={18} />}
+          {mobileSidebarOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
         </Button>
       </div>
       <div className="topbar__right">

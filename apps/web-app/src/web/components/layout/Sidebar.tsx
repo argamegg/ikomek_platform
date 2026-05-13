@@ -128,6 +128,16 @@ export function Sidebar({
             {isCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
           </button>
         ) : null}
+        {isCompact && mobileOpen ? (
+          <button
+            type="button"
+            className="sidebar__collapse-button sidebar__collapse-button--mobile"
+            onClick={onCloseMobile}
+            aria-label="Close navigation"
+          >
+            <PanelLeftClose size={18} />
+          </button>
+        ) : null}
         <div className="sidebar__brand">
           <div className="sidebar__brand-mark">
             <img src="/appicon1.svg" alt="iKomek" width={54} height={54} />
