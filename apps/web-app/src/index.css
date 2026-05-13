@@ -4904,3 +4904,288 @@ button {
     scroll-behavior: auto !important;
   }
 }
+
+@media (max-width: 1199px) {
+  .topbar {
+    top: 12px;
+    right: 16px;
+    left: 16px;
+    width: auto;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+    backdrop-filter: blur(16px);
+  }
+
+  .page-shell {
+    padding-top: 104px;
+  }
+
+  .page-header h1,
+  .auth-header h1 {
+    letter-spacing: 0;
+  }
+
+  .section-card,
+  .toolbar-card,
+  .auth-panel,
+  .auth-aside {
+    padding: clamp(18px, 3vw, 24px);
+  }
+
+  .map-card,
+  .map-canvas {
+    min-height: min(460px, 58vh);
+  }
+}
+
+@media (max-width: 820px) {
+  .page-shell {
+    padding-top: 98px;
+  }
+
+  .dashboard-grid,
+  .dashboard-grid--wide,
+  .hero-grid,
+  .auth-grid {
+    gap: 16px;
+  }
+
+  .page-header {
+    padding-top: 0;
+  }
+
+  .page-header h1 {
+    margin-bottom: 6px;
+    font-size: clamp(1.85rem, 6.2vw, 2.45rem);
+  }
+
+  .page-header p,
+  .auth-header p {
+    font-size: 0.96rem;
+    line-height: 1.58;
+  }
+
+  .auth-shell {
+    gap: 18px;
+  }
+
+  .auth-header {
+    padding-top: 0;
+  }
+
+  .auth-panel {
+    min-height: auto;
+  }
+
+  .chat-thread-card {
+    min-height: min(620px, calc(100vh - 144px));
+  }
+
+  .chat-thread {
+    min-height: min(500px, calc(100vh - 220px));
+  }
+}
+
+@media (max-width: 720px) {
+  .topbar {
+    top: 10px;
+    right: 12px;
+    left: 12px;
+    margin-top: 0;
+    padding: 10px 12px;
+  }
+
+  .topbar__right {
+    overflow: visible;
+  }
+
+  .topbar__profile {
+    max-width: min(46vw, 180px);
+  }
+
+  .topbar__profile-dropdown {
+    right: -2px;
+    max-width: calc(100vw - 24px);
+  }
+
+  .page-shell {
+    padding-top: 92px;
+  }
+
+  .page-stack {
+    gap: 20px;
+  }
+
+  .stats-grid .ui-card {
+    min-height: 118px;
+  }
+
+  .request-row,
+  .address-list__item,
+  .news-stack__item {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .topbar {
+    right: 10px;
+    left: 10px;
+    gap: 8px;
+    padding: 9px 10px;
+  }
+
+  .page-shell {
+    padding-top: 86px;
+  }
+
+  .topbar__profile {
+    max-width: min(42vw, 148px);
+  }
+
+  .topbar__profile-copy {
+    max-width: 72px;
+  }
+
+  .topbar__profile-chevron {
+    display: none;
+  }
+
+  .language-switcher {
+    gap: 5px;
+    padding-inline: 7px;
+  }
+
+  .language-switcher select {
+    max-width: 48px;
+  }
+
+  .page-header__action > a,
+  .page-header__action .ui-button,
+  .auth-verify__actions .ui-button {
+    min-width: 0;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stats-grid .ui-card {
+    min-height: 108px;
+    padding: 15px 13px;
+  }
+
+  .stat-tile__label {
+    margin-bottom: 10px;
+    font-size: 0.82rem;
+  }
+
+  .stat-tile__value {
+    font-size: clamp(1.55rem, 10vw, 2rem);
+  }
+
+  .section-card,
+  .toolbar-card,
+  .auth-panel,
+  .auth-aside {
+    padding: 16px;
+  }
+
+  .auth-panel--centered .form-stack {
+    gap: 14px;
+  }
+
+  .field__control {
+    min-height: 46px;
+  }
+}
+
+@media (max-width: 380px) {
+  .topbar {
+    right: 8px;
+    left: 8px;
+    padding-inline: 8px;
+  }
+
+  .ui-button.topbar__menu--mobile {
+    width: 40px;
+    min-width: 40px;
+    padding-inline: 0;
+  }
+
+  .topbar__right {
+    gap: 5px;
+  }
+
+  .topbar__profile {
+    max-width: 104px;
+    padding-right: 4px;
+  }
+
+  .topbar__profile-copy {
+    max-width: 54px;
+  }
+
+  .topbar__avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 0.86rem;
+  }
+
+  .language-switcher {
+    min-height: 40px;
+    padding-inline: 6px;
+  }
+}
+
+@media (max-height: 560px) and (orientation: landscape) {
+  .topbar {
+    top: 8px;
+    padding-block: 8px;
+  }
+
+  .page-shell {
+    padding-top: 76px;
+    padding-bottom: 22px;
+  }
+
+  .page-stack,
+  .auth-shell,
+  .form-stack,
+  .form-grid {
+    gap: 14px;
+  }
+
+  .auth-header {
+    gap: 6px;
+  }
+
+  .auth-header h1,
+  .page-header h1 {
+    font-size: clamp(1.55rem, 4vw, 2rem);
+  }
+
+  .auth-header p,
+  .page-header p {
+    line-height: 1.45;
+  }
+
+  .section-card,
+  .toolbar-card,
+  .auth-panel,
+  .auth-aside,
+  .request-card,
+  .news-card {
+    padding: 14px;
+  }
+
+  .map-card,
+  .map-canvas,
+  .request-flow-location-map,
+  .request-flow-location-map__canvas {
+    min-height: 260px;
+  }
+}
