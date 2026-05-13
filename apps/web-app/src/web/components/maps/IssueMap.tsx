@@ -1,19 +1,42 @@
 import type { CivicRequest, MapMode } from "../../../types/platform";
 import { useMapLibreRequestMap } from "../../../components/map/useMapLibreRequestMap";
+import type { MapLayerState } from "../../lib/mapDashboard";
 
 type IssueMapProps = {
   requests: CivicRequest[];
+  districtRequests?: CivicRequest[];
   currentUserId?: string;
   mode: MapMode;
+  layers?: MapLayerState;
+  selectedDistrictId?: string;
+  selectedRequestId?: string | null;
   onSelectRequest?: (request: CivicRequest) => void;
+  onSelectDistrict?: (districtId: string) => void;
+  fitPadding?: number | { top: number; right: number; bottom: number; left: number };
 };
 
-export function IssueMap({ requests, currentUserId, mode, onSelectRequest }: IssueMapProps) {
+export function IssueMap({
+  requests,
+  districtRequests,
+  currentUserId,
+  mode,
+  layers,
+  selectedDistrictId,
+  selectedRequestId,
+  onSelectRequest,
+  onSelectDistrict,
+  fitPadding,
+}: IssueMapProps) {
   const { containerRef, zoomIn, zoomOut } = useMapLibreRequestMap({
     requests,
+    districtRequests,
     currentUserId,
     mode,
+    layers,
+    selectedDistrictId,
+    selectedRequestId,
     onSelectRequest,
+    onSelectDistrict,
     palette: {
       mine: "rgba(255, 107, 0, 0.92)",
       critical: "rgba(225, 29, 72, 0.9)",
@@ -23,6 +46,7 @@ export function IssueMap({ requests, currentUserId, mode, onSelectRequest }: Iss
     defaultRadius: 10,
     clustered: true,
     fitToData: true,
+    fitPadding,
   });
 
   return (

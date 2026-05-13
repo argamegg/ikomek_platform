@@ -1,24 +1,31 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import type { CivicRequest, MapMode } from "../../types/platform";
-import { PageHeader } from "../components/ui/PageHeader";
-import { Card } from "../components/ui/Card";
+import type { CivicRequest, Locale, MapMode } from "../../types/platform";
+import { CITY_DISTRICT_ID } from "../../components/map/mapDistricts";
+import { CleanCityMap } from "../components/maps/CleanCityMap";
+import { DistrictAnalyticsPanel } from "../components/maps/DistrictAnalyticsPanel";
+import { MapLayerControls } from "../components/maps/MapLayerControls";
 import { Tabs } from "../components/ui/Tabs";
-import { Badge } from "../components/ui/Badge";
-import { IssueMap } from "../components/maps/IssueMap";
-import { getPriorityTone, getStatusTone } from "../lib/format";
 import {
-  localizeRequestDescription,
-  localizeRequestPriority,
-  localizeRequestProblemType,
-  localizeRequestStatus,
-} from "../lib/requestMeta";
+  buildAnalyticsStats,
+  buildDistrictStats,
+  defaultMapLayers,
+  getScopedRequests,
+  getVisibleRequests,
+  type MapLayerState,
+} from "../lib/mapDashboard";
 import { platformApi, queryKeys } from "../services/platformApi";
+
+function resolveLocale(value: string): Locale {
+  return value === "ru" || value === "kz" || value === "en" ? value : "ru";
+}
 
 export function MapPage() {
   const { t, i18n } = useTranslation();
   const [mode, setMode] = useState<MapMode>("all");
+  const [layers, setLayers] = useState<MapLayerState>(defaultMapLayers);
+  const [selectedDistrictId, setSelectedDistrictId] = useState(CITY_DISTRICT_ID);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const currentUserQuery = useQuery({
     queryKey: queryKeys.currentUser,
@@ -45,59 +52,80 @@ export function MapPage() {
     return Array.from(map.values());
   }, [myRequestsQuery.data, publicRequestsQuery.data]);
 
-  const selectedRequest =
-    allRequests.find((request) => request.id === selectedId) ?? allRequests[0] ?? null;
+  const scopedRequests = useMemo(
+    () => getScopedRequests(allRequests, currentUserQuery.data?.id, mode),
+    [allRequests, currentUserQuery.data?.id, mode],
+  );
+  const visibleRequests = useMemo(
+    () => getVisibleRequests(scopedRequests, selectedDistrictId),
+    [scopedRequests, selectedDistrictId],
+  );
+  const districtStats = useMemo(
+    () => buildDistrictStats(scopedRequests, districtsQuery.data ?? []),
+    [districtsQuery.data, scopedRequests],
+  );
+  const analyticsStats = useMemo(
+    () => buildAnalyticsStats(visibleRequests, selectedDistrictId, districtStats),
+    [districtStats, selectedDistrictId, visibleRequests],
+  );
+  const selectedRequest = visibleRequests.find((request) => request.id === selectedId) ?? null;
+  const activeSelectedId = selectedRequest?.id ?? null;
+  const locale = resolveLocale(i18n.language);
+
+  function handleModeChange(value: string) {
+    setMode(value as MapMode);
+  }
+
+  function handleSelectDistrict(districtId: string) {
+    setSelectedDistrictId(districtId);
+    setSelectedId(null);
+  }
+
+  function handleSelectRequest(request: CivicRequest) {
+    setSelectedId(request.id);
+  }
 
   return (
-    <div className="page-stack">
-      <PageHeader title={t("map.title")} description={t("map.description")} />
-      <Card className="toolbar-card" hover={false}>
-        <Tabs
-          value={mode}
-          onChange={(value) => setMode(value as MapMode)}
-          options={[
-            { key: "all", label: t("map.all") },
-            { key: "my", label: t("map.mine") },
-            { key: "heatmap", label: t("map.heatmap") },
-          ]}
+    <div className="map-dashboard">
+      <section className="map-dashboard__surface" aria-label={t("map.title")}>
+        <CleanCityMap
+          requests={visibleRequests}
+          districtRequests={scopedRequests}
+          currentUserId={currentUserQuery.data?.id}
+          mode={mode}
+          layers={layers}
+          selectedDistrictId={selectedDistrictId}
+          selectedRequestId={activeSelectedId}
+          onSelectRequest={handleSelectRequest}
+          onSelectDistrict={handleSelectDistrict}
         />
-      </Card>
-      <div className="dashboard-grid dashboard-grid--wide">
-        <Card className="section-card section-card--map" hover={false}>
-          <IssueMap
-            requests={allRequests}
-            currentUserId={currentUserQuery.data?.id}
-            mode={mode}
-            onSelectRequest={(request) => setSelectedId(request.id)}
+
+        <div className="map-dashboard__tools" aria-label="Фильтры и слои карты">
+          <Tabs
+            value={mode}
+            onChange={handleModeChange}
+            options={[
+              { key: "all", label: t("map.all") },
+              { key: "my", label: t("map.mine") },
+            ]}
+            className="map-dashboard__tabs"
           />
-        </Card>
-        <Card className="section-card">
-          <div className="section-card__header">
-            <div>
-              <span className="section-card__eyebrow">Selection</span>
-              <h3>{selectedRequest ? localizeRequestProblemType(selectedRequest.categoryId || selectedRequest.categoryName, selectedRequest.title, t) : "Choose a marker"}</h3>
-            </div>
-          </div>
-          {selectedRequest ? (
-            <>
-              <Badge tone={getPriorityTone(selectedRequest.priority)}>{localizeRequestPriority(selectedRequest.priority, t)}</Badge>
-              <p>{selectedRequest.address}</p>
-              <p>{localizeRequestDescription(selectedRequest.description, selectedRequest.categoryId, selectedRequest.title, selectedRequest.reasonId || selectedRequest.reasonName, t)}</p>
-              <Badge tone={getStatusTone(selectedRequest.status)}>
-                {localizeRequestStatus(selectedRequest.statusLabel || selectedRequest.status, t)}
-              </Badge>
-            </>
-          ) : null}
-          <div className="district-list">
-            {(districtsQuery.data ?? []).slice(0, 8).map((district) => (
-              <div key={district.id} className="district-list__item">
-                <strong>{district.name}</strong>
-                <span>{district.requestDensity ?? 0} density</span>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
+          <MapLayerControls layers={layers} onChange={setLayers} />
+        </div>
+      </section>
+
+      <DistrictAnalyticsPanel
+        selectedDistrictId={selectedDistrictId}
+        cityTotal={scopedRequests.length}
+        districts={districtStats}
+        stats={analyticsStats}
+        selectedRequest={selectedRequest}
+        selectedRequestId={activeSelectedId}
+        locale={locale}
+        t={t}
+        onSelectDistrict={handleSelectDistrict}
+        onSelectRequest={handleSelectRequest}
+      />
     </div>
   );
 }

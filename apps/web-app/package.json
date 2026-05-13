@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.95.2",
+    "@turf/boolean-point-in-polygon": "^7.3.5",
+    "@turf/helpers": "^7.3.5",
     "axios": "^1.13.6",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",

@@ -19,6 +19,7 @@ export function AppShell({ children }: PropsWithChildren) {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
+  const isMapPage = location.pathname === "/map";
   const currentUserQuery = useQuery({
     queryKey: queryKeys.currentUser,
     queryFn: platformApi.getCurrentUser,
@@ -98,7 +99,7 @@ export function AppShell({ children }: PropsWithChildren) {
             {getErrorMessage(currentUserQuery.error)}
           </div>
         ) : null}
-        <main className="page-shell">
+        <main className={isMapPage ? "page-shell page-shell--map" : "page-shell"}>
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
@@ -106,7 +107,7 @@ export function AppShell({ children }: PropsWithChildren) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.22 }}
-              className="page-shell__inner"
+              className={isMapPage ? "page-shell__inner page-shell__inner--map" : "page-shell__inner"}
             >
               {children ?? <Outlet />}
             </motion.div>
