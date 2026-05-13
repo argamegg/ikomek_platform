@@ -33,20 +33,20 @@ export default function UsersScreen() {
   const changeRole = (user: UserItem) => {
     const otherRoles = ROLES.filter(r => r !== user.role);
     Alert.alert(
-      'Change Role',
-      `Current role: ${user.role}\nSelect new role for ${user.full_name}:`,
+      t('admin.changeRole'),
+      t('admin.currentRoleSelect', { role: t(`roles.${user.role}`), name: user.full_name }),
       [
         ...otherRoles.map(role => ({
-          text: role.charAt(0).toUpperCase() + role.slice(1),
+          text: t(`roles.${role}`),
           onPress: async () => {
             try {
               await apiService.updateUserRole(user.id, role);
-              Alert.alert('Success', `Role changed to ${role}`);
+              Alert.alert(t('common.success'), t('admin.roleChanged', { role: t(`roles.${role}`) }));
               fetchUsers();
-            } catch { Alert.alert('Error', 'Failed to update role'); }
+            } catch { Alert.alert(t('common.error'), t('admin.roleUpdateFailed')); }
           }
         })),
-        { text: 'Cancel', style: 'cancel' as const }
+        { text: t('common.cancel'), style: 'cancel' as const }
       ]
     );
   };
@@ -63,10 +63,10 @@ export default function UsersScreen() {
         <View style={styles.userInfo}>
           <Text style={styles.userName}>{item.full_name}</Text>
           <Text style={styles.userEmail}>{item.email}</Text>
-          <Text style={styles.userDate}>Joined: {format(new Date(item.created_at), 'dd.MM.yyyy')}</Text>
+          <Text style={styles.userDate}>{t('admin.joined')}: {format(new Date(item.created_at), 'dd.MM.yyyy')}</Text>
         </View>
         <TouchableOpacity style={[styles.roleBadge, { backgroundColor: `${roleColor}15`, borderColor: roleColor }]} onPress={() => changeRole(item)}>
-          <Text style={[styles.roleText, { color: roleColor }]}>{item.role}</Text>
+          <Text style={[styles.roleText, { color: roleColor }]}>{t(`roles.${item.role}`)}</Text>
           <Ionicons name="chevron-down" size={14} color={roleColor} />
         </TouchableOpacity>
       </View>
@@ -79,7 +79,7 @@ export default function UsersScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Text style={styles.headerTitle} data-testid="admin-users-title">{t('admin.users')}</Text>
-        <Text style={styles.headerSub}>{users.length} total users</Text>
+        <Text style={styles.headerSub}>{t('admin.totalUsersCount', { count: users.length })}</Text>
       </View>
       <FlatList data={users} keyExtractor={i => i.id} renderItem={renderUser}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => { setIsRefreshing(true); fetchUsers(); }} tintColor={ORANGE} />}
@@ -90,7 +90,7 @@ export default function UsersScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F2F2F7' },
+  container: { flex: 1, backgroundColor: 'transparent' },
   centered: { justifyContent: 'center', alignItems: 'center' },
   header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
   headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#1C1C1E' },

@@ -2,16 +2,18 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { View, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 const ORANGE = '#FF6B00';
 
 export default function OperatorLayout() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
+        sceneStyle: { backgroundColor: 'transparent' },
         tabBarActiveTintColor: ORANGE,
         tabBarInactiveTintColor: '#8E8E93',
         tabBarStyle: {
@@ -24,11 +26,11 @@ export default function OperatorLayout() {
       }}
     >
       <Tabs.Screen name="dashboard" options={{
-        title: 'Requests',
+        title: t('nav.requests'),
         tabBarIcon: ({ color, size }) => <Ionicons name="clipboard" size={size} color={color} />
       }} />
       <Tabs.Screen name="profile" options={{
-        title: 'Profile',
+        title: t('operator.profile.title'),
         tabBarIcon: ({ color, size }) => <Ionicons name="person" size={size} color={color} />
       }} />
     </Tabs>

@@ -4,11 +4,15 @@ import type {
   AuthLoginInput,
   AuthRegistrationChallenge,
   AuthRegisterInput,
+  AIAssistantInput,
+  AIAssistantResponse,
   CivicRequest,
   District,
   EmailVerificationInput,
   NewsCreateInput,
   NewsItem,
+  NewsListResponse,
+  NewsTranslationPreview,
   NotificationItem,
   PasswordRecoveryInput,
   PlatformMetrics,
@@ -33,6 +37,7 @@ import {
   normalizeMessage,
   normalizeMetrics,
   normalizeNews,
+  normalizeNewsListResponse,
   normalizeNotification,
   normalizeReason,
   normalizeRequest,
@@ -102,6 +107,23 @@ const REQUEST_REASON_TEMPLATES: Record<string, Array<{ id: string; name: string 
 };
 
 const DEFAULT_PLACE_OPTIONS = ["apartment", "house", "office", "street", "park", "other"];
+
+function getCurrentLang(): string {
+  const lang =
+    session.getLocale() ||
+    (typeof navigator !== "undefined" ? navigator.language : "ru") ||
+    "ru";
+
+  if (lang.startsWith("kz") || lang.startsWith("kk")) {
+    return "kk";
+  }
+
+  if (lang.startsWith("en")) {
+    return "en";
+  }
+
+  return "ru";
+}
 
 export const queryKeys = {
   currentUser: ["current-user"] as const,
@@ -281,7 +303,7 @@ async function fileToDataUrl(file: File) {
 async function getAccessibleRequests(status?: RequestStatus) {
   try {
     const response = await platformClient.get("/operator/requests", {
-      params: status ? { status } : undefined,
+      params: { ...(status ? { status } : {}), lang: getCurrentLang() },
     });
     return normalizeList(response.data, normalizeRequest);
   } catch (error) {
@@ -290,7 +312,7 @@ async function getAccessibleRequests(status?: RequestStatus) {
     }
 
     const response = await platformClient.get("/requests/all", {
-      params: status ? { status } : undefined,
+      params: { ...(status ? { status } : {}), lang: getCurrentLang() },
     });
     return normalizeList(response.data, normalizeRequest);
   }
@@ -345,6 +367,7 @@ export const platformApi = {
   },
 
   async recoverPassword(_payload: PasswordRecoveryInput) {
+    void _payload;
     throw new Error("Password recovery is not available in the current backend yet.");
   },
 
@@ -395,14 +418,33 @@ export const platformApi = {
     }
   },
 
-  async getNews(): Promise<NewsItem[]> {
-    const response = await platformClient.get(apiConfig.endpoints.news);
-    return normalizeList(response.data, normalizeNews);
+  async getNews(params?: {
+    search?: string;
+    category?: string;
+    type?: string;
+    period?: string;
+    sort?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<NewsListResponse> {
+    const response = await platformClient.get(apiConfig.endpoints.news, {
+      params: { lang: getCurrentLang(), ...params },
+    });
+    return normalizeNewsListResponse(response.data);
   },
 
   async getAlerts(): Promise<NewsItem[]> {
-    const items = await this.getNews();
-    return items.filter((item) => item.category === "critical" || item.category === "warning");
+    const items = await this.getNews({ limit: 20 });
+    return items.news.filter((item) =>
+      item.types.some((type) =>
+        [
+          "Аварийные работы",
+          "Погодные условия",
+          "Плановые работы",
+          "Дорожные ситуации",
+        ].includes(type),
+      ),
+    );
   },
 
   async getPublicRequests(): Promise<CivicRequest[]> {
@@ -412,13 +454,23 @@ export const platformApi = {
       return [];
     }
 
-    const response = await platformClient.get("/requests/all");
+    const response = await platformClient.get("/requests/all", {
+      params: { lang: getCurrentLang() },
+    });
     return normalizeList(response.data, normalizeRequest);
   },
 
   async getMyRequests(): Promise<CivicRequest[]> {
+    const token = session.getToken();
+
+    if (!token) {
+      return [];
+    }
+
     try {
-      const response = await platformClient.get(apiConfig.endpoints.myRequests);
+      const response = await platformClient.get(apiConfig.endpoints.myRequests, {
+        params: { lang: getCurrentLang() },
+      });
       return normalizeList(response.data, normalizeRequest);
     } catch (error) {
       if (isUnauthorized(error)) {
@@ -443,7 +495,9 @@ export const platformApi = {
 
   async getRequestById(requestId: string): Promise<CivicRequest> {
     const [requestResponse, messagesResponse] = await Promise.all([
-      platformClient.get(`${apiConfig.endpoints.requests}/${requestId}`),
+      platformClient.get(`${apiConfig.endpoints.requests}/${requestId}`, {
+        params: { lang: getCurrentLang() },
+      }),
       platformClient.get(resolvePath(apiConfig.endpoints.requestMessages, { requestId })),
     ]);
 
@@ -460,13 +514,14 @@ export const platformApi = {
     const response = await platformClient.post(apiConfig.endpoints.requests, {
       category_id: payload.categoryId,
       address: payload.address,
-      latitude: payload.lat ?? 51.1282,
-      longitude: payload.lng ?? 71.4306,
+      latitude: payload.lat,
+      longitude: payload.lng,
       place_type: payload.place,
       problem_type: problemType,
       reason: reasonLabel || "Submitted from web",
       description: payload.description,
       photos,
+      source_lang: getCurrentLang(),
     });
 
     return normalizeRequest(response.data);
@@ -497,6 +552,24 @@ export const platformApi = {
     return normalizeMessage(response.data);
   },
 
+  async askAIAssistant(payload: AIAssistantInput): Promise<AIAssistantResponse> {
+    const response = await platformClient.post("/ai/assistant", {
+      message: payload.message,
+      history: payload.history,
+      locale: payload.locale,
+    });
+    const record =
+      typeof response.data === "object" && response.data !== null
+        ? (response.data as Record<string, unknown>)
+        : {};
+
+    return {
+      reply: String(record.reply ?? ""),
+      configured: Boolean(record.configured),
+      model: String(record.model ?? ""),
+    };
+  },
+
   async getMetrics(): Promise<PlatformMetrics> {
     try {
       const response = await platformClient.get(apiConfig.endpoints.metrics);
@@ -512,6 +585,12 @@ export const platformApi = {
   },
 
   async getSavedLocations(): Promise<SavedLocation[]> {
+    const token = session.getToken();
+
+    if (!token) {
+      return [];
+    }
+
     try {
       const response = await platformClient.get(apiConfig.endpoints.savedLocations);
       return normalizeList(response.data, normalizeSavedLocation);
@@ -550,7 +629,7 @@ export const platformApi = {
     const [requests, news] = await Promise.all([this.getMyRequests(), this.getNews()]);
     return [
       ...requests.slice(0, 4).map(toNotificationItem),
-      ...news.slice(0, 3).map((item) =>
+      ...news.news.slice(0, 3).map((item) =>
         normalizeNotification({
           id: `news-${item.id}`,
           title: item.title,
@@ -563,22 +642,98 @@ export const platformApi = {
   },
 
   async createNews(payload: NewsCreateInput) {
-    const category =
-      payload.priority === "critical" || payload.category === "critical"
+    const primaryType = payload.types[0];
+    const legacyPriority =
+      primaryType === "Аварийные работы"
         ? "critical"
-        : payload.priority === "warning" || payload.category === "warning"
+        : primaryType === "Плановые работы" || primaryType === "Дорожные ситуации"
           ? "warning"
-          : "info";
+          : "information";
     const content = payload.body || payload.summary;
+    const sourceLang = getCurrentLang();
     const response = await platformClient.post("/admin/news", {
       title: payload.title,
-      title_ru: payload.title,
-      title_kz: payload.title,
+      title_ru: payload.titleRu ?? (sourceLang === "ru" ? payload.title : undefined),
+      title_kz: payload.titleKz ?? (sourceLang === "kk" ? payload.title : undefined),
+      title_en: payload.titleEn ?? (sourceLang === "en" ? payload.title : undefined),
       content,
-      content_ru: content,
-      content_kz: content,
-      category,
+      content_ru: payload.bodyRu ?? (sourceLang === "ru" ? content : undefined),
+      content_kz: payload.bodyKz ?? (sourceLang === "kk" ? content : undefined),
+      content_en: payload.bodyEn ?? (sourceLang === "en" ? content : undefined),
+      category: payload.category,
+      types: payload.types,
+      type: primaryType,
+      priority: legacyPriority,
+      summary: payload.summary,
+      summary_ru: payload.summaryRu,
+      summary_kz: payload.summaryKz,
+      summary_en: payload.summaryEn,
+      location: payload.location,
+      start_at: payload.startAt,
+      end_at: payload.endAt,
+      source_lang: payload.sourceLang ?? sourceLang,
+      translation_status: payload.translationStatus,
+      skip_translation: payload.skipTranslation ?? false,
     });
     return normalizeNews(response.data);
+  },
+
+  async previewNewsTranslation(payload: { title: string; content: string; summary?: string }): Promise<NewsTranslationPreview> {
+    const response = await platformClient.post("/admin/news/translate-preview", payload);
+    const record =
+      typeof response.data === "object" && response.data !== null
+        ? (response.data as Record<string, unknown>)
+        : {};
+
+    return {
+      sourceLang: String(record.source_lang ?? record.sourceLang ?? "ru") as NewsTranslationPreview["sourceLang"],
+      translations: {
+        ru: {
+          title: String((record.translations as Record<string, any> | undefined)?.ru?.title ?? ""),
+          content: String((record.translations as Record<string, any> | undefined)?.ru?.content ?? ""),
+          summary: String((record.translations as Record<string, any> | undefined)?.ru?.summary ?? ""),
+        },
+        kk: {
+          title: String((record.translations as Record<string, any> | undefined)?.kk?.title ?? ""),
+          content: String((record.translations as Record<string, any> | undefined)?.kk?.content ?? ""),
+          summary: String((record.translations as Record<string, any> | undefined)?.kk?.summary ?? ""),
+        },
+        en: {
+          title: String((record.translations as Record<string, any> | undefined)?.en?.title ?? ""),
+          content: String((record.translations as Record<string, any> | undefined)?.en?.content ?? ""),
+          summary: String((record.translations as Record<string, any> | undefined)?.en?.summary ?? ""),
+        },
+      },
+    };
+  },
+
+  async updateNews(newsId: string, payload: NewsCreateInput) {
+    const response = await platformClient.put(`/admin/news/${newsId}`, {
+      title: payload.title,
+      title_ru: payload.titleRu,
+      title_kz: payload.titleKz,
+      title_en: payload.titleEn,
+      content: payload.body,
+      content_ru: payload.bodyRu,
+      content_kz: payload.bodyKz,
+      content_en: payload.bodyEn,
+      summary: payload.summary,
+      summary_ru: payload.summaryRu,
+      summary_kz: payload.summaryKz,
+      summary_en: payload.summaryEn,
+      category: payload.category,
+      types: payload.types,
+      type: payload.types[0],
+      location: payload.location,
+      start_at: payload.startAt,
+      end_at: payload.endAt,
+      source_lang: payload.sourceLang ?? getCurrentLang(),
+      translation_status: payload.translationStatus,
+    });
+    return normalizeNews(response.data);
+  },
+
+  async deleteNews(newsId: string) {
+    await platformClient.delete(`/admin/news/${newsId}`);
   },
 };

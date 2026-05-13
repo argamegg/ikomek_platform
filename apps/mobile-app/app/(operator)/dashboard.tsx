@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity,
-  ActivityIndicator, Modal, ScrollView, TextInput, Alert
+  ActivityIndicator, Modal, ScrollView, TextInput, Alert, useWindowDimensions
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,16 +9,23 @@ import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { apiService, Request, Message } from '../../src/utils/api';
 import { StatusBadge } from '../../src/components/StatusBadge';
+import {
+  getStatusTranslationKey,
+  localizeCategory,
+  localizeProblemType,
+  localizeRequestDescription,
+} from '../../src/utils/requestLocalization';
 
 const ORANGE = '#FF6B00';
 const STATUSES = ['pending', 'in_progress', 'closed'];
-const STATUS_LABELS: Record<string, string> = { pending: 'Pending', in_progress: 'In Progress', closed: 'Closed' };
-const PRIORITY_COLORS: Record<string, string> = { urgent: '#FF3B30', normal: '#8E8E93' };
+const STATS_HORIZONTAL_PADDING = 16;
+const STATS_GAP = 8;
 
 export default function OperatorDashboard() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const [requests, setRequests] = useState<Request[]>([]);
+  const { width: viewportWidth } = useWindowDimensions();
+  const [allRequests, setAllRequests] = useState<Request[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
@@ -31,15 +38,18 @@ export default function OperatorDashboard() {
 
   const fetchRequests = useCallback(async () => {
     try {
-      const params: any = {};
-      if (statusFilter) params.status = statusFilter;
-      const res = await apiService.getOperatorRequests(params);
-      setRequests(res.data);
+      const res = await apiService.getOperatorRequests();
+      setAllRequests(res.data);
     } catch (e) { console.error(e); }
     finally { setIsLoading(false); setIsRefreshing(false); }
-  }, [statusFilter]);
+  }, []);
 
   useEffect(() => { fetchRequests(); }, [fetchRequests]);
+
+  const filteredRequests = useMemo(
+    () => allRequests.filter((request) => !statusFilter || request.status === statusFilter),
+    [allRequests, statusFilter],
+  );
 
   const openDetail = async (req: Request) => {
     setSelected(req);
@@ -55,10 +65,10 @@ export default function OperatorDashboard() {
         status: newStatus,
         operator_notes: operatorNotes || undefined
       });
-      Alert.alert('Success', `Status updated to ${STATUS_LABELS[newStatus]}`);
+      Alert.alert(t('common.success'), t('operator.statusUpdated', { status: t(getStatusTranslationKey(newStatus)) }));
       setSelected(null);
       fetchRequests();
-    } catch { Alert.alert('Error', 'Failed to update'); }
+    } catch { Alert.alert(t('common.error'), t('operator.updateFailed')); }
     finally { setIsUpdating(false); }
   };
 
@@ -73,24 +83,27 @@ export default function OperatorDashboard() {
   };
 
   const counts = {
-    total: requests.length,
-    pending: requests.filter(r => r.status === 'pending').length,
-    in_progress: requests.filter(r => r.status === 'in_progress').length,
-    closed: requests.filter(r => r.status === 'closed').length
+    total: allRequests.length,
+    pending: allRequests.filter(r => r.status === 'pending').length,
+    in_progress: allRequests.filter(r => r.status === 'in_progress').length,
+    closed: allRequests.filter(r => r.status === 'closed').length
   };
+  const statsColumns = viewportWidth >= 340 ? 4 : 2;
+  const availableStatsWidth = Math.max(viewportWidth - (STATS_HORIZONTAL_PADDING * 2), 0);
+  const statCardWidth = (availableStatsWidth - STATS_GAP * (statsColumns - 1)) / statsColumns;
 
   const renderCard = ({ item }: { item: Request }) => (
     <TouchableOpacity style={styles.card} onPress={() => openDetail(item)} activeOpacity={0.8} data-testid={`op-req-${item.id}`}>
       <View style={[styles.cardStrip, { backgroundColor: item.priority === 'urgent' ? '#FF3B30' : (({ pending: '#FF9500', in_progress: '#007AFF', closed: '#34C759' } as any)[item.status] || '#FF9500') }]} />
       <View style={styles.cardBody}>
         <View style={styles.cardTop}>
-          <Text style={styles.cardTitle} numberOfLines={1}>{item.problem_type}</Text>
+          <Text style={styles.cardTitle} numberOfLines={1}>{localizeProblemType(item.category_id, item.problem_type, t)}</Text>
           <StatusBadge status={item.status} size="small" />
         </View>
         <Text style={styles.cardAddress} numberOfLines={1}>{item.address}</Text>
         <View style={styles.cardMeta}>
           <Text style={styles.cardDate}>{format(new Date(item.created_at), 'dd.MM.yy HH:mm')}</Text>
-          {item.priority === 'urgent' && <View style={styles.urgentBadge}><Text style={styles.urgentText}>URGENT</Text></View>}
+          {item.priority === 'urgent' && <View style={styles.urgentBadge}><Text style={styles.urgentText}>{t('operator.urgent')}</Text></View>}
         </View>
       </View>
     </TouchableOpacity>
@@ -102,27 +115,35 @@ export default function OperatorDashboard() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Text style={styles.headerTitle} data-testid="operator-dashboard-title">{t('operator.dashboard')}</Text>
-        <Text style={styles.headerSub}>{counts.total} requests</Text>
+        <Text style={styles.headerSub}>{t('operator.requestsCount', { count: counts.total })}</Text>
       </View>
 
       {/* Stats */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.statsRow}>
-        {[{ key: null, label: 'All', count: counts.total, color: ORANGE },
-          { key: 'pending', label: 'Pending', count: counts.pending, color: '#FF9500' },
-          { key: 'in_progress', label: 'In Progress', count: counts.in_progress, color: '#007AFF' },
-          { key: 'closed', label: 'Closed', count: counts.closed, color: '#34C759' }
+      <View style={styles.statsRow}>
+        {[{ key: null, label: t('common.all'), count: counts.total, color: ORANGE },
+          { key: 'pending', label: t('status.pending'), count: counts.pending, color: '#FF9500' },
+          { key: 'in_progress', label: t('status.inProgress'), count: counts.in_progress, color: '#007AFF' },
+          { key: 'closed', label: t('status.closed'), count: counts.closed, color: '#34C759' }
         ].map(s => (
-          <TouchableOpacity key={s.key || 'all'} style={[styles.statCard, statusFilter === s.key && styles.statCardActive]} onPress={() => setStatusFilter(s.key)}>
+          <TouchableOpacity
+            key={s.key || 'all'}
+            style={[
+              styles.statCard,
+              { width: statCardWidth },
+              statusFilter === s.key && styles.statCardActive,
+            ]}
+            onPress={() => setStatusFilter(s.key)}
+          >
             <Text style={[styles.statNum, { color: s.color }]}>{s.count}</Text>
             <Text style={styles.statLabel}>{s.label}</Text>
           </TouchableOpacity>
         ))}
-      </ScrollView>
+      </View>
 
-      <FlatList data={requests.filter(r => !statusFilter || r.status === statusFilter)} keyExtractor={i => i.id} renderItem={renderCard}
+      <FlatList data={filteredRequests} keyExtractor={i => i.id} renderItem={renderCard}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => { setIsRefreshing(true); fetchRequests(); }} tintColor={ORANGE} />}
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
-        ListEmptyComponent={<View style={styles.emptyBox}><Ionicons name="checkbox-outline" size={48} color="#C7C7CC" /><Text style={styles.emptyText}>No requests</Text></View>}
+        ListEmptyComponent={<View style={styles.emptyBox}><Ionicons name="checkbox-outline" size={48} color="#C7C7CC" /><Text style={styles.emptyText}>{t('operator.noRequests')}</Text></View>}
       />
 
       {/* Detail Modal */}
@@ -131,59 +152,59 @@ export default function OperatorDashboard() {
           <View style={[styles.modalContainer, { paddingTop: insets.top || 16 }]}>
             <View style={styles.modalHeader}>
               <TouchableOpacity onPress={() => setSelected(null)} style={styles.closeBtn}><Ionicons name="close" size={24} color="#1C1C1E" /></TouchableOpacity>
-              <Text style={styles.modalTitle}>Request Details</Text>
+              <Text style={styles.modalTitle}>{t('myRequests.details')}</Text>
               <View style={{ width: 44 }} />
             </View>
             <ScrollView style={styles.modalBody}>
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Problem</Text>
-                <Text style={styles.detailValue}>{selected.problem_type}</Text>
+                <Text style={styles.detailLabel}>{t('request.problem')}</Text>
+                <Text style={styles.detailValue}>{localizeProblemType(selected.category_id, selected.problem_type, t)}</Text>
               </View>
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Address</Text>
+                <Text style={styles.detailLabel}>{t('request.location')}</Text>
                 <Text style={styles.detailValue}>{selected.address}</Text>
               </View>
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Category</Text>
-                <Text style={styles.detailValue}>{selected.category_name}</Text>
+                <Text style={styles.detailLabel}>{t('request.category')}</Text>
+                <Text style={styles.detailValue}>{localizeCategory(selected.category_id || selected.category_name, t)}</Text>
               </View>
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Status</Text>
+                <Text style={styles.detailLabel}>{t('operator.filterByStatus')}</Text>
                 <StatusBadge status={selected.status} />
               </View>
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Created</Text>
+                <Text style={styles.detailLabel}>{t('myRequests.created')}</Text>
                 <Text style={styles.detailValue}>{format(new Date(selected.created_at), 'dd.MM.yyyy HH:mm')}</Text>
               </View>
-              <Text style={styles.descText}>{selected.description}</Text>
+              <Text style={styles.descText}>{localizeRequestDescription(selected.description, selected.category_id, selected.problem_type, selected.reason, t)}</Text>
 
               {/* Status Actions */}
-              <Text style={styles.sectionTitle}>Update Status</Text>
+              <Text style={styles.sectionTitle}>{t('operator.updateStatus')}</Text>
               <View style={styles.statusBtns}>
                 {STATUSES.map(s => (
                   <TouchableOpacity key={s} style={[styles.statusBtn, selected.status === s && styles.statusBtnActive, { borderColor: ({ pending: '#FF9500', in_progress: '#007AFF', closed: '#34C759' } as any)[s] }]}
                     onPress={() => updateStatus(s)} disabled={isUpdating || selected.status === s}>
-                    <Text style={[styles.statusBtnText, selected.status === s && styles.statusBtnTextActive]}>{STATUS_LABELS[s]}</Text>
+                    <Text style={[styles.statusBtnText, selected.status === s && styles.statusBtnTextActive]}>{t(getStatusTranslationKey(s))}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
 
               {/* Operator Notes */}
-              <Text style={styles.sectionTitle}>Operator Notes</Text>
-              <TextInput style={styles.notesInput} multiline numberOfLines={3} value={operatorNotes} onChangeText={setOperatorNotes} placeholder="Internal notes..." placeholderTextColor="#C7C7CC" />
+              <Text style={styles.sectionTitle}>{t('operator.internalNotes')}</Text>
+              <TextInput style={styles.notesInput} multiline numberOfLines={3} value={operatorNotes} onChangeText={setOperatorNotes} placeholder={t('operator.internalNotesPlaceholder')} placeholderTextColor="#C7C7CC" />
 
               {/* Chat */}
-              <Text style={styles.sectionTitle}>Messages</Text>
-              {messages.length === 0 ? <Text style={styles.noMsg}>No messages yet</Text> : messages.map(msg => (
+              <Text style={styles.sectionTitle}>{t('myRequests.chat')}</Text>
+              {messages.length === 0 ? <Text style={styles.noMsg}>{t('myRequests.noMessages')}</Text> : messages.map(msg => (
                 <View key={msg.id} style={[styles.msgBubble, msg.sender_type === 'operator' ? styles.opMsg : styles.userMsg]}>
-                  <Text style={styles.msgSender}>{msg.sender_name || (msg.sender_type === 'operator' ? 'Operator' : 'Citizen')}</Text>
+                  <Text style={styles.msgSender}>{msg.sender_name || (msg.sender_type === 'operator' ? t('auth.operator') : t('operator.citizen'))}</Text>
                   <Text style={[styles.msgText, msg.sender_type === 'operator' && { color: '#FFF' }]}>{msg.content}</Text>
                   <Text style={[styles.msgTime, msg.sender_type === 'operator' && { color: 'rgba(255,255,255,0.7)' }]}>{format(new Date(msg.created_at), 'HH:mm')}</Text>
                 </View>
               ))}
             </ScrollView>
             <View style={[styles.msgInputRow, { paddingBottom: insets.bottom || 16 }]}>
-              <TextInput style={styles.msgInput} value={newMessage} onChangeText={setNewMessage} placeholder="Reply..." placeholderTextColor="#C7C7CC" multiline />
+              <TextInput style={styles.msgInput} value={newMessage} onChangeText={setNewMessage} placeholder={t('operator.replyPlaceholder')} placeholderTextColor="#C7C7CC" multiline />
               <TouchableOpacity style={[styles.sendBtn, (!newMessage.trim() || isSending) && { opacity: 0.5 }]} onPress={sendMessage} disabled={!newMessage.trim() || isSending}>
                 <Ionicons name="send" size={20} color="#FFF" />
               </TouchableOpacity>
@@ -196,16 +217,33 @@ export default function OperatorDashboard() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F2F2F7' },
+  container: { flex: 1, backgroundColor: 'transparent' },
   centered: { justifyContent: 'center', alignItems: 'center' },
   header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
   headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#1C1C1E' },
   headerSub: { fontSize: 15, color: '#8E8E93', marginTop: 4 },
-  statsRow: { paddingHorizontal: 16, marginBottom: 12, flexGrow: 0 },
-  statCard: { backgroundColor: '#FFF', borderRadius: 12, padding: 12, marginRight: 10, minWidth: 80, alignItems: 'center' },
-  statCardActive: { backgroundColor: `${ORANGE}10`, borderWidth: 1, borderColor: ORANGE },
-  statNum: { fontSize: 20, fontWeight: 'bold' },
-  statLabel: { fontSize: 11, color: '#8E8E93', marginTop: 2 },
+  statsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'stretch',
+    paddingHorizontal: STATS_HORIZONTAL_PADDING,
+    marginBottom: 12,
+    gap: STATS_GAP,
+  },
+  statCard: {
+    minHeight: 68,
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statCardActive: { backgroundColor: `${ORANGE}10`, borderColor: ORANGE },
+  statNum: { fontSize: 18, lineHeight: 20, fontWeight: '700' },
+  statLabel: { marginTop: 4, fontSize: 10, lineHeight: 12, color: '#8E8E93', textAlign: 'center' },
   list: { paddingHorizontal: 16 },
   card: { backgroundColor: '#FFF', borderRadius: 14, marginBottom: 10, flexDirection: 'row', overflow: 'hidden' },
   cardStrip: { width: 4 },

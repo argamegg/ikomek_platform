@@ -1,116 +1,261 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useMemo } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
-import { NewsItem } from '../utils/api';
+import { useTranslation } from 'react-i18next';
+import type { NewsItem } from '../utils/api';
+import {
+  categoryKeyMap,
+  getBorderColor,
+  getNewsCategory,
+  getNewsPeriod,
+  getNewsTypeMeta,
+  getNewsTypes,
+  NEWS_CATEGORY_COLOR,
+  typeKeyMap,
+} from '../utils/newsMeta';
+import { getNewsCardSizes, useResponsive } from '../utils/responsive';
 
-const CATEGORY_CONFIG = {
-  critical: {
-    icon: 'alert-circle' as const,
-    color: '#FF3B30',
-    bgColor: 'rgba(255, 59, 48, 0.1)',
-    label: 'Critical'
-  },
-  warning: {
-    icon: 'warning' as const,
-    color: '#FF9500',
-    bgColor: 'rgba(255, 149, 0, 0.1)',
-    label: 'Warning'
-  },
-  info: {
-    icon: 'information-circle' as const,
-    color: '#007AFF',
-    bgColor: 'rgba(0, 122, 255, 0.1)',
-    label: 'Info'
-  }
-};
-
-interface NewsCardProps {
+type NewsCardProps = {
   news: NewsItem;
   onPress: () => void;
-}
-
-export const NewsCard = ({ news, onPress }: NewsCardProps) => {
-  const config = CATEGORY_CONFIG[news.category] || CATEGORY_CONFIG.info;
-
-  return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
-      <View style={[styles.indicator, { backgroundColor: config.color }]} />
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <View style={[styles.badge, { backgroundColor: config.bgColor }]}>
-            <Ionicons name={config.icon} size={14} color={config.color} />
-            <Text style={[styles.badgeText, { color: config.color }]}>{config.label}</Text>
-          </View>
-          <Text style={styles.date}>
-            {format(new Date(news.created_at), 'dd.MM.yyyy')}
-          </Text>
-        </View>
-        <Text style={styles.title} numberOfLines={2}>{news.title}</Text>
-        <Text style={styles.preview} numberOfLines={2}>{news.content}</Text>
-      </View>
-      <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
-    </TouchableOpacity>
-  );
 };
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    marginHorizontal: 16,
-    marginVertical: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3
-  },
-  indicator: {
-    width: 4,
-    height: '100%',
-    position: 'absolute',
-    left: 0
-  },
-  content: {
-    flex: 1,
-    padding: 16,
-    paddingLeft: 20
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    gap: 4
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '600'
-  },
-  date: {
-    fontSize: 12,
-    color: '#8E8E93'
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1C1C1E',
-    marginBottom: 4
-  },
-  preview: {
-    fontSize: 13,
-    color: '#8E8E93',
-    lineHeight: 18
+function getLocalizedText(item: NewsItem, field: 'title' | 'content', language: string) {
+  const normalized = language.startsWith('kz') || language.startsWith('kk')
+    ? 'kz'
+    : language.startsWith('ru')
+      ? 'ru'
+      : 'en';
+  const localizedField = normalized === 'en' ? field : `${field}_${normalized}`;
+  return String((item as Record<string, unknown>)[localizedField] ?? item[field] ?? '');
+}
+
+function formatDateLabel(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return 'Дата не указана';
   }
-});
+
+  return format(date, 'dd.MM.yyyy');
+}
+
+function formatPeriodLabel(start?: string, end?: string) {
+  if (!start) {
+    return '';
+  }
+
+  const startDate = new Date(start.endsWith('Z') ? start : `${start}Z`);
+  const endDate = end ? new Date(end.endsWith('Z') ? end : `${end}Z`) : null;
+
+  const formatCardPeriod = (value: Date) => {
+    const day = String(value.getUTCDate()).padStart(2, '0');
+    const month = String(value.getUTCMonth() + 1).padStart(2, '0');
+    const hours = String(value.getUTCHours()).padStart(2, '0');
+    const minutes = String(value.getUTCMinutes()).padStart(2, '0');
+    return `${day}.${month} ${hours}:${minutes}`;
+  };
+
+  const startLabel = Number.isNaN(startDate.getTime()) ? '' : formatCardPeriod(startDate);
+  const endLabel =
+    endDate && !Number.isNaN(endDate.getTime()) ? formatCardPeriod(endDate) : '';
+
+  if (!startLabel) {
+    return '';
+  }
+
+  return endLabel ? `${startLabel} - ${endLabel}` : startLabel;
+}
+
+export function NewsCard({ news, onPress }: NewsCardProps) {
+  const { t, i18n } = useTranslation();
+  const { isTablet } = useResponsive();
+  const sizes = useMemo(() => getNewsCardSizes(isTablet), [isTablet]);
+  const styles = useMemo(() => createStyles(sizes), [sizes]);
+  const types = useMemo(() => getNewsTypes(news), [news]);
+  const category = getNewsCategory(news);
+  const period = getNewsPeriod(news);
+  const title = getLocalizedText(news, 'title', i18n.language);
+  const content = getLocalizedText(news, 'content', i18n.language);
+  const formattedCreatedAt = formatDateLabel(news.created_at);
+  const periodLabel = formatPeriodLabel(period.start, period.end);
+  const borderColor = getBorderColor(period.start, period.end);
+
+  return (
+    <View style={styles.card}>
+      <View style={[styles.sideAccent, { backgroundColor: borderColor }]} />
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        scrollEventThrottle={16}
+        decelerationRate="fast"
+        snapToAlignment="start"
+        nestedScrollEnabled
+        contentContainerStyle={styles.typeScrollContent}
+      >
+        {types.map((type, index) => {
+          const meta = getNewsTypeMeta(type);
+          return (
+            <View key={`${news.id}-${type}-${index}`} style={styles.typeBlock}>
+              <View style={[styles.iconWrap, { backgroundColor: meta.color }]}>
+                <MaterialCommunityIcons name={meta.icon} size={sizes.iconSize} color="#FFFFFF" />
+              </View>
+              <View style={styles.typeBlockMeta}>
+                <Text style={[styles.typeLabel, { color: meta.color }]} numberOfLines={1}>
+                  {t(typeKeyMap[type] ?? type)}
+                </Text>
+                {index === 0 ? (
+                  <Text style={styles.dateLabel}>{formattedCreatedAt}</Text>
+                ) : null}
+              </View>
+            </View>
+          );
+        })}
+      </ScrollView>
+
+      <TouchableOpacity style={styles.contentPressArea} onPress={onPress} activeOpacity={0.92}>
+        <Text style={styles.title} numberOfLines={2}>
+          {title}
+        </Text>
+        <Text style={styles.preview} numberOfLines={3}>
+          {content}
+        </Text>
+
+        <View style={styles.footer}>
+          {periodLabel ? (
+            <View style={styles.footerItem}>
+              <MaterialCommunityIcons
+                name="clock-outline"
+                size={sizes.footerIconSize}
+                color="#7C8798"
+              />
+              <Text style={styles.footerText} numberOfLines={1}>
+                {periodLabel}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.footerSpacer} />
+          )}
+          <View style={styles.categoryChip}>
+            <Text style={styles.categoryChipText}>{t(categoryKeyMap[category] ?? category)}</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function createStyles(sizes: ReturnType<typeof getNewsCardSizes>) {
+  return StyleSheet.create({
+    card: {
+      position: 'relative',
+      backgroundColor: '#FFFFFF',
+      borderRadius: sizes.borderRadius,
+      paddingHorizontal: sizes.paddingHorizontal,
+      paddingVertical: sizes.paddingVertical,
+      gap: sizes.gap,
+      shadowColor: '#0F172A',
+      shadowOffset: { width: 0, height: sizes.shadowOffsetHeight },
+      shadowOpacity: 0.08,
+      shadowRadius: sizes.shadowRadius,
+      elevation: sizes.elevation,
+      overflow: 'hidden',
+    },
+    sideAccent: {
+      position: 'absolute',
+      left: 0,
+      top: sizes.sideAccentInset,
+      bottom: sizes.sideAccentInset,
+      width: sizes.sideAccentWidth,
+      borderTopRightRadius: 999,
+      borderBottomRightRadius: 999,
+    },
+    typeScrollContent: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: sizes.headerGap,
+      paddingRight: sizes.headerGap,
+    },
+    typeBlock: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: sizes.headerGap,
+      flexShrink: 0,
+      minWidth: 0,
+    },
+    iconWrap: {
+      width: sizes.iconWrapSize,
+      height: sizes.iconWrapSize,
+      borderRadius: sizes.iconWrapRadius,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#0F172A',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.12,
+      shadowRadius: 14,
+      elevation: 2,
+    },
+    typeBlockMeta: {
+      minWidth: 0,
+      gap: 4,
+    },
+    contentPressArea: {
+      gap: sizes.gap,
+    },
+    typeLabel: {
+      fontSize: sizes.typeLabelSize,
+      lineHeight: sizes.typeLabelLineHeight,
+      fontWeight: '800',
+    },
+    dateLabel: {
+      fontSize: sizes.dateLabelSize,
+      color: '#6B7280',
+      fontWeight: '600',
+    },
+    categoryChip: {
+      alignSelf: 'flex-start',
+      backgroundColor: NEWS_CATEGORY_COLOR,
+      borderRadius: 999,
+      paddingHorizontal: sizes.categoryChipHorizontal,
+      paddingVertical: sizes.categoryChipVertical,
+    },
+    categoryChipText: {
+      fontSize: sizes.categoryChipTextSize,
+      color: '#FFFFFF',
+      fontWeight: '700',
+    },
+    title: {
+      fontSize: sizes.titleSize,
+      lineHeight: sizes.titleLineHeight,
+      color: '#1F2937',
+      fontWeight: '800',
+    },
+    preview: {
+      fontSize: sizes.previewSize,
+      lineHeight: sizes.previewLineHeight,
+      color: '#4B5563',
+      fontWeight: '500',
+    },
+    footer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: sizes.footerGap,
+      paddingTop: 2,
+    },
+    footerItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      maxWidth: '100%',
+    },
+    footerSpacer: {
+      flex: 1,
+    },
+    footerText: {
+      fontSize: sizes.footerTextSize,
+      color: '#7C8798',
+      fontWeight: '600',
+    },
+  });
+}

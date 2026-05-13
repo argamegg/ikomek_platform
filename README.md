@@ -182,7 +182,6 @@ When the backend is running:
 ```bash
 curl -X POST http://localhost:8001/api/seed
 ```
-test commiit     112312
 
 ## Notes
 
@@ -199,7 +198,3 @@ test commiit     112312
 - [startup guide](/Users/argame/Documents/ikomek-project/docs/RUNNING.md)
 - [launcher script](/Users/argame/Documents/ikomek-project/scripts/start_system.py)
 
-## Updates
-- Minor UI improvements
-- Added debug logs
-- Improved styling

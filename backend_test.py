@@ -4,6 +4,7 @@ iKomek 109 Smart City Service App - Backend API Tests
 Tests all backend endpoints with proper authentication flow
 """
 
+import os
 import requests
 import json
 import uuid
@@ -12,7 +13,7 @@ import sys
 import traceback
 
 # Base URL from environment
-BASE_URL = "https://ikomek-astana.preview.emergentagent.com/api"
+BASE_URL = os.getenv("IKOMEK_API_URL", "http://localhost:8000/api")
 
 # Demo credentials
 DEMO_EMAIL = "demo@ikomek.kz"

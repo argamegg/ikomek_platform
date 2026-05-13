@@ -1,6 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
+import i18n from '../i18n';
 
 const API_URL = Constants.expoConfig?.extra?.backendUrl || process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
@@ -11,6 +12,13 @@ const api = axios.create({
     'Content-Type': 'application/json'
   }
 });
+
+function getCurrentLang(): string {
+  const lang = i18n.language;
+  if (lang.startsWith('kz') || lang === 'kk') return 'kk';
+  if (lang.startsWith('en')) return 'en';
+  return 'ru';
+}
 
 api.interceptors.request.use(
   async (config) => {
@@ -34,6 +42,23 @@ api.interceptors.response.use(
   }
 );
 
+export function getApiErrorMessage(error: unknown, fallbackMessage: string): string {
+  if (axios.isAxiosError(error)) {
+    const detail = error.response?.data?.detail;
+    const message = error.response?.data?.message;
+
+    if (typeof detail === 'string' && detail.trim()) {
+      return detail;
+    }
+
+    if (typeof message === 'string' && message.trim()) {
+      return message;
+    }
+  }
+
+  return fallbackMessage;
+}
+
 export interface Category {
   id: string;
   name: string;
@@ -55,6 +80,10 @@ export interface Request {
   problem_type: string;
   reason: string;
   description: string;
+  description_ru?: string;
+  description_kz?: string;
+  description_en?: string;
+  source_lang?: string;
   photos: string[];
   status: 'pending' | 'in_progress' | 'closed';
   priority?: string;
@@ -80,18 +109,66 @@ export interface SavedLocation {
   created_at: string;
 }
 
+export type NewsType =
+  | 'Аварийные работы'
+  | 'Погодные условия'
+  | 'Плановые работы'
+  | 'Дорожные ситуации'
+  | 'Управление образования'
+  | 'Мероприятия города';
+
+export type NewsCategory =
+  | 'Дороги'
+  | 'Коммунальные услуги'
+  | 'Транспорт'
+  | 'Образование'
+  | 'Погода'
+  | 'Благоустройство';
+
 export interface NewsItem {
   id: string;
   title: string;
   title_ru: string;
   title_kz: string;
+  title_en?: string;
   content: string;
   content_ru: string;
   content_kz: string;
-  category: 'critical' | 'warning' | 'info';
+  content_en?: string;
+  summary?: string;
+  summary_ru?: string;
+  summary_kz?: string;
+  summary_en?: string;
+  source_lang?: string;
+  translation_status?: 'translated' | 'failed' | 'skipped' | string;
+  category: NewsCategory | 'critical' | 'warning' | 'info' | string;
+  types?: NewsType[] | string[];
+  type?: NewsType | string;
   image?: string;
+  location?: string;
+  start_at?: string;
+  end_at?: string;
+  period_start?: string;
+  period_end?: string;
   created_at: string;
+  updated_at?: string;
   is_active: boolean;
+}
+
+export interface NewsListResponse {
+  news: NewsItem[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface NewsTranslationPreview {
+  source_lang: 'ru' | 'kk' | 'en';
+  translations: {
+    ru: { title: string; content: string; summary: string };
+    kk: { title: string; content: string; summary: string };
+    en: { title: string; content: string; summary: string };
+  };
 }
 
 export interface Message {
@@ -103,6 +180,17 @@ export interface Message {
   content: string;
   created_at: string;
   is_read: boolean;
+}
+
+export interface AIAssistantMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface AIAssistantResponse {
+  reply: string;
+  configured: boolean;
+  model: string;
 }
 
 export interface MapPoint {
@@ -146,15 +234,15 @@ export const apiService = {
     reason: string;
     description: string;
     photos?: string[];
-  }) => api.post<Request>('/requests', data),
-  getUserRequests: () => api.get<Request[]>('/requests'),
+  }) => api.post<Request>('/requests', { ...data, source_lang: getCurrentLang() }),
+  getUserRequests: () => api.get<Request[]>('/requests', { params: { lang: getCurrentLang() } }),
   getAllRequests: (params?: { category?: string; status?: string }) =>
-    api.get<Request[]>('/requests/all', { params }),
-  getRequest: (id: string) => api.get<Request>(`/requests/${id}`),
+    api.get<Request[]>('/requests/all', { params: { ...params, lang: getCurrentLang() } }),
+  getRequest: (id: string) => api.get<Request>(`/requests/${id}`, { params: { lang: getCurrentLang() } }),
 
   // Requests - Operator
   getOperatorRequests: (params?: { category?: string; status?: string; priority?: string; district?: string }) =>
-    api.get<Request[]>('/operator/requests', { params }),
+    api.get<Request[]>('/operator/requests', { params: { ...params, lang: getCurrentLang() } }),
   updateRequestOperator: (id: string, data: {
     status: string;
     resolution_notes?: string;
@@ -175,16 +263,60 @@ export const apiService = {
   sendMessage: (requestId: string, content: string) =>
     api.post<Message>(`/requests/${requestId}/messages`, { content }),
 
+  // AI Assistant
+  askAIAssistant: (data: { message: string; history: AIAssistantMessage[]; locale: string }) =>
+    api.post<AIAssistantResponse>('/ai/assistant', data),
+
   // News
-  getNews: (category?: string) => api.get<NewsItem[]>('/news', { params: { category } }),
-  getNewsItem: (id: string) => api.get<NewsItem>(`/news/${id}`),
+  getNews: (params?: {
+    lang?: string;
+    search?: string;
+    category?: string;
+    type?: string;
+    period?: string;
+    sort?: string;
+    page?: number;
+    limit?: number;
+  }) => {
+    const queryParams = {
+      lang: params?.lang || getCurrentLang(),
+      search: params?.search,
+      category: params?.category,
+      type: params?.type,
+      period: params?.period,
+      sort: params?.sort,
+      page: params?.page,
+      limit: params?.limit,
+    };
+    return api.get<NewsListResponse>('/news', { params: queryParams });
+  },
+  getNewsItem: (id: string) => api.get<NewsItem>(`/news/${id}`, { params: { lang: getCurrentLang() } }),
+  previewNewsTranslation: (data: { title: string; content: string; summary?: string }) =>
+    api.post<NewsTranslationPreview>('/admin/news/translate-preview', data),
 
   // Admin - News
   createNews: (data: {
-    title: string; title_ru: string; title_kz: string;
-    content: string; content_ru: string; content_kz: string;
-    category: string; image?: string;
-  }) => api.post<NewsItem>('/admin/news', data),
+    title: string; title_ru?: string; title_kz?: string; title_en?: string;
+    content: string; content_ru?: string; content_kz?: string; content_en?: string;
+    summary?: string; summary_ru?: string; summary_kz?: string; summary_en?: string;
+    category: string;
+    types: string[];
+    image?: string;
+    location?: string;
+    start_at?: string;
+    end_at?: string;
+    source_lang?: string;
+    translation_status?: string;
+    skip_translation?: boolean;
+  }) => {
+    const source_lang = getCurrentLang();
+    return api.post<NewsItem>('/admin/news', {
+      ...data,
+      source_lang: data.source_lang || source_lang,
+    });
+  },
+  updateNews: (id: string, data: Partial<NewsItem> & { skip_translation?: boolean }) =>
+    api.put<NewsItem>(`/admin/news/${id}`, data),
   deleteNews: (id: string) => api.delete(`/admin/news/${id}`),
 
   // Admin - Users

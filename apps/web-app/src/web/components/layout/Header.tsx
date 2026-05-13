@@ -1,14 +1,15 @@
-import { Globe2, Menu, Plus, Search, X } from "lucide-react";
+import { ChevronDown, Globe2, LogOut, Menu, UserRound, X } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import type { User } from "../../../types/platform";
+import { cn } from "../../lib/cn";
 import { session } from "../../lib/session";
 import { Button } from "../ui/Button";
-import { Input } from "../ui/Input";
 
 type HeaderProps = {
   currentUser: User | null;
-  onToggleSidebar: () => void;
+  isCompact: boolean;
   onToggleMobileSidebar: () => void;
   mobileSidebarOpen: boolean;
   onLogout: () => void;
@@ -16,19 +17,17 @@ type HeaderProps = {
 
 export function Header({
   currentUser,
-  onToggleSidebar,
+  isCompact,
   onToggleMobileSidebar,
   mobileSidebarOpen,
   onLogout,
 }: HeaderProps) {
   const { t, i18n } = useTranslation();
-  const isOperator = currentUser?.roles.includes("operator") ?? false;
-  const isAdmin = currentUser?.roles.includes("admin") ?? false;
-  const showCitizenActions = Boolean(currentUser) && !isOperator && !isAdmin;
-  const accountPath = isAdmin ? "/admin" : isOperator ? "/operator" : "/profile";
+  const userRoleLabel = currentUser ? t(`roles.${currentUser.primaryRole}`, currentUser.primaryRole) : "";
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   return (
-    <header className="topbar">
+    <header className={cn("topbar", isCompact && "topbar--compact")}>
       <div className="topbar__left">
         <Button
           type="button"
@@ -40,23 +39,6 @@ export function Header({
         >
           {mobileSidebarOpen ? <X size={18} /> : <Menu size={18} />}
         </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="topbar__menu topbar__menu--desktop"
-          onClick={onToggleSidebar}
-          aria-label="Collapse sidebar"
-        >
-          <Menu size={18} />
-        </Button>
-        <div className="topbar__search">
-          <Input
-            aria-label={t("common.search")}
-            placeholder={t("common.searchPlaceholder")}
-            icon={<Search size={16} />}
-          />
-        </div>
       </div>
       <div className="topbar__right">
         <label className="language-switcher">
@@ -76,31 +58,46 @@ export function Header({
           </select>
         </label>
         {currentUser ? (
-          <>
-            {showCitizenActions ? (
-              <Link to="/requests/new" className="topbar__cta">
-                <Button iconLeft={<Plus size={16} />}>{t("common.submitRequest")}</Button>
-              </Link>
+          <div className="topbar__profile-menu">
+            <button
+              type="button"
+              className="topbar__profile"
+              onClick={() => setProfileMenuOpen((value) => !value)}
+              aria-expanded={profileMenuOpen}
+              aria-label={t("shell.account")}
+            >
+              <span className="topbar__avatar">
+                {currentUser.name
+                  .split(" ")
+                  .map((part) => part[0])
+                  .join("")
+                  .slice(0, 2)}
+              </span>
+              <span className="topbar__profile-copy">
+                <strong>{currentUser.name}</strong>
+                <small>{userRoleLabel}</small>
+              </span>
+              <ChevronDown size={18} className={cn("topbar__profile-chevron", profileMenuOpen && "topbar__profile-chevron--open")} />
+            </button>
+            {profileMenuOpen ? (
+              <div className="topbar__profile-dropdown">
+                <Link to="/profile" onClick={() => setProfileMenuOpen(false)}>
+                  <UserRound size={16} />
+                  <span>{t("nav.profile")}</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProfileMenuOpen(false);
+                    onLogout();
+                  }}
+                >
+                  <LogOut size={16} />
+                  <span>{t("common.logout")}</span>
+                </button>
+              </div>
             ) : null}
-            <div className="topbar__account">
-              <Link to={accountPath} className="topbar__profile">
-                <span className="topbar__avatar">
-                  {currentUser.name
-                    .split(" ")
-                    .map((part) => part[0])
-                    .join("")
-                    .slice(0, 2)}
-                </span>
-                <span>
-                  <strong>{currentUser.name}</strong>
-                  <small>{currentUser.primaryRole}</small>
-                </span>
-              </Link>
-              <Button type="button" variant="ghost" size="sm" className="topbar__logout" onClick={onLogout}>
-                {t("common.logout")}
-              </Button>
-            </div>
-          </>
+          </div>
         ) : (
           <Link to="/auth" className="topbar__cta">
             <Button variant="secondary">{t("common.login")}</Button>

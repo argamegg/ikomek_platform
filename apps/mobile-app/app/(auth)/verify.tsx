@@ -191,7 +191,7 @@ export default function VerifyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF',
+    backgroundColor: 'transparent',
   },
   scrollContent: {
     flexGrow: 1,

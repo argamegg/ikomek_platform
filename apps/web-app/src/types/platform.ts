@@ -143,15 +143,58 @@ export type CivicRequest = {
 export type NewsItem = {
   id: string;
   title: string;
-  category: string;
-  priority: RequestPriority;
+  titleRu?: string;
+  titleKz?: string;
+  titleEn?: string;
+  category:
+    | "Дороги"
+    | "Коммунальные услуги"
+    | "Транспорт"
+    | "Образование"
+    | "Погода"
+    | "Благоустройство";
+  types: Array<
+    | "Аварийные работы"
+    | "Погодные условия"
+    | "Плановые работы"
+    | "Дорожные ситуации"
+    | "Управление образования"
+    | "Мероприятия города"
+  >;
+  priority?: RequestPriority;
   summary: string;
+  summaryRu?: string;
+  summaryKz?: string;
+  summaryEn?: string;
   body: string;
+  bodyRu?: string;
+  bodyKz?: string;
+  bodyEn?: string;
   location?: string;
+  sourceLang?: "ru" | "kk" | "en" | string;
+  translationStatus?: "translated" | "failed" | "skipped" | string;
   startAt: string;
   endAt?: string;
   imageUrl?: string;
   publishedAt?: string;
+  updatedAt?: string;
+  isActive?: boolean;
+};
+
+export type NewsListResponse = {
+  news: NewsItem[];
+  total: number;
+  page: number;
+  limit: number;
+};
+
+export type NewsTranslationPreview = {
+  sourceLang: "ru" | "kk" | "en";
+  translations: {
+    ru: { title: string; content: string; summary: string };
+    kk: { title: string; content: string; summary: string };
+    en: { title: string; content: string; summary: string };
+  };
 };
 
 export type NotificationItem = {
@@ -261,6 +304,23 @@ export type RequestMessageInput = {
   attachment?: File | null;
 };
 
+export type AIAssistantChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export type AIAssistantInput = {
+  message: string;
+  history: AIAssistantChatMessage[];
+  locale: Locale;
+};
+
+export type AIAssistantResponse = {
+  reply: string;
+  configured: boolean;
+  model: string;
+};
+
 export type UserProfileUpdateInput = {
   name: string;
   phone: string;
@@ -279,13 +339,25 @@ export type SavedLocationInput = {
 
 export type NewsCreateInput = {
   title: string;
-  category: string;
-  priority: RequestPriority;
+  category: NewsItem["category"];
+  types: NewsItem["types"];
   summary: string;
   body: string;
   location: string;
   startAt: string;
   endAt?: string;
+  titleRu?: string;
+  titleKz?: string;
+  titleEn?: string;
+  bodyRu?: string;
+  bodyKz?: string;
+  bodyEn?: string;
+  summaryRu?: string;
+  summaryKz?: string;
+  summaryEn?: string;
+  sourceLang?: "ru" | "kk" | "en";
+  translationStatus?: "translated" | "failed" | "skipped" | string;
+  skipTranslation?: boolean;
 };
 
 export type RouteConfig = {

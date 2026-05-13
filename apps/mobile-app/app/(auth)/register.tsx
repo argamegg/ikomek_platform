@@ -174,7 +174,7 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF'
+    backgroundColor: 'transparent'
   },
   scrollContent: {
     flexGrow: 1,
@@ -199,7 +199,8 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: '#8E8E93',
+    color: '#475569',
+    fontWeight: '500',
     textAlign: 'center'
   },
   form: {

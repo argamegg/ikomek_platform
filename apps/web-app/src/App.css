@@ -27,3 +27,50 @@
     opacity: 1;
   }
 }
+
+.splash-container {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  opacity: 1;
+  transition: opacity 300ms ease;
+}
+
+.splash-container--hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.splash-video {
+  width: 40%;
+  max-width: 400px;
+  min-width: 200px;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.splash-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 35%;
+  height: 3px;
+  background: #fb8c00;
+  animation: progress-indeterminate 1s infinite ease-in-out;
+  z-index: 10000;
+}
+
+@keyframes progress-indeterminate {
+  0% {
+    transform: translateX(-120%);
+  }
+
+  100% {
+    transform: translateX(320%);
+  }
+}

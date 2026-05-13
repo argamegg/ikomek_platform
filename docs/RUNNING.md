@@ -91,7 +91,9 @@ What it starts:
 
 - backend on `http://localhost:8001`
 - web app on `http://localhost:5173`
-- Expo mobile dev server in `apps/mobile-app`
+- interactive Expo mobile dev server in `apps/mobile-app`
+
+The mobile dev server prints the QR code directly in the terminal. You can scan it from a development build, or use Expo keyboard shortcuts such as `i` for iOS Simulator and `a` for Android Emulator.
 
 Useful options:
 
@@ -99,6 +101,7 @@ Useful options:
 python3 scripts/start_system.py --skip-mobile
 python3 scripts/start_system.py --skip-web
 python3 scripts/start_system.py --skip-backend
+python3 scripts/start_system.py --mobile-port 8082
 python3 scripts/start_system.py --dry-run
 ```
 

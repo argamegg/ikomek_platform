@@ -4,6 +4,7 @@ import type {
   District,
   Locale,
   NewsItem,
+  NewsListResponse,
   NotificationItem,
   PlatformMetrics,
   RequestAttachment,
@@ -18,7 +19,63 @@ import type {
   User,
   UserRole,
 } from "../../types/platform";
+import { getNewsCategory, getNewsTypes } from "./newsMeta";
 import { session } from "./session";
+
+export const typeKeyMap: Record<string, string> = {
+  "Аварийные работы": "news.types.emergency",
+  "Погодные условия": "news.types.weather",
+  "Плановые работы": "news.types.planned",
+  "Дорожные ситуации": "news.types.road",
+  "Управление образования": "news.types.education",
+  "Мероприятия города": "news.types.events",
+};
+
+export const categoryKeyMap: Record<string, string> = {
+  "Дороги": "news.categories.roads",
+  "Коммунальные услуги": "news.categories.utilities",
+  "Транспорт": "news.categories.transport",
+  "Образование": "news.categories.education",
+  "Погода": "news.categories.weather",
+  "Благоустройство": "news.categories.improvement",
+};
+
+function toUtcDate(dateStr: string) {
+  return new Date(dateStr.endsWith("Z") ? dateStr : `${dateStr}Z`);
+}
+
+export function formatNewsDate(dateStr: string): string {
+  if (!dateStr) {
+    return "—";
+  }
+
+  const date = toUtcDate(dateStr);
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const year = date.getUTCFullYear();
+  return `${day}.${month}.${year}`;
+}
+
+export function formatNewsPeriod(dateStr: string): string {
+  if (!dateStr) {
+    return "";
+  }
+
+  const date = toUtcDate(dateStr);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+  return `${day}.${month} ${hours}:${minutes}`;
+}
 
 type JsonRecord = Record<string, unknown>;
 
@@ -105,7 +162,7 @@ function localizedKeys(baseKey: string, locale: Locale) {
     return [`${baseKey}_kz`, `${baseKey}`];
   }
 
-  return [baseKey, `${baseKey}_ru`, `${baseKey}_kz`];
+  return [`${baseKey}_en`, baseKey, `${baseKey}_ru`, `${baseKey}_kz`];
 }
 
 export function unwrapPayload<T>(payload: unknown): T {
@@ -381,13 +438,45 @@ export function normalizeNews(payload: unknown): NewsItem {
     ]),
     "",
   );
-  const category = asString(pick(record, ["category", "type"]), "info");
-  const priority = normalizePriority(category);
+  const rawCategory = asString(pick(record, ["category", "news_category", "topic"]), "");
+  const rawTypes = pick(record, ["types", "type", "labels"]);
+  const types = getNewsTypes({
+    category: rawCategory || asString(pick(record, ["category", "type"]), "info"),
+    type: typeof rawTypes === "string" ? rawTypes : undefined,
+    types: Array.isArray(rawTypes) ? rawTypes : undefined,
+    priority: pick(record, ["priority", "severity", "type", "category"]),
+  });
+  const category = getNewsCategory({
+    category: rawCategory,
+    type: typeof rawTypes === "string" ? rawTypes : undefined,
+    types: Array.isArray(rawTypes) ? rawTypes : undefined,
+    priority: pick(record, ["priority", "severity", "type", "category"]),
+  });
+  const fallbackPriority =
+    types[0] === "Аварийные работы"
+      ? "critical"
+      : types[0] === "Плановые работы" || types[0] === "Дорожные ситуации"
+        ? "warning"
+        : "information";
+  const rawPriority = normalizePriority(pick(record, ["priority", "severity"]));
+  const priority =
+    rawPriority === "critical" ||
+    rawPriority === "warning" ||
+    rawPriority === "information" ||
+    rawPriority === "high" ||
+    rawPriority === "medium" ||
+    rawPriority === "low"
+      ? rawPriority
+      : fallbackPriority;
 
   return {
     id: asString(pick(record, ["id", "newsId", "uuid"]), crypto.randomUUID()),
     title: asString(pick(record, localizedKeys("title", locale)), "City update"),
+    titleRu: asString(pick(record, ["title_ru", "titleRu"])),
+    titleKz: asString(pick(record, ["title_kz", "titleKz"])),
+    titleEn: asString(pick(record, ["title_en", "titleEn"])),
     category,
+    types,
     priority,
     summary: asString(
       pick(record, [
@@ -397,8 +486,18 @@ export function normalizeNews(payload: unknown): NewsItem {
       ]),
       body.slice(0, 160),
     ),
+    summaryRu: asString(pick(record, ["summary_ru", "summaryRu"])),
+    summaryKz: asString(pick(record, ["summary_kz", "summaryKz"])),
+    summaryEn: asString(pick(record, ["summary_en", "summaryEn"])),
     body,
+    bodyRu: asString(pick(record, ["content_ru", "contentRu", "body_ru", "bodyRu"])),
+    bodyKz: asString(pick(record, ["content_kz", "contentKz", "body_kz", "bodyKz"])),
+    bodyEn: asString(pick(record, ["content_en", "contentEn", "body_en", "bodyEn"])),
     location: asString(pick(record, ["location", "district"])),
+    sourceLang: asString(pick(record, ["source_lang", "sourceLang"])),
+    translationStatus: asString(
+      pick(record, ["translation_status", "translationStatus"]),
+    ) as NewsItem["translationStatus"],
     startAt: asString(
       pick(record, ["startAt", "start_at", "publishedAt", "published_at", "created_at"]),
       new Date().toISOString(),
@@ -406,6 +505,21 @@ export function normalizeNews(payload: unknown): NewsItem {
     endAt: asString(pick(record, ["endAt", "end_at"])),
     imageUrl: asString(pick(record, ["imageUrl", "image_url", "cover", "image"])),
     publishedAt: asString(pick(record, ["publishedAt", "published_at", "created_at"])),
+    updatedAt: asString(pick(record, ["updatedAt", "updated_at"])),
+    isActive: asBoolean(pick(record, ["isActive", "is_active"]), true),
+  };
+}
+
+export function normalizeNewsListResponse(payload: unknown): NewsListResponse {
+  const record = isRecord(unwrapPayload<JsonRecord>(payload)) ? unwrapPayload<JsonRecord>(payload) : {};
+  const items = pick(record, ["news", "items"]);
+  const news = Array.isArray(items) ? items.map((item) => normalizeNews(item)) : normalizeList(payload, normalizeNews);
+
+  return {
+    news,
+    total: asNumber(pick(record, ["total"]), news.length),
+    page: asNumber(pick(record, ["page"]), 1),
+    limit: asNumber(pick(record, ["limit"]), news.length || 20),
   };
 }
 

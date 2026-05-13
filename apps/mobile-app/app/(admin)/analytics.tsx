@@ -4,13 +4,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { apiService, Analytics } from '../../src/utils/api';
+import { localizeCategory } from '../../src/utils/requestLocalization';
 
 const ORANGE = '#FF6B00';
-
-const CATEGORY_LABELS: Record<string, string> = {
-  electricity: 'Electricity', water: 'Water', heating: 'Heating',
-  public_order: 'Public Order', sewage: 'Sewage', waste: 'Waste', roads: 'Roads', other: 'Other'
-};
 const CATEGORY_COLORS: Record<string, string> = {
   electricity: '#FFB300', water: '#2196F3', heating: '#FF5722',
   public_order: '#4CAF50', sewage: '#607D8B', waste: '#795548', roads: '#9E9E9E'
@@ -42,36 +38,36 @@ export default function AnalyticsScreen() {
       <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 100 }]}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => { setIsRefreshing(true); fetchAnalytics(); }} tintColor={ORANGE} />}>
         <Text style={styles.headerTitle} data-testid="admin-analytics-title">{t('admin.analytics')}</Text>
-        <Text style={styles.headerSub}>System overview</Text>
+        <Text style={styles.headerSub}>{t('admin.systemOverview')}</Text>
 
         {/* Request Stats */}
         <View style={styles.statsGrid}>
           <View style={[styles.statBox, { borderLeftColor: ORANGE }]}>
             <Text style={[styles.statNum, { color: ORANGE }]}>{data.requests.total}</Text>
-            <Text style={styles.statLabel}>Total Requests</Text>
+            <Text style={styles.statLabel}>{t('admin.totalRequests')}</Text>
           </View>
           <View style={[styles.statBox, { borderLeftColor: '#FF9500' }]}>
             <Text style={[styles.statNum, { color: '#FF9500' }]}>{data.requests.pending}</Text>
-            <Text style={styles.statLabel}>Pending</Text>
+            <Text style={styles.statLabel}>{t('status.pending')}</Text>
           </View>
           <View style={[styles.statBox, { borderLeftColor: '#007AFF' }]}>
             <Text style={[styles.statNum, { color: '#007AFF' }]}>{data.requests.in_progress}</Text>
-            <Text style={styles.statLabel}>In Progress</Text>
+            <Text style={styles.statLabel}>{t('status.inProgress')}</Text>
           </View>
           <View style={[styles.statBox, { borderLeftColor: '#34C759' }]}>
             <Text style={[styles.statNum, { color: '#34C759' }]}>{data.requests.closed}</Text>
-            <Text style={styles.statLabel}>Closed</Text>
+            <Text style={styles.statLabel}>{t('status.closed')}</Text>
           </View>
         </View>
 
         {/* Category Breakdown */}
-        <Text style={styles.sectionTitle}>By Category</Text>
+        <Text style={styles.sectionTitle}>{t('admin.byCategory')}</Text>
         <View style={styles.categorySection}>
           {Object.entries(data.categories).map(([key, count]) => (
             <View key={key} style={styles.catRow}>
               <View style={styles.catInfo}>
                 <View style={[styles.catDot, { backgroundColor: CATEGORY_COLORS[key] || '#9E9E9E' }]} />
-                <Text style={styles.catName}>{CATEGORY_LABELS[key] || key}</Text>
+                <Text style={styles.catName}>{localizeCategory(key, t)}</Text>
               </View>
               <View style={styles.catBarBg}>
                 <View style={[styles.catBar, { width: `${(count / maxCat) * 100}%`, backgroundColor: CATEGORY_COLORS[key] || '#9E9E9E' }]} />
@@ -82,27 +78,27 @@ export default function AnalyticsScreen() {
         </View>
 
         {/* User Stats */}
-        <Text style={styles.sectionTitle}>Users</Text>
+        <Text style={styles.sectionTitle}>{t('admin.users')}</Text>
         <View style={styles.userStats}>
           <View style={styles.userStat}>
             <Ionicons name="people" size={24} color={ORANGE} />
             <Text style={styles.userStatNum}>{data.users.total}</Text>
-            <Text style={styles.userStatLabel}>Total</Text>
+            <Text style={styles.userStatLabel}>{t('admin.total')}</Text>
           </View>
           <View style={styles.userStat}>
             <Ionicons name="person" size={24} color="#34C759" />
             <Text style={styles.userStatNum}>{data.users.citizens}</Text>
-            <Text style={styles.userStatLabel}>Citizens</Text>
+            <Text style={styles.userStatLabel}>{t('admin.citizens')}</Text>
           </View>
           <View style={styles.userStat}>
             <Ionicons name="headset" size={24} color="#007AFF" />
             <Text style={styles.userStatNum}>{data.users.operators}</Text>
-            <Text style={styles.userStatLabel}>Operators</Text>
+            <Text style={styles.userStatLabel}>{t('admin.operators')}</Text>
           </View>
           <View style={styles.userStat}>
             <Ionicons name="shield" size={24} color="#FF3B30" />
             <Text style={styles.userStatNum}>{data.users.admins}</Text>
-            <Text style={styles.userStatLabel}>Admins</Text>
+            <Text style={styles.userStatLabel}>{t('admin.admins')}</Text>
           </View>
         </View>
       </ScrollView>
@@ -111,7 +107,7 @@ export default function AnalyticsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F2F2F7' },
+  container: { flex: 1, backgroundColor: 'transparent' },
   centered: { justifyContent: 'center', alignItems: 'center' },
   scroll: { padding: 16 },
   headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#1C1C1E' },

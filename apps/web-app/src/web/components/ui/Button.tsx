@@ -28,7 +28,6 @@ export function Button({
 }: ButtonProps) {
   return (
     <motion.span
-      className={cn("ui-button-wrap", fullWidth && "ui-button-wrap--full")}
       whileHover={{ y: -1 }}
       whileTap={{ scale: 0.98 }}
       transition={{ duration: 0.18 }}

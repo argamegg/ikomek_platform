@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../src/context/AuthContext';
 import { apiService, SavedLocation } from '../../src/utils/api';
+import { AIAssistantHeaderButton } from '../../src/components/AIAssistantWidget';
 
 const ORANGE = '#FF6B00';
 
@@ -112,8 +113,8 @@ export default function ProfileScreen() {
   };
 
   const getRoleBadge = () => {
-    if (isAdmin) return { label: 'Admin', color: '#FF3B30' };
-    if (isOperator) return { label: 'Operator', color: '#007AFF' };
+    if (isAdmin) return { label: t('roles.admin'), color: '#FF3B30' };
+    if (isOperator) return { label: t('roles.operator'), color: '#007AFF' };
     return null;
   };
 
@@ -125,6 +126,7 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>{t('profile.title')}</Text>
+          <AIAssistantHeaderButton />
         </View>
 
         {/* Profile Card */}
@@ -201,7 +203,7 @@ export default function ProfileScreen() {
 
         {/* Settings */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('profile.settings')}</Text>
+          <Text style={[styles.sectionTitle, styles.sectionTitleStandalone]}>{t('profile.settings')}</Text>
           
           <TouchableOpacity style={styles.settingItem}>
             <View style={[styles.settingIcon, { backgroundColor: '#007AFF20' }]}>
@@ -246,7 +248,7 @@ export default function ProfileScreen() {
           <Text style={styles.logoutText}>{t('profile.logout')}</Text>
         </TouchableOpacity>
 
-        <Text style={styles.version}>iKomek 109 v2.0.0</Text>
+        <Text style={styles.version}>iKomek 109 v1.0.0</Text>
       </ScrollView>
 
       {/* Edit Profile Modal */}
@@ -334,12 +336,15 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F7'
+    backgroundColor: 'transparent'
   },
   scrollContent: {
     padding: 16
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingVertical: 8,
     marginBottom: 8
   },
@@ -422,9 +427,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#8E8E93',
+    color: '#475569',
     textTransform: 'uppercase',
     letterSpacing: 0.5
+  },
+  sectionTitleStandalone: {
+    marginBottom: 12
   },
   emptyLocations: {
     backgroundColor: '#FFF',
@@ -523,7 +531,7 @@ const styles = StyleSheet.create({
   version: {
     textAlign: 'center',
     fontSize: 13,
-    color: '#C7C7CC',
+    color: '#8E8E93',
     marginTop: 24
   },
   modalContainer: {

@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import os
 import shutil
+import socket
 import subprocess
 import sys
 import threading
@@ -53,6 +54,7 @@ class ServiceSpec:
     cwd: Path
     command: list[str]
     extra_env: dict[str, str]
+    interactive: bool = False
 
 
 def stream_output(name: str, pipe) -> None:
@@ -64,7 +66,25 @@ def stream_output(name: str, pipe) -> None:
     finally:
         pipe.close()
 
+def is_port_available(port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        return sock.connect_ex(("127.0.0.1", port)) != 0
 
+
+def find_available_port(preferred_port: int, *, dry_run: bool) -> int:
+    if dry_run:
+        return preferred_port
+
+    port = preferred_port
+    while port < preferred_port + 20:
+        if is_port_available(port):
+            return port
+        port += 1
+
+    raise RuntimeError(f"No available mobile dev server port found near {preferred_port}.")
+
+
+# Build the list of services to start based on CLI arguments
 def build_service_specs(args: argparse.Namespace) -> list[ServiceSpec]:
     specs: list[ServiceSpec] = []
 
@@ -108,12 +128,25 @@ def build_service_specs(args: argparse.Namespace) -> list[ServiceSpec]:
         )
 
     if not args.skip_mobile:
+        mobile_port = find_available_port(args.mobile_port, dry_run=args.dry_run)
+        if mobile_port != args.mobile_port:
+            print(f"[system] Mobile port {args.mobile_port} is busy. Using port {mobile_port} instead.")
+
         specs.append(
             ServiceSpec(
                 name="mobile",
                 cwd=MOBILE_DIR,
-                command=[npm_executable(), "run", "start"],
+                command=[
+                    npm_executable(),
+                    "run",
+                    "start",
+                    "--",
+                    "--dev-client",
+                    "--port",
+                    str(mobile_port),
+                ],
                 extra_env={"EXPO_NO_TELEMETRY": "1"},
+                interactive=True,
             )
         )
 
@@ -128,7 +161,7 @@ def validate_layout(specs: list[ServiceSpec]) -> None:
     if missing:
         raise RuntimeError(f"Missing application directories: {', '.join(missing)}")
 
-
+# Parse CLI arguments for system startup xddd
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Start the iKOMEK backend, web app, and mobile app from one command."
@@ -138,6 +171,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--skip-mobile", action="store_true", help="Do not start the mobile frontend.")
     parser.add_argument("--backend-port", type=int, default=8001, help="Backend port.")
     parser.add_argument("--web-port", type=int, default=5173, help="Web app port.")
+    parser.add_argument("--mobile-port", type=int, default=8081, help="Preferred Expo dev server port.")
     parser.add_argument("--dry-run", action="store_true", help="Print commands without starting them.")
     return parser.parse_args()
 
@@ -180,7 +214,7 @@ def main() -> int:
     if not args.skip_web:
         print(f"Web URL: http://localhost:{args.web_port}")
     if not args.skip_mobile:
-        print("Mobile: Expo dev server will print its own connection details.")
+        print("Mobile: Expo dev server is interactive. Scan the QR code or press i/a for simulator/device launch.")
     print("")
 
     processes: list[subprocess.Popen[str]] = []
@@ -188,6 +222,11 @@ def main() -> int:
         for spec in specs:
             env = os.environ.copy()
             env.update(spec.extra_env)
+            if spec.interactive:
+                process = subprocess.Popen(spec.command, cwd=spec.cwd, env=env)
+                processes.append(process)
+                continue
+
             process = subprocess.Popen(
                 spec.command,
                 cwd=spec.cwd,
@@ -223,3 +262,6 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+if False:
+    print("unreachable")
