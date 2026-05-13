@@ -885,6 +885,16 @@ button {
   -webkit-tap-highlight-color: transparent;
 }
 
+.ui-button > span {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.15;
+}
+
 .ui-button--full {
   width: 100%;
 }
@@ -4012,10 +4022,23 @@ button {
     left: 0;
     z-index: 60;
     width: min(86vw, 320px) !important;
-    height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
+    gap: 20px;
+    padding: 20px 16px 18px;
+    background: #ffffff;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
     transform: translateX(calc(-100% - 24px));
     opacity: 0;
     pointer-events: none;
+  }
+
+  .sidebar:not(.sidebar--collapsed) {
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   .sidebar--mobile-open {
@@ -4024,8 +4047,44 @@ button {
     pointer-events: auto;
   }
 
+  .sidebar--compact .sidebar__brand {
+    min-height: 64px;
+    padding: 8px 58px 8px 8px;
+  }
+
+  .sidebar--compact .sidebar__nav {
+    flex: 0 0 auto;
+    gap: 14px;
+    padding-bottom: 4px;
+  }
+
+  .sidebar--compact .sidebar__section {
+    gap: 7px;
+  }
+
+  .sidebar--compact .sidebar__link {
+    min-height: 48px;
+    padding: 12px 14px;
+    border-radius: 14px;
+  }
+
+  .sidebar--compact .sidebar__footer {
+    flex: 0 0 auto;
+    margin-top: auto;
+    padding-bottom: 0;
+  }
+
   .ui-button.topbar__menu--mobile {
     display: inline-flex;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.06);
+    color: var(--text);
+    transform: translateY(2px);
   }
 
   .ui-button.topbar__menu--desktop {
@@ -4043,6 +4102,11 @@ button {
 
   .topbar__left {
     grid-area: left;
+    align-self: center;
+  }
+
+  .topbar--mobile-menu-open {
+    pointer-events: none;
   }
 
   .topbar__search {
@@ -4060,6 +4124,36 @@ button {
 
   .topbar__search .field__control {
     min-height: 48px;
+  }
+
+  .topbar__menu--mobile svg {
+    width: 20px;
+    height: 20px;
+    stroke-width: 2.3;
+  }
+
+  .ui-button.topbar__menu--mobile.topbar__menu--hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .sidebar__collapse-button--mobile {
+    display: grid;
+    top: 30px;
+    right: 18px;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.055);
+    color: var(--text);
+  }
+
+  .sidebar__collapse-button--mobile svg {
+    display: block;
+    width: 20px;
+    height: 20px;
+    stroke-width: 2.25;
   }
 
   .page-header,
@@ -4452,8 +4546,32 @@ button {
     border-radius: 18px;
   }
 
-  .request-row {
+  .request-row,
+  .news-stack__item {
     flex-direction: column;
+  }
+
+  .news-stack {
+    max-height: min(620px, 72dvh);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 2px;
+    scrollbar-width: thin;
+  }
+
+  .news-stack__item {
+    align-items: stretch;
+  }
+
+  .news-stack__item .ui-badge {
+    align-self: flex-start;
+  }
+
+  .news-stack__item strong,
+  .news-stack__item p,
+  .news-stack__item span {
+    max-width: 100%;
+    overflow-wrap: anywhere;
   }
 
   .request-row__meta {
@@ -5169,6 +5287,54 @@ button {
   .topbar {
     top: 8px;
     padding-block: 8px;
+  }
+
+  .sidebar--compact {
+    gap: 12px;
+    padding: 12px 12px 14px;
+  }
+
+  .sidebar--compact .sidebar__brand {
+    min-height: 52px;
+    padding: 4px 50px 4px 6px;
+  }
+
+  .sidebar--compact .sidebar__brand-mark,
+  .sidebar--compact .sidebar__brand-mark img {
+    width: 44px;
+    height: 44px;
+  }
+
+  .sidebar--compact .sidebar__brand-copy strong {
+    font-size: 0.94rem;
+  }
+
+  .sidebar--compact .sidebar__brand span {
+    font-size: 0.78rem;
+  }
+
+  .sidebar--compact .sidebar__collapse-button--mobile {
+    top: 17px;
+    right: 14px;
+    width: 38px;
+    height: 38px;
+  }
+
+  .sidebar--compact .sidebar__nav {
+    gap: 10px;
+  }
+
+  .sidebar--compact .sidebar__section-title {
+    font-size: 10px;
+  }
+
+  .sidebar--compact .sidebar__link {
+    min-height: 42px;
+    padding-block: 9px;
+  }
+
+  .sidebar--compact .sidebar__footer {
+    gap: 8px;
   }
 
   .page-shell {
