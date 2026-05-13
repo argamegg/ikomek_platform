@@ -137,10 +137,18 @@ class AIAssistantRequest(BaseModel):
     history: List[AIAssistantMessage] = []
     locale: Optional[str] = "ru"
 
+class AIAssistantAction(BaseModel):
+    type: str = "navigate"
+    label: str
+    web_path: Optional[str] = None
+    mobile_path: Optional[str] = None
+    request_id: Optional[str] = None
+
 class AIAssistantResponse(BaseModel):
     reply: str
     configured: bool
     model: str
+    actions: List[AIAssistantAction] = []
 
 class NewsItem(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))

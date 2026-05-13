@@ -17,10 +17,10 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { usePathname } from 'expo-router';
+import { type Href, usePathname, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { apiService, AIAssistantMessage, getApiErrorMessage } from '../utils/api';
+import { apiService, AIAssistantAction, AIAssistantMessage, getApiErrorMessage } from '../utils/api';
 
 const ORANGE = '#FF6B00';
 const ASSISTANT_ROUTES = new Set(['/', '/map', '/requests']);
@@ -95,6 +95,7 @@ export function AIAssistantHeaderButton({ style }: { style?: StyleProp<ViewStyle
 
 export function AIAssistantProvider({ children }: { children: React.ReactNode }) {
   const { i18n } = useTranslation();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const locale = getLocale(i18n.language);
@@ -172,7 +173,10 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
         locale,
       });
       setConfigured(response.data.configured);
-      setMessages((current) => [...current, { role: 'assistant', content: response.data.reply }]);
+      setMessages((current) => [
+        ...current,
+        { role: 'assistant', content: response.data.reply, actions: response.data.actions ?? [] },
+      ]);
     } catch (error) {
       setMessages((current) => [
         ...current,
@@ -184,6 +188,13 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
     } finally {
       setIsSending(false);
     }
+  };
+
+  const handleActionPress = (action: AIAssistantAction) => {
+    const path = action.mobile_path;
+    if (!path) return;
+    router.push(path as Href);
+    closeAssistant();
   };
 
   return (
@@ -239,6 +250,21 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
                     ]}
                   >
                     <Text style={styles.messageText}>{message.content}</Text>
+                    {message.actions?.length ? (
+                      <View style={styles.actionsRow}>
+                        {message.actions.map((action, actionIndex) => (
+                          <TouchableOpacity
+                            key={`${action.label}-${actionIndex}`}
+                            activeOpacity={0.82}
+                            disabled={!action.mobile_path}
+                            style={[styles.actionButton, !action.mobile_path && styles.actionButtonDisabled]}
+                            onPress={() => handleActionPress(action)}
+                          >
+                            <Text style={styles.actionButtonText}>{action.label}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    ) : null}
                   </View>
                 ))}
                 {isSending ? (
@@ -378,6 +404,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: '#0F172A',
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 10,
+  },
+  actionButton: {
+    minHeight: 32,
+    justifyContent: 'center',
+    paddingHorizontal: 11,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(37,99,235,0.22)',
+    backgroundColor: 'rgba(255,255,255,0.78)',
+  },
+  actionButtonDisabled: {
+    opacity: 0.45,
+  },
+  actionButtonText: {
+    color: '#1D4ED8',
+    fontSize: 12,
+    fontWeight: '700',
   },
   loadingMessage: {
     width: 48,
