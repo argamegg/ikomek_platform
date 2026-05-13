@@ -5054,11 +5054,11 @@ button {
     left: 16px;
     width: auto;
     padding: 12px 14px;
-    border: 1px solid var(--border);
-    border-radius: 22px;
-    background: rgba(255, 255, 255, 0.88);
-    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
-    backdrop-filter: blur(16px);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
   }
 
   .page-shell {
