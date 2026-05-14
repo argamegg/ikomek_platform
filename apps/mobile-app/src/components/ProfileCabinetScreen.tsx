@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { isAxiosError } from 'axios';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -120,7 +121,7 @@ function getStatusColor(status: Request['status']) {
 
 export function ProfileCabinetScreen() {
   const { t, i18n } = useTranslation();
-  const { user, isAdmin, isOperator } = useAuth();
+  const { user, token, isLoading: isAuthLoading, isAdmin, isOperator } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [citizenRequests, setCitizenRequests] = useState<Request[]>([]);
@@ -130,6 +131,25 @@ export function ProfileCabinetScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const loadData = useCallback(async () => {
+    if (isAuthLoading) {
+      return;
+    }
+
+    if (!token || !user) {
+      setCitizenRequests([]);
+      setOperatorStats(null);
+      setAdminStats(null);
+      setIsLoading(false);
+      setIsRefreshing(false);
+      return;
+    }
+
+    const endpoint = isAdmin
+      ? '/admin/platform-stats'
+      : isOperator
+        ? '/operator/my-stats'
+        : '/requests';
+
     try {
       if (isAdmin) {
         const response = await apiService.getAdminPlatformStats();
@@ -142,12 +162,26 @@ export function ProfileCabinetScreen() {
         setCitizenRequests(response.data);
       }
     } catch (error) {
-      console.error('Profile stats load error:', error);
+      const status = isAxiosError(error) ? error.response?.status : undefined;
+      console.log('Profile stats unavailable:', {
+        endpoint,
+        status,
+        role: user.role,
+        hasToken: Boolean(token),
+      });
+
+      if (isAdmin) {
+        setAdminStats(null);
+      } else if (isOperator) {
+        setOperatorStats(null);
+      } else {
+        setCitizenRequests([]);
+      }
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [isAdmin, isOperator]);
+  }, [isAdmin, isAuthLoading, isOperator, token, user]);
 
   useEffect(() => {
     void loadData();
