@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   listModeSurface: { backgroundColor: '#FFF' },
   mapLoading: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.9)', justifyContent: 'center', alignItems: 'center' },
   mapLoadingText: { marginTop: 8, fontSize: 14, color: '#8E8E93' },
-  legend: { position: 'absolute', left: 12, right: 12, bottom: 14, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 18, backgroundColor: 'rgba(255, 255, 255, 0.86)', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.05)', shadowColor: '#0F172A', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.06, shadowRadius: 18, elevation: 4 },
+  legend: { position: 'absolute', left: 12, right: 12, top: 14, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 18, backgroundColor: 'rgba(255, 255, 255, 0.86)', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.05)', shadowColor: '#0F172A', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.06, shadowRadius: 18, elevation: 4 },
   legendCompact: { gap: 8, paddingHorizontal: 10, paddingVertical: 8 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6, marginRight: 4 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
