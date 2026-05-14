@@ -2464,7 +2464,7 @@ button {
   position: fixed;
   right: 24px;
   bottom: 24px;
-  z-index: 80;
+  z-index: 1000;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -2483,27 +2483,71 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  width: 72px;
+  position: relative;
+  width: 56px;
   height: 56px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #0f172a, #2563eb);
-  color: #ffffff;
-  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.24);
+  border: 2px solid var(--primary);
+  border-radius: 50%;
+  background: #ffffff;
+  color: var(--primary);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   font-weight: 800;
   pointer-events: auto;
+  transition: all 0.2s ease;
+  animation: pulse-ring 2.5s ease-out infinite;
+}
+
+.ai-assistant__toggle:hover {
+  background: var(--primary);
+  color: #ffffff;
+  transform: scale(1.08);
+}
+
+.ai-assistant__toggle--open {
+  animation: none;
+}
+
+.ai-assistant__toggle-icon {
+  position: absolute;
+  inset: auto;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.ai-assistant__toggle-icon--close,
+.ai-assistant__toggle--open .ai-assistant__toggle-icon--message {
+  opacity: 0;
+  transform: scale(0.72) rotate(-14deg);
+}
+
+.ai-assistant__toggle--open .ai-assistant__toggle-icon--close {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 0 0 0 rgba(255, 107, 0, 0.4);
+  }
+  70% {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 0 0 10px rgba(255, 107, 0, 0);
+  }
+  100% {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 0 0 0 rgba(255, 107, 0, 0);
+  }
 }
 
 .ai-assistant__panel {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  width: min(390px, calc(100vw - 32px));
-  height: min(560px, calc(100vh - 112px));
+  width: min(360px, calc(100vw - 32px));
+  min-height: 200px;
+  max-height: min(520px, calc(100vh - 112px));
+  height: min(520px, calc(100vh - 112px));
   overflow: hidden;
-  border: 1px solid var(--border-strong);
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: var(--shadow-lg);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
   pointer-events: auto;
 }
 
@@ -2512,8 +2556,10 @@ button {
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  padding: 14px;
-  border-bottom: 1px solid var(--border);
+  padding: 16px;
+  border-bottom: 0;
+  background: linear-gradient(135deg, #ff7a1a, #ff4f00);
+  color: #ffffff;
 }
 
 .ai-assistant__avatar {
@@ -2521,9 +2567,9 @@ button {
   width: 42px;
   height: 42px;
   place-items: center;
-  border-radius: 14px;
-  background: linear-gradient(135deg, rgba(255, 107, 0, 0.16), rgba(37, 99, 235, 0.16));
-  color: var(--primary-strong);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
 }
 
 .ai-assistant__header strong,
@@ -2535,7 +2581,7 @@ button {
 }
 
 .ai-assistant__header small {
-  color: var(--text-faint);
+  color: rgba(255, 255, 255, 0.82);
   font-size: 0.78rem;
 }
 
@@ -2544,9 +2590,15 @@ button {
   width: 36px;
   height: 36px;
   place-items: center;
-  border-radius: 12px;
-  background: rgba(15, 23, 42, 0.06);
-  color: var(--text-soft);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+
+.ai-assistant__header button:hover {
+  background: rgba(255, 255, 255, 0.26);
+  transform: scale(1.04);
 }
 
 .ai-assistant__messages {
@@ -4864,15 +4916,15 @@ button {
   }
 
   .ai-assistant__toggle {
-    width: 64px;
-    height: 52px;
-    border-radius: 16px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
   }
 
   .ai-assistant__panel {
     width: calc(100vw - 32px);
-    height: min(540px, calc(100vh - 96px));
-    border-radius: 22px;
+    height: min(520px, calc(100vh - 96px));
+    border-radius: 20px;
   }
 
   .home-hero,

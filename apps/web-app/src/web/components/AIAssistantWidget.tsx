@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { Bot, LoaderCircle, MessageCircle, Send, X } from "lucide-react";
+import { LoaderCircle, MessageCircle, Send, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
@@ -142,11 +143,20 @@ export function AIAssistantWidget() {
 
   return (
     <div className="ai-assistant">
-      {open ? (
-        <section className="ai-assistant__panel" aria-label={copy.title}>
+      <AnimatePresence>
+        {open ? (
+          <motion.section
+            className="ai-assistant__panel"
+            aria-label={copy.title}
+            initial={{ opacity: 0, scale: 0.85, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.85, y: 16 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            style={{ transformOrigin: "bottom right" }}
+          >
           <header className="ai-assistant__header">
             <span className="ai-assistant__avatar">
-              <Bot size={20} />
+              <MessageCircle size={20} />
             </span>
             <span>
               <strong>{copy.title}</strong>
@@ -197,17 +207,18 @@ export function AIAssistantWidget() {
               <Send size={17} />
             </button>
           </form>
-        </section>
-      ) : null}
+          </motion.section>
+        ) : null}
+      </AnimatePresence>
       <button
         type="button"
-        className="ai-assistant__toggle"
+        className={`ai-assistant__toggle${open ? " ai-assistant__toggle--open" : ""}`}
         onClick={() => setOpen((value) => !value)}
         aria-label={copy.label}
         title={copy.label}
       >
-        <MessageCircle size={22} />
-        <span>109</span>
+        <MessageCircle className="ai-assistant__toggle-icon ai-assistant__toggle-icon--message" size={24} />
+        <X className="ai-assistant__toggle-icon ai-assistant__toggle-icon--close" size={24} />
       </button>
     </div>
   );
