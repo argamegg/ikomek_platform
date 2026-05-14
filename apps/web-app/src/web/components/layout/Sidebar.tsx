@@ -79,6 +79,13 @@ export function Sidebar({
     });
   }
 
+  if (currentUser && (isOperator || isAdmin)) {
+    sections.push({
+      title: t("nav.sections.personal"),
+      items: [{ to: "/profile", label: t("nav.cabinet"), icon: UserRound }],
+    });
+  }
+
   if (currentUser && isOperator && !isAdmin) {
     sections.push({
       title: t("nav.sections.workplace"),

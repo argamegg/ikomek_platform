@@ -1,4 +1,7 @@
 {
+  "nav": {
+    "cabinet": "My Cabinet"
+  },
   "navigation": [
     "Home",
     "Authentication",

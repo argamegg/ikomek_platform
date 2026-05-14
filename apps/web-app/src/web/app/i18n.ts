@@ -46,6 +46,7 @@ const resources = {
       },
       nav: {
         home: "Home",
+        cabinet: "My Cabinet",
         dashboard: "Resident dashboard",
         requests: "My requests",
         newRequest: "Submit issue",
@@ -895,6 +896,7 @@ const resources = {
       },
       nav: {
         home: "Главная",
+        cabinet: "Мой кабинет",
         dashboard: "Кабинет жителя",
         requests: "Мои заявки",
         newRequest: "Подать проблему",
@@ -1748,6 +1750,7 @@ const resources = {
       },
       nav: {
         home: "Басты бет",
+        cabinet: "Менің кабинетім",
         dashboard: "Тұрғын кабинеті",
         requests: "Менің өтінімдерім",
         newRequest: "Мәселе жіберу",
