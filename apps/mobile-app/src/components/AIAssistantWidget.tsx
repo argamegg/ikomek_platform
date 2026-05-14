@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { type Href, usePathname, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../context/AuthContext';
 import { apiService, AIAssistantAction, AIAssistantMessage, getApiErrorMessage } from '../utils/api';
 
 const ORANGE = '#FF6B00';
@@ -75,8 +76,9 @@ export function useAIAssistant() {
 export function AIAssistantHeaderButton({ style }: { style?: StyleProp<ViewStyle> }) {
   const { openAssistant } = useAIAssistant();
   const pathname = usePathname();
+  const { user } = useAuth();
 
-  if (!ASSISTANT_ROUTES.has(pathname)) {
+  if (user?.role !== 'citizen' || !ASSISTANT_ROUTES.has(pathname)) {
     return null;
   }
 
@@ -95,7 +97,9 @@ export function AIAssistantHeaderButton({ style }: { style?: StyleProp<ViewStyle
 
 export function AIAssistantProvider({ children }: { children: React.ReactNode }) {
   const { i18n } = useTranslation();
+  const { user } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const locale = getLocale(i18n.language);
@@ -120,6 +124,8 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
     inputRange: [0, 1],
     outputRange: [-panelHeight / 2, 0],
   });
+  const isCitizen = user?.role === 'citizen';
+  const showAssistant = isCitizen && ASSISTANT_ROUTES.has(pathname);
 
   const closeAssistant = useCallback(() => {
     Animated.timing(openProgress, {
@@ -135,6 +141,8 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
   }, [openProgress]);
 
   const openAssistant = useCallback(() => {
+    if (!showAssistant) return;
+
     setPanelVisible(true);
     requestAnimationFrame(() => {
       Animated.timing(openProgress, {
@@ -144,7 +152,13 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
         useNativeDriver: true,
       }).start();
     });
-  }, [openProgress]);
+  }, [openProgress, showAssistant]);
+
+  useEffect(() => {
+    if (!showAssistant && panelVisible) {
+      closeAssistant();
+    }
+  }, [closeAssistant, panelVisible, showAssistant]);
 
   useEffect(() => {
     setMessages((current) => {
@@ -200,45 +214,46 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
   return (
     <AIAssistantContext.Provider value={{ openAssistant }}>
       {children}
-      <View pointerEvents="box-none" style={styles.root}>
-        {panelVisible ? (
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            pointerEvents="box-none"
-            style={styles.panelLayer}
-          >
-            <Pressable style={StyleSheet.absoluteFill} onPress={closeAssistant}>
-              <Animated.View style={[styles.backdrop, { opacity: openProgress }]} />
-            </Pressable>
-            <Animated.View
-              style={[
-                styles.panel,
-                {
-                  top: panelTop,
-                  right: 14,
-                  width: panelWidth,
-                  height: panelHeight,
-                  opacity: openProgress,
-                  transform: [
-                    { translateX },
-                    { translateY },
-                    { scale: openProgress.interpolate({ inputRange: [0, 1], outputRange: [0.18, 1] }) },
-                  ],
-                },
-              ]}
+      {showAssistant ? (
+        <View pointerEvents="box-none" style={styles.root}>
+          {panelVisible ? (
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              pointerEvents="box-none"
+              style={styles.panelLayer}
             >
-              <View style={styles.header}>
-                <View style={styles.avatar}>
-                  <Ionicons name="sparkles-outline" size={20} color={ORANGE} />
+              <Pressable style={StyleSheet.absoluteFill} onPress={closeAssistant}>
+                <Animated.View style={[styles.backdrop, { opacity: openProgress }]} />
+              </Pressable>
+              <Animated.View
+                style={[
+                  styles.panel,
+                  {
+                    top: panelTop,
+                    right: 14,
+                    width: panelWidth,
+                    height: panelHeight,
+                    opacity: openProgress,
+                    transform: [
+                      { translateX },
+                      { translateY },
+                      { scale: openProgress.interpolate({ inputRange: [0, 1], outputRange: [0.18, 1] }) },
+                    ],
+                  },
+                ]}
+              >
+                <View style={styles.header}>
+                  <View style={styles.avatar}>
+                    <Ionicons name="sparkles-outline" size={20} color={ORANGE} />
+                  </View>
+                  <View style={styles.headerCopy}>
+                    <Text style={styles.title}>{copy.title}</Text>
+                    <Text style={styles.subtitle}>{configured ? copy.subtitle : copy.unconfigured}</Text>
+                  </View>
+                  <TouchableOpacity style={styles.iconButton} onPress={closeAssistant}>
+                    <Ionicons name="close" size={20} color="#475569" />
+                  </TouchableOpacity>
                 </View>
-                <View style={styles.headerCopy}>
-                  <Text style={styles.title}>{copy.title}</Text>
-                  <Text style={styles.subtitle}>{configured ? copy.subtitle : copy.unconfigured}</Text>
-                </View>
-                <TouchableOpacity style={styles.iconButton} onPress={closeAssistant}>
-                  <Ionicons name="close" size={20} color="#475569" />
-                </TouchableOpacity>
-              </View>
 
               <ScrollView ref={scrollRef} style={styles.messages} contentContainerStyle={styles.messagesContent}>
                 {messages.map((message, index) => (
@@ -294,7 +309,8 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
             </Animated.View>
           </KeyboardAvoidingView>
         ) : null}
-      </View>
+        </View>
+      ) : null}
     </AIAssistantContext.Provider>
   );
 }

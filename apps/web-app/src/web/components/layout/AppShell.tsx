@@ -113,7 +113,7 @@ export function AppShell({ children }: PropsWithChildren) {
           </AnimatePresence>
         </main>
       </div>
-      <AIAssistantWidget />
+      {shellState.currentUser?.primaryRole === "citizen" ? <AIAssistantWidget /> : null}
     </div>
   );
 }
