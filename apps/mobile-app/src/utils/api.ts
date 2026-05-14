@@ -229,6 +229,41 @@ export interface Analytics {
   users: { total: number; citizens: number; operators: number; admins: number };
 }
 
+export interface OperatorStatsResponse {
+  total_assigned: number;
+  in_progress: number;
+  closed: number;
+  pending_queue: number;
+  avg_close_days: number;
+  monthly_activity: Array<{ month: string; count: number }>;
+  recent_requests: Array<{
+    id: string;
+    address: string;
+    category_name: string;
+    status: Request['status'];
+    created_at: string;
+    updated_at: string;
+  }>;
+}
+
+export interface AdminPlatformStatsResponse {
+  total_requests: number;
+  pending: number;
+  in_progress: number;
+  closed: number;
+  total_users: number;
+  total_operators: number;
+  top_categories: Array<{ id?: string; name: string; count: number }>;
+  monthly_activity: Array<{ month: string; count: number }>;
+  operators_workload: Array<{
+    operator_id: string;
+    operator_name: string;
+    in_progress: number;
+    closed: number;
+    total: number;
+  }>;
+}
+
 export const apiService = {
   // Categories
   getCategories: () => api.get<Category[]>('/categories'),
@@ -253,6 +288,7 @@ export const apiService = {
   // Requests - Operator
   getOperatorRequests: (params?: { category?: string; status?: string; priority?: string; district?: string }) =>
     api.get<Request[]>('/operator/requests', { params: { ...params, lang: getCurrentLang() } }),
+  getOperatorMyStats: () => api.get<OperatorStatsResponse>('/operator/my-stats'),
   updateRequestOperator: (id: string, data: {
     status: string;
     resolution_notes?: string;
@@ -340,6 +376,7 @@ export const apiService = {
 
   // Admin - Analytics
   getAnalytics: () => api.get<Analytics>('/admin/analytics'),
+  getAdminPlatformStats: () => api.get<AdminPlatformStatsResponse>('/admin/platform-stats'),
 
   // Map
   getMapPoints: (params?: { category?: string; status?: string; my_only?: boolean }) =>

@@ -138,6 +138,7 @@ function RootLayoutContent() {
             <Stack.Screen name="(operator)" options={{ headerShown: false }} />
             <Stack.Screen name="(admin)" options={{ headerShown: false }} />
             <Stack.Screen name="request" options={{ headerShown: false }} />
+            <Stack.Screen name="settings" options={{ headerShown: false }} />
           </Stack>
         </Animated.View>
       </AIAssistantProvider>
