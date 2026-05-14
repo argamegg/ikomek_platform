@@ -331,6 +331,38 @@
     "futureTitle": "Future scaling",
     "futureDescription": "This architecture supports modular expansion into SLA dashboards, AI-assisted categorization, district scorecards, and dedicated departmental workspaces without splitting the data model."
   },
+  "cabinet": {
+    "title": "My Cabinet",
+    "memberSince": "Member since",
+    "editProfile": "Edit Profile",
+    "logout": "Log Out",
+    "comingSoon": "Coming soon",
+    "stats": {
+      "title": "My Statistics",
+      "total": "Total Requests",
+      "closed": "Closed",
+      "inProgress": "In Progress",
+      "pending": "Pending",
+      "avgDays": "Average closing time",
+      "days": "days"
+    },
+    "activity": {
+      "title": "Activity by Month"
+    },
+    "recent": {
+      "title": "Recent Requests",
+      "all": "All Requests",
+      "category": "Category"
+    },
+    "saved": {
+      "title": "Saved places",
+      "empty": "Saved addresses will appear here after you add them."
+    },
+    "alerts": {
+      "title": "Alerts and notifications",
+      "empty": "No alerts or notifications yet."
+    }
+  },
   "architecture": {
     "kicker": "13. Production-ready frontend structure",
     "title": "Separation of UI, domain, map logic, and backend integration",

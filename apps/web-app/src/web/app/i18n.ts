@@ -737,6 +737,38 @@ const resources = {
         addLocation: "Add place",
         notifications: "Notifications",
       },
+      cabinet: {
+        title: "My Cabinet",
+        memberSince: "Member since",
+        editProfile: "Edit Profile",
+        logout: "Log Out",
+        comingSoon: "Coming soon",
+        stats: {
+          title: "My Statistics",
+          total: "Total Requests",
+          closed: "Closed",
+          inProgress: "In Progress",
+          pending: "Pending",
+          avgDays: "Average closing time",
+          days: "days",
+        },
+        activity: {
+          title: "Activity by Month",
+        },
+        recent: {
+          title: "Recent Requests",
+          all: "All Requests",
+          category: "Category",
+        },
+        saved: {
+          title: "Saved places",
+          empty: "Saved addresses will appear here after you add them.",
+        },
+        alerts: {
+          title: "Alerts and notifications",
+          empty: "No alerts or notifications yet.",
+        },
+      },
       operator: {
         title: "Operator workspace",
         description: "Prioritize the queue, review details, and update statuses without leaving the shared system.",
@@ -1526,6 +1558,38 @@ const resources = {
         addLocation: "Добавить место",
         notifications: "Уведомления",
       },
+      cabinet: {
+        title: "Личный кабинет",
+        memberSince: "Житель с",
+        editProfile: "Редактировать профиль",
+        logout: "Выйти",
+        comingSoon: "Скоро будет доступно",
+        stats: {
+          title: "Моя статистика",
+          total: "Всего заявок",
+          closed: "Закрыто",
+          inProgress: "В работе",
+          pending: "Ожидает",
+          avgDays: "Среднее время закрытия",
+          days: "дней",
+        },
+        activity: {
+          title: "Активность по месяцам",
+        },
+        recent: {
+          title: "Последние заявки",
+          all: "Все заявки",
+          category: "Категория",
+        },
+        saved: {
+          title: "Сохраненные места",
+          empty: "Сохраненные адреса появятся здесь после добавления.",
+        },
+        alerts: {
+          title: "Алерты и уведомления",
+          empty: "Пока нет алертов или уведомлений.",
+        },
+      },
       operator: {
         title: "Рабочее место оператора",
         description: "Приоритизируйте очередь, проверяйте детали и обновляйте статусы внутри общей системы.",
@@ -2313,6 +2377,38 @@ const resources = {
         title: "Профиль және сақталған орындар",
         addLocation: "Орын қосу",
         notifications: "Хабарламалар",
+      },
+      cabinet: {
+        title: "Жеке кабинет",
+        memberSince: "Тұрғын болғалы",
+        editProfile: "Профильді өңдеу",
+        logout: "Шығу",
+        comingSoon: "Жақында қолжетімді болады",
+        stats: {
+          title: "Менің статистикам",
+          total: "Барлық өтініштер",
+          closed: "Жабылды",
+          inProgress: "Жұмыста",
+          pending: "Күтуде",
+          avgDays: "Орташа жабылу уақыты",
+          days: "күн",
+        },
+        activity: {
+          title: "Айлар бойынша белсенділік",
+        },
+        recent: {
+          title: "Соңғы өтініштер",
+          all: "Барлық өтініштер",
+          category: "Санат",
+        },
+        saved: {
+          title: "Сақталған орындар",
+          empty: "Сақталған мекенжайлар қосылғаннан кейін осында пайда болады.",
+        },
+        alerts: {
+          title: "Ескертулер мен хабарламалар",
+          empty: "Әзірге ескертулер немесе хабарламалар жоқ.",
+        },
       },
       operator: {
         title: "Оператор workspace",

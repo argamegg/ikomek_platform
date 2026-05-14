@@ -52,6 +52,7 @@ export type User = {
   language: Locale;
   notificationsEnabled: boolean;
   avatarUrl?: string;
+  createdAt?: string;
   departmentName?: string;
 };
 

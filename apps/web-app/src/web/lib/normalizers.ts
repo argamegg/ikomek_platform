@@ -235,6 +235,7 @@ export function normalizeUser(payload: unknown): User {
       true,
     ),
     avatarUrl: asString(pick(record, ["avatarUrl", "avatar", "photo", "image_url"])),
+    createdAt: asString(pick(record, ["createdAt", "created_at", "registered_at"])),
     departmentName: asString(pick(record, ["departmentName", "department_name"])),
   };
 }

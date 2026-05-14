@@ -331,6 +331,38 @@
     "futureTitle": "Дальнейшее масштабирование",
     "futureDescription": "Архитектура поддерживает развитие в SLA-dashboard, AI-assisted categorization, district scorecards и отдельные рабочие зоны департаментов без разделения модели данных."
   },
+  "cabinet": {
+    "title": "Личный кабинет",
+    "memberSince": "Житель с",
+    "editProfile": "Редактировать профиль",
+    "logout": "Выйти",
+    "comingSoon": "Скоро будет доступно",
+    "stats": {
+      "title": "Моя статистика",
+      "total": "Всего заявок",
+      "closed": "Закрыто",
+      "inProgress": "В работе",
+      "pending": "Ожидает",
+      "avgDays": "Среднее время закрытия",
+      "days": "дней"
+    },
+    "activity": {
+      "title": "Активность по месяцам"
+    },
+    "recent": {
+      "title": "Последние заявки",
+      "all": "Все заявки",
+      "category": "Категория"
+    },
+    "saved": {
+      "title": "Сохраненные места",
+      "empty": "Сохраненные адреса появятся здесь после добавления."
+    },
+    "alerts": {
+      "title": "Алерты и уведомления",
+      "empty": "Пока нет алертов или уведомлений."
+    }
+  },
   "architecture": {
     "kicker": "13. Production-ready frontend структура",
     "title": "Разделение UI, domain, map logic и backend integration",

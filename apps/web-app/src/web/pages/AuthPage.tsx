@@ -84,7 +84,7 @@ export function AuthPage() {
         return;
       }
 
-      navigate(result.user?.roles.includes("operator") ? "/operator" : "/dashboard");
+      navigate(result.user?.roles.includes("operator") ? "/operator" : "/profile");
     });
   }
 
@@ -117,7 +117,7 @@ export function AuthPage() {
 
   useEffect(() => {
     if (currentUserQuery.data) {
-      navigate("/dashboard", { replace: true });
+      navigate("/profile", { replace: true });
     }
   }, [currentUserQuery.data, navigate]);
 

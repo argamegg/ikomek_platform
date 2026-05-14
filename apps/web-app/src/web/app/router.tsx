@@ -60,7 +60,7 @@ function RoleRoute({ roles, children }: { roles: string[]; children: ReactElemen
   }
 
   if (!roles.some((role) => currentUserQuery.data?.roles.includes(role))) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/profile" replace />;
   }
 
   return children;

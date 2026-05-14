@@ -3,13 +3,13 @@ import {
   FilePlus2,
   Files,
   Home,
-  LayoutDashboard,
   LogIn,
   Map,
   PanelLeftClose,
   PanelLeftOpen,
   Settings2,
   Shield,
+  UserRound,
   Workflow,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
@@ -72,7 +72,7 @@ export function Sidebar({
     sections.push({
       title: t("nav.sections.personal"),
       items: [
-        { to: "/dashboard", label: t("nav.dashboard"), icon: LayoutDashboard },
+        { to: "/profile", label: t("nav.dashboard"), icon: UserRound },
         { to: "/requests", label: t("nav.requests"), icon: Files },
         { to: "/requests/new", label: t("nav.newRequest"), icon: FilePlus2 },
       ],

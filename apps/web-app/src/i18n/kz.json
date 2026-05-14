@@ -331,6 +331,38 @@
     "futureTitle": "Болашақ масштабтау",
     "futureDescription": "Бұл архитектура SLA dashboards, AI-assisted categorization, district scorecards және бөлек departmental workspaces бағытында data model-ді бөлмей кеңеюге мүмкіндік береді."
   },
+  "cabinet": {
+    "title": "Жеке кабинет",
+    "memberSince": "Тұрғын болғалы",
+    "editProfile": "Профильді өңдеу",
+    "logout": "Шығу",
+    "comingSoon": "Жақында қолжетімді болады",
+    "stats": {
+      "title": "Менің статистикам",
+      "total": "Барлық өтініштер",
+      "closed": "Жабылды",
+      "inProgress": "Жұмыста",
+      "pending": "Күтуде",
+      "avgDays": "Орташа жабылу уақыты",
+      "days": "күн"
+    },
+    "activity": {
+      "title": "Айлар бойынша белсенділік"
+    },
+    "recent": {
+      "title": "Соңғы өтініштер",
+      "all": "Барлық өтініштер",
+      "category": "Санат"
+    },
+    "saved": {
+      "title": "Сақталған орындар",
+      "empty": "Сақталған мекенжайлар қосылғаннан кейін осында пайда болады."
+    },
+    "alerts": {
+      "title": "Ескертулер мен хабарламалар",
+      "empty": "Әзірге ескертулер немесе хабарламалар жоқ."
+    }
+  },
   "architecture": {
     "kicker": "13. Production-ready frontend құрылымы",
     "title": "UI, domain, map logic және backend integration қабаттарын бөлу",
