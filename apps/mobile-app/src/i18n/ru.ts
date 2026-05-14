@@ -158,6 +158,8 @@ export const ru = {
     inProgress: 'В работе',
     closed: 'Закрыто',
     yourRequest: 'Ваша заявка',
+    categoryAnalyticsTitle: 'Популярные категории',
+    insufficientAnalyticsData: 'Недостаточно данных для аналитики',
     devBuildRequiredTitle: 'Для карты нужен development build',
     devBuildRequiredRequests: 'Откройте iKOMEKMobileApp вместо Expo Go, чтобы использовать живую карту.',
     devBuildRequiredLocation: 'Откройте iKOMEKMobileApp вместо Expo Go, чтобы выбрать локацию.',

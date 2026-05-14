@@ -60,6 +60,18 @@ export function getRequestColor(
     return palette.mine;
   }
 
+  if (request.status === "pending") {
+    return "rgba(255, 149, 0, 0.92)";
+  }
+
+  if (request.status === "in_progress") {
+    return "rgba(0, 122, 255, 0.88)";
+  }
+
+  if (request.status === "closed") {
+    return "rgba(52, 199, 89, 0.88)";
+  }
+
   return request.priority === "critical" ? palette.critical : palette.default;
 }
 
@@ -80,6 +92,7 @@ export function buildRequestFeatureCollection(
       },
       properties: {
         requestId: request.id,
+        status: request.status,
         color: getRequestColor(request, currentUserId, palette),
         weight: getRequestWeight(request),
         radius: request.citizenId === currentUserId ? mineRadius : defaultRadius,

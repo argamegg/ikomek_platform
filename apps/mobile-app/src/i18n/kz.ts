@@ -158,6 +158,8 @@ export const kz = {
     inProgress: 'Орындалуда',
     closed: 'Жабық',
     yourRequest: 'Сіздің өтінішіңіз',
+    categoryAnalyticsTitle: 'Танымал санаттар',
+    insufficientAnalyticsData: 'Аналитика үшін деректер жеткіліксіз',
     devBuildRequiredTitle: 'Карта үшін development build қажет',
     devBuildRequiredRequests: 'Жанды картаны пайдалану үшін Expo Go орнына iKOMEKMobileApp ашыңыз.',
     devBuildRequiredLocation: 'Орналасқан жерді таңдау үшін Expo Go орнына iKOMEKMobileApp ашыңыз.',

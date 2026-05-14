@@ -6,14 +6,16 @@ type IssueMapProps = {
   currentUserId?: string;
   mode: MapMode;
   onSelectRequest?: (request: CivicRequest) => void;
+  focusRequestId?: string | null;
 };
 
-export function IssueMap({ requests, currentUserId, mode, onSelectRequest }: IssueMapProps) {
-  const { containerRef, zoomIn, zoomOut } = useMapLibreRequestMap({
+export function IssueMap({ requests, currentUserId, mode, onSelectRequest, focusRequestId }: IssueMapProps) {
+  const { containerRef, zoomIn, zoomOut, locateUser } = useMapLibreRequestMap({
     requests,
     currentUserId,
     mode,
     onSelectRequest,
+    focusRequestId,
     palette: {
       mine: "rgba(255, 107, 0, 0.92)",
       critical: "rgba(225, 29, 72, 0.9)",
@@ -42,6 +44,13 @@ export function IssueMap({ requests, currentUserId, mode, onSelectRequest }: Iss
           aria-label="Zoom out"
         >
           −
+        </button>
+        <button
+          type="button"
+          onClick={locateUser}
+          aria-label="Locate me"
+        >
+          ⌖
         </button>
       </div>
     </div>

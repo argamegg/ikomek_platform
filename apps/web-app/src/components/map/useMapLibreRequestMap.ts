@@ -23,6 +23,7 @@ type UseMapLibreRequestMapOptions = {
   currentUserId?: string;
   mode: MapMode;
   onSelectRequest?: (request: CivicRequest) => void;
+  focusRequestId?: string | null;
   palette: RequestMapPalette;
   mineRadius: number;
   defaultRadius: number;
@@ -59,6 +60,11 @@ function addMapLayers(map: maplibregl.Map, clustered: boolean) {
       cluster: true,
       clusterMaxZoom: 15,
       clusterRadius: 44,
+      clusterProperties: {
+        pendingCount: ["+", ["case", ["==", ["get", "status"], "pending"], 1, 0]],
+        inProgressCount: ["+", ["case", ["==", ["get", "status"], "in_progress"], 1, 0]],
+        closedCount: ["+", ["case", ["==", ["get", "status"], "closed"], 1, 0]],
+      },
     });
   }
 
@@ -112,7 +118,14 @@ function addMapLayers(map: maplibregl.Map, clustered: boolean) {
       source: CLUSTER_SOURCE_ID,
       filter: ["has", "point_count"],
       paint: {
-        "circle-color": "rgba(255, 107, 0, 0.88)",
+        "circle-color": [
+          "case",
+          [">", ["coalesce", ["get", "pendingCount"], 0], 0],
+          "rgba(255, 149, 0, 0.92)",
+          [">", ["coalesce", ["get", "inProgressCount"], 0], 0],
+          "rgba(0, 122, 255, 0.88)",
+          "rgba(52, 199, 89, 0.88)",
+        ],
         "circle-radius": [
           "interpolate",
           ["linear"],
@@ -218,6 +231,7 @@ export function useMapLibreRequestMap({
   currentUserId,
   mode,
   onSelectRequest,
+  focusRequestId,
   palette,
   mineRadius,
   defaultRadius,
@@ -382,6 +396,21 @@ export function useMapLibreRequestMap({
     fitMapToRequests(map, filteredRequests, fitToData);
   }, [clustered, featureCollection, filteredRequests, fitToData, mode]);
 
+  useEffect(() => {
+    const map = mapRef.current;
+    const request = filteredRequests.find((item) => item.id === focusRequestId);
+
+    if (!map || !request) {
+      return;
+    }
+
+    map.easeTo({
+      center: [request.point.lng || ASTANA_CENTER[0], request.point.lat || ASTANA_CENTER[1]],
+      zoom: Math.max(map.getZoom(), 14.5),
+      duration: 420,
+    });
+  }, [filteredRequests, focusRequestId]);
+
   const zoomIn = () => {
     mapRef.current?.zoomIn({ duration: 220 });
   };
@@ -390,9 +419,31 @@ export function useMapLibreRequestMap({
     mapRef.current?.zoomOut({ duration: 220 });
   };
 
+  const locateUser = () => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      mapRef.current?.easeTo({ center: ASTANA_CENTER, zoom: 12.5, duration: 300 });
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        mapRef.current?.easeTo({
+          center: [position.coords.longitude, position.coords.latitude],
+          zoom: 14.5,
+          duration: 420,
+        });
+      },
+      () => {
+        mapRef.current?.easeTo({ center: ASTANA_CENTER, zoom: 12.5, duration: 300 });
+      },
+      { enableHighAccuracy: true, timeout: 6000 },
+    );
+  };
+
   return {
     containerRef,
     zoomIn,
     zoomOut,
+    locateUser,
   };
 }

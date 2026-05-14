@@ -1,103 +1,474 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import { Activity, BarChart3, MapPin, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { CivicRequest, MapMode } from "../../types/platform";
-import { PageHeader } from "../components/ui/PageHeader";
-import { Card } from "../components/ui/Card";
-import { Tabs } from "../components/ui/Tabs";
-import { Badge } from "../components/ui/Badge";
-import { IssueMap } from "../components/maps/IssueMap";
-import { getPriorityTone, getStatusTone } from "../lib/format";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  localizeRequestDescription,
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import type { CivicRequest, MapMode, RequestStatus } from "../../types/platform";
+import { IssueMap } from "../components/maps/IssueMap";
+import { Tabs } from "../components/ui/Tabs";
+import {
+  localizeRequestCategory,
   localizeRequestPriority,
   localizeRequestProblemType,
   localizeRequestStatus,
 } from "../lib/requestMeta";
 import { platformApi, queryKeys } from "../services/platformApi";
 
+const STATUS_OPTIONS: Array<{ key: "all" | RequestStatus; tone: string }> = [
+  { key: "all", tone: "#64748b" },
+  { key: "pending", tone: "#ff9500" },
+  { key: "in_progress", tone: "#007aff" },
+  { key: "closed", tone: "#34c759" },
+];
+
+const PRIORITY_OPTIONS = ["all", "low", "medium", "high"] as const;
+const WEEKDAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+
+type PriorityFilter = (typeof PRIORITY_OPTIONS)[number];
+type StatusFilter = "all" | RequestStatus;
+type Hotspot = { address: string; count: number; request: CivicRequest };
+
+function normalizeLocale(language: string) {
+  if (language.startsWith("kk") || language.startsWith("kz")) return "kk";
+  if (language.startsWith("en")) return "en";
+  return "ru";
+}
+
+function getMonthKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function getLastMonthKeys(count: number) {
+  const now = new Date();
+  return Array.from({ length: count }, (_, index) => {
+    const date = new Date(now.getFullYear(), now.getMonth() - (count - 1 - index), 1);
+    return getMonthKey(date);
+  });
+}
+
+function formatMonth(month: string, language: string) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const date = new Date(year, monthNumber - 1, 1);
+  if (Number.isNaN(date.getTime())) return month;
+  return new Intl.DateTimeFormat(normalizeLocale(language), { month: "short" }).format(date);
+}
+
+function formatRequestDate(value: string, language: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat(normalizeLocale(language), {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function formatWeekday(dayIndex: number, language: string) {
+  const monday = new Date(2026, 0, 5 + dayIndex);
+  return new Intl.DateTimeFormat(normalizeLocale(language), { weekday: "short" }).format(monday);
+}
+
+function formatRequestCount(count: number, language: string) {
+  const locale = normalizeLocale(language);
+
+  if (locale === "en") {
+    return `${count} ${count === 1 ? "request" : "requests"}`;
+  }
+
+  if (locale === "kk") {
+    return `${count} өтініш`;
+  }
+
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  const noun = mod10 === 1 && mod100 !== 11
+    ? "заявка"
+    : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)
+      ? "заявки"
+      : "заявок";
+  return `${count} ${noun}`;
+}
+
+function getPriorityMatch(request: CivicRequest, priority: PriorityFilter) {
+  if (priority === "all") return true;
+  if (priority === "high") return request.priority === "high" || request.priority === "critical";
+  if (priority === "medium") return request.priority === "medium" || request.priority === "warning";
+  return request.priority === "low" || request.priority === "information";
+}
+
+function getStatusCount(requests: CivicRequest[], status: RequestStatus) {
+  return requests.filter((request) => request.status === status).length;
+}
+
 export function MapPage() {
   const { t, i18n } = useTranslation();
-  const [mode, setMode] = useState<MapMode>("all");
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const mode = (searchParams.get("mode") as MapMode | null) ?? "all";
+  const category = searchParams.get("category") ?? "all";
+  const status = (searchParams.get("status") as StatusFilter | null) ?? "all";
+  const priority = (searchParams.get("priority") as PriorityFilter | null) ?? "all";
+  const mapMode: MapMode = mode === "my" || mode === "heatmap" ? mode : "all";
+
   const currentUserQuery = useQuery({
     queryKey: queryKeys.currentUser,
     queryFn: platformApi.getCurrentUser,
+  });
+  const categoriesQuery = useQuery({
+    queryKey: [...queryKeys.categories, i18n.language],
+    queryFn: platformApi.getCategories,
   });
   const publicRequestsQuery = useQuery({
     queryKey: [...queryKeys.publicRequests, i18n.language],
     queryFn: platformApi.getPublicRequests,
   });
-  const myRequestsQuery = useQuery({ queryKey: [...queryKeys.myRequests, i18n.language], queryFn: platformApi.getMyRequests });
-  const districtsQuery = useQuery({ queryKey: queryKeys.districts, queryFn: platformApi.getDistricts });
+  const myRequestsQuery = useQuery({
+    queryKey: [...queryKeys.myRequests, i18n.language],
+    queryFn: platformApi.getMyRequests,
+  });
 
   const allRequests = useMemo(() => {
-    const map = new Map<string, CivicRequest>();
+    const requestMap = new Map<string, CivicRequest>();
 
-    for (const request of publicRequestsQuery.data ?? []) {
-      map.set(request.id, request);
-    }
+    for (const request of publicRequestsQuery.data ?? []) requestMap.set(request.id, request);
+    for (const request of myRequestsQuery.data ?? []) requestMap.set(request.id, request);
 
-    for (const request of myRequestsQuery.data ?? []) {
-      map.set(request.id, request);
-    }
-
-    return Array.from(map.values());
+    return Array.from(requestMap.values());
   }, [myRequestsQuery.data, publicRequestsQuery.data]);
 
-  const selectedRequest =
-    allRequests.find((request) => request.id === selectedId) ?? allRequests[0] ?? null;
+  const filteredRequests = useMemo(() => {
+    return allRequests.filter((request) => {
+      const matchesMode = mapMode !== "my" || request.citizenId === currentUserQuery.data?.id;
+      const matchesCategory = category === "all" || request.categoryId === category;
+      const matchesStatus = status === "all" || request.status === status;
+      const matchesPriority = getPriorityMatch(request, priority);
+      return matchesMode && matchesCategory && matchesStatus && matchesPriority;
+    });
+  }, [allRequests, category, currentUserQuery.data?.id, mapMode, priority, status]);
+
+  const selectedRequest = filteredRequests.find((request) => request.id === selectedId) ?? null;
+  const isLoading = publicRequestsQuery.isLoading || myRequestsQuery.isLoading;
+  const hasActiveFilters = mapMode !== "all" || category !== "all" || status !== "all" || priority !== "all";
+
+  const statusCounts = useMemo(
+    () => ({
+      pending: getStatusCount(allRequests, "pending"),
+      inProgress: getStatusCount(allRequests, "in_progress"),
+      closed: getStatusCount(allRequests, "closed"),
+    }),
+    [allRequests],
+  );
+
+  const categoryData = useMemo(() => {
+    const counts = new Map<string, { id: string; fallbackName: string; count: number }>();
+
+    for (const request of allRequests) {
+      const id = request.categoryId || request.categoryName || "other";
+      const current = counts.get(id);
+
+      if (current) {
+        current.count += 1;
+      } else {
+        counts.set(id, {
+          id,
+          fallbackName: request.categoryName || id,
+          count: 1,
+        });
+      }
+    }
+
+    return Array.from(counts.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
+  }, [allRequests]);
+
+  const timelineData = useMemo(() => {
+    const months = getLastMonthKeys(12);
+    return months.map((month) => {
+      const monthRequests = allRequests.filter((request) => getMonthKey(new Date(request.createdAt)) === month);
+      return {
+        month,
+        label: formatMonth(month, i18n.language),
+        all: monthRequests.length,
+        pending: monthRequests.filter((request) => request.status === "pending").length,
+        closed: monthRequests.filter((request) => request.status === "closed").length,
+      };
+    });
+  }, [allRequests, i18n.language]);
+
+  const hotspots = useMemo<Hotspot[]>(() => {
+    const groups = new Map<string, Hotspot>();
+
+    for (const request of allRequests) {
+      const address = request.address || "—";
+      const current = groups.get(address);
+      if (current) {
+        current.count += 1;
+      } else {
+        groups.set(address, { address, count: 1, request });
+      }
+    }
+
+    return Array.from(groups.values()).sort((a, b) => b.count - a.count).slice(0, 7);
+  }, [allRequests]);
+
+  const activityData = useMemo(() => {
+    const matrix = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0));
+    for (const request of allRequests) {
+      const date = new Date(request.createdAt);
+      if (Number.isNaN(date.getTime())) continue;
+      const mondayFirstDay = (date.getDay() + 6) % 7;
+      matrix[mondayFirstDay][date.getHours()] += 1;
+    }
+    const max = Math.max(...matrix.flat(), 1);
+    return { matrix, max };
+  }, [allRequests]);
+
+  function updateFilter(key: "mode" | "category" | "status" | "priority", value: string) {
+    const next = new URLSearchParams(searchParams);
+    if (value === "all") {
+      next.delete(key);
+    } else {
+      next.set(key, value);
+    }
+    setSearchParams(next, { replace: true });
+  }
+
+  function resetFilters() {
+    setSearchParams(new URLSearchParams(), { replace: true });
+  }
+
+  function focusHotspot(hotspot: Hotspot) {
+    setSelectedId(hotspot.request.id);
+  }
 
   return (
-    <div className="page-stack">
-      <PageHeader title={t("map.title")} description={t("map.description")} />
-      <Card className="toolbar-card" hover={false}>
-        <Tabs
-          value={mode}
-          onChange={(value) => setMode(value as MapMode)}
-          options={[
-            { key: "all", label: t("map.all") },
-            { key: "my", label: t("map.mine") },
-            { key: "heatmap", label: t("map.heatmap") },
-          ]}
+    <div className="map-page">
+      <section className="map-page__hero">
+        <div>
+          <span className="map-page__eyebrow">iKOMEK 109</span>
+          <h1>{t("map.title")}</h1>
+          <p>{t("map.subtitleWithCount", { count: allRequests.length })}</p>
+        </div>
+        <div className="map-page__status-row">
+          <span><i style={{ background: "#ff9500" }} />{statusCounts.pending} {localizeRequestStatus("pending", t)}</span>
+          <span><i style={{ background: "#007aff" }} />{statusCounts.inProgress} {localizeRequestStatus("in_progress", t)}</span>
+          <span><i style={{ background: "#34c759" }} />{statusCounts.closed} {localizeRequestStatus("closed", t)}</span>
+        </div>
+      </section>
+
+      <section className="map-page__map-shell">
+        {isLoading ? <div className="map-page__skeleton" /> : null}
+        <IssueMap
+          requests={filteredRequests}
+          currentUserId={currentUserQuery.data?.id}
+          mode={mapMode}
+          onSelectRequest={(request) => setSelectedId(request.id)}
+          focusRequestId={selectedId}
         />
-      </Card>
-      <div className="dashboard-grid dashboard-grid--wide">
-        <Card className="section-card section-card--map" hover={false}>
-          <IssueMap
-            requests={allRequests}
-            currentUserId={currentUserQuery.data?.id}
-            mode={mode}
-            onSelectRequest={(request) => setSelectedId(request.id)}
+
+        <div className="map-page__filters">
+          <Tabs
+            value={mapMode}
+            onChange={(value) => updateFilter("mode", value)}
+            options={[
+              { key: "all", label: t("map.filters.allRequests") },
+              { key: "my", label: t("map.filters.myRequests") },
+              { key: "heatmap", label: t("map.filters.heatmap") },
+            ]}
           />
-        </Card>
-        <Card className="section-card">
-          <div className="section-card__header">
-            <div>
-              <span className="section-card__eyebrow">Selection</span>
-              <h3>{selectedRequest ? localizeRequestProblemType(selectedRequest.categoryId || selectedRequest.categoryName, selectedRequest.title, t) : "Choose a marker"}</h3>
-            </div>
-          </div>
-          {selectedRequest ? (
-            <>
-              <Badge tone={getPriorityTone(selectedRequest.priority)}>{localizeRequestPriority(selectedRequest.priority, t)}</Badge>
-              <p>{selectedRequest.address}</p>
-              <p>{localizeRequestDescription(selectedRequest.description, selectedRequest.categoryId, selectedRequest.title, selectedRequest.reasonId || selectedRequest.reasonName, t)}</p>
-              <Badge tone={getStatusTone(selectedRequest.status)}>
-                {localizeRequestStatus(selectedRequest.statusLabel || selectedRequest.status, t)}
-              </Badge>
-            </>
-          ) : null}
-          <div className="district-list">
-            {(districtsQuery.data ?? []).slice(0, 8).map((district) => (
-              <div key={district.id} className="district-list__item">
-                <strong>{district.name}</strong>
-                <span>{district.requestDensity ?? 0} density</span>
-              </div>
+          <select value={category} onChange={(event) => updateFilter("category", event.target.value)}>
+            <option value="all">{t("map.filters.allCategories")}</option>
+            {(categoriesQuery.data ?? []).map((item) => (
+              <option key={item.id} value={item.id}>{item.name}</option>
+            ))}
+          </select>
+          <div className="map-page__tag-row">
+            {STATUS_OPTIONS.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                className={status === item.key ? "is-active" : ""}
+                onClick={() => updateFilter("status", item.key)}
+              >
+                {item.key === "all" ? t("map.filters.allStatuses") : localizeRequestStatus(item.key, t)}
+              </button>
             ))}
           </div>
-        </Card>
+          <div className="map-page__tag-row">
+            {PRIORITY_OPTIONS.map((item) => (
+              <button
+                key={item}
+                type="button"
+                className={priority === item ? "is-active" : ""}
+                onClick={() => updateFilter("priority", item)}
+              >
+                {item === "all" ? t("map.filters.allPriorities") : localizeRequestPriority(item, t)}
+              </button>
+            ))}
+          </div>
+          {hasActiveFilters ? (
+            <button type="button" className="map-page__reset" onClick={resetFilters}>
+              <RotateCcw size={15} /> {t("map.filters.reset")}
+            </button>
+          ) : null}
+        </div>
+
+        {selectedRequest ? (
+          <article className="map-page__popup">
+            <strong>{localizeRequestProblemType(selectedRequest.categoryId, selectedRequest.title, t)}</strong>
+            <span>{selectedRequest.address}</span>
+            <small>{localizeRequestCategory(selectedRequest.categoryId || selectedRequest.categoryName, t)}</small>
+            <div>
+              <b>{localizeRequestStatus(selectedRequest.statusLabel || selectedRequest.status, t)}</b>
+              <small>{formatRequestDate(selectedRequest.createdAt, i18n.language)}</small>
+            </div>
+            <button type="button" onClick={() => navigate(`/requests/${selectedRequest.id}`)}>
+              {t("common.details", "Подробнее")}
+            </button>
+          </article>
+        ) : null}
+      </section>
+
+      <motion.section
+        className="map-analytics"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.15 }}
+        variants={{ visible: { transition: { staggerChildren: 0.08 } } }}
+      >
+        <div className="map-analytics__header">
+          <BarChart3 size={24} />
+          <h2>{t("map.analytics.title")}</h2>
+        </div>
+        <div className="map-analytics__grid">
+          <AnalyticsCard title={t("map.analytics.categories")}>
+            {categoryData.length ? (
+              <div className="density-list">
+                {categoryData.map((item) => {
+                  const max = Math.max(...categoryData.map((category) => category.count), 1);
+                  return (
+                    <div key={item.id} className="density-list__item">
+                      <span>{localizeRequestCategory(item.id, t) || item.fallbackName}</span>
+                      <div><i style={{ width: `${Math.max((item.count / max) * 100, 6)}%` }} /></div>
+                      <b>{formatRequestCount(item.count, i18n.language)}</b>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : <EmptyAnalytics label={t("map.analytics.insufficientData")} />}
+          </AnalyticsCard>
+
+          <AnalyticsCard title={t("map.analytics.timeline")}>
+            <ResponsiveContainer width="100%" height={230}>
+              <AreaChart data={timelineData}>
+                <defs>
+                  <linearGradient id="mapTimelineOrange" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="5%" stopColor="#ff6b00" stopOpacity={0.28} />
+                    <stop offset="95%" stopColor="#ff6b00" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke="#eef2f7" vertical={false} />
+                <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 11 }} />
+                <YAxis width={28} tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 11 }} />
+                <Tooltip
+                  formatter={(value, name) => [
+                    value,
+                    name === "all"
+                      ? t("map.analytics.seriesAll")
+                      : name === "pending"
+                        ? localizeRequestStatus("pending", t)
+                        : localizeRequestStatus("closed", t),
+                  ]}
+                />
+                <Area name={t("map.analytics.seriesAll")} type="monotone" dataKey="all" stroke="#ff6b00" fill="url(#mapTimelineOrange)" strokeWidth={3} />
+                <Area name={localizeRequestStatus("pending", t)} type="monotone" dataKey="pending" stroke="#ff9500" fill="transparent" strokeWidth={2} />
+                <Area name={localizeRequestStatus("closed", t)} type="monotone" dataKey="closed" stroke="#34c759" fill="transparent" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </AnalyticsCard>
+
+          <AnalyticsCard title={t("map.analytics.hotspots")}>
+            {hotspots.length ? (
+              <div className="hotspot-list">
+                {hotspots.map((item, index) => {
+                  const max = Math.max(...hotspots.map((hotspot) => hotspot.count), 1);
+                  return (
+                    <button key={item.address} type="button" onClick={() => focusHotspot(item)}>
+                      <span>#{index + 1}</span>
+                      <strong>{item.address}</strong>
+                      <i><em style={{ width: `${Math.max((item.count / max) * 100, 8)}%` }} /></i>
+                      <b>{formatRequestCount(item.count, i18n.language)}</b>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : <EmptyAnalytics label={t("map.analytics.insufficientData")} />}
+          </AnalyticsCard>
+
+          <AnalyticsCard title={t("map.analytics.activity")}>
+            <div className="activity-heatmap">
+              <div className="activity-heatmap__hours">
+                {Array.from({ length: 24 }, (_, hour) => (
+                  <span key={hour}>{hour % 3 === 0 ? hour : ""}</span>
+                ))}
+              </div>
+              {activityData.matrix.map((row, dayIndex) => (
+                <div key={WEEKDAY_KEYS[dayIndex]} className="activity-heatmap__row">
+                  <span>{formatWeekday(dayIndex, i18n.language)}</span>
+                  {row.map((count, hour) => (
+                    <i
+                      key={hour}
+                      title={`${formatWeekday(dayIndex, i18n.language)} ${hour}:00 — ${formatRequestCount(count, i18n.language)}`}
+                      style={{ opacity: count ? 0.22 + (count / activityData.max) * 0.78 : 0.08 }}
+                    />
+                  ))}
+                </div>
+              ))}
+            </div>
+          </AnalyticsCard>
+        </div>
+      </motion.section>
+    </div>
+  );
+}
+
+function AnalyticsCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <motion.article
+      className="map-analytics__card"
+      variants={{
+        hidden: { opacity: 0, y: 18 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.28 } },
+      }}
+    >
+      <div className="map-analytics__card-title">
+        <Activity size={18} />
+        <h3>{title}</h3>
       </div>
+      {children}
+    </motion.article>
+  );
+}
+
+function EmptyAnalytics({ label }: { label: string }) {
+  return (
+    <div className="map-analytics__empty">
+      <MapPin size={24} />
+      <span>{label}</span>
     </div>
   );
 }

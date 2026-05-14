@@ -158,6 +158,8 @@ export const en = {
     inProgress: 'In Progress',
     closed: 'Closed',
     yourRequest: 'Your request',
+    categoryAnalyticsTitle: 'Popular Categories',
+    insufficientAnalyticsData: 'Not enough data for analytics',
     devBuildRequiredTitle: 'Map requires the development build',
     devBuildRequiredRequests: 'Open iKOMEKMobileApp instead of Expo Go to use the live map.',
     devBuildRequiredLocation: 'Open iKOMEKMobileApp instead of Expo Go to choose a location.',
