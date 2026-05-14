@@ -306,7 +306,22 @@
       "Review full request context, photos, previous status history, and chat",
       "Respond to citizen, assign department, and log internal operational notes",
       "Track execution proof, validate completion, and close the issue with synchronized status updates"
-    ]
+    ],
+    "stats": {
+      "title": "My Operator Statistics",
+      "assigned": "Taken In Work",
+      "closed": "Closed",
+      "inProgress": "Currently In Progress",
+      "queue": "Pending Queue",
+      "avgDays": "Average closing time",
+      "days": "days"
+    },
+    "activity": {
+      "title": "My Monthly Workload"
+    },
+    "recent": {
+      "title": "Recently Processed Requests"
+    }
   },
   "admin": {
     "kicker": "12. Admin dashboard",

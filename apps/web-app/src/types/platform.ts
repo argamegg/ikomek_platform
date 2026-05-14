@@ -216,6 +216,30 @@ export type PlatformMetrics = {
   satisfactionRate?: string;
 };
 
+export type OperatorStatsRecentRequest = {
+  id: string;
+  address: string;
+  categoryName: string;
+  status: RequestStatus;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type OperatorMonthlyActivity = {
+  month: string;
+  count: number;
+};
+
+export type OperatorStats = {
+  totalAssigned: number;
+  inProgress: number;
+  closed: number;
+  pendingQueue: number;
+  avgCloseDays: number;
+  monthlyActivity: OperatorMonthlyActivity[];
+  recentRequests: OperatorStatsRecentRequest[];
+};
+
 export type PublicPlatformData = {
   categories: RequestCategory[];
   reasons: RequestReason[];

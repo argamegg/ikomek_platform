@@ -14,6 +14,7 @@ import type {
   NewsListResponse,
   NewsTranslationPreview,
   NotificationItem,
+  OperatorStats,
   PasswordRecoveryInput,
   PlatformMetrics,
   RequestCategory,
@@ -137,6 +138,7 @@ export const queryKeys = {
   allRequests: (status?: RequestStatus) => ["all-requests", status ?? "all"] as const,
   request: (requestId: string) => ["request", requestId] as const,
   metrics: ["metrics"] as const,
+  operatorStats: ["operator-stats"] as const,
   savedLocations: ["saved-locations"] as const,
   notifications: ["notifications"] as const,
 };
@@ -594,6 +596,46 @@ export const platformApi = {
       const requests = await this.getAllRequests();
       return buildMetricsFromRequests(requests);
     }
+  },
+
+  async getOperatorStats(): Promise<OperatorStats> {
+    const response = await platformClient.get("/operator/my-stats");
+    const data = response.data as {
+      total_assigned?: number;
+      in_progress?: number;
+      closed?: number;
+      pending_queue?: number;
+      avg_close_days?: number;
+      monthly_activity?: Array<{ month?: string; count?: number }>;
+      recent_requests?: Array<{
+        id?: string;
+        address?: string;
+        category_name?: string;
+        status?: RequestStatus;
+        created_at?: string;
+        updated_at?: string;
+      }>;
+    };
+
+    return {
+      totalAssigned: Number(data.total_assigned ?? 0),
+      inProgress: Number(data.in_progress ?? 0),
+      closed: Number(data.closed ?? 0),
+      pendingQueue: Number(data.pending_queue ?? 0),
+      avgCloseDays: Number(data.avg_close_days ?? 0),
+      monthlyActivity: (data.monthly_activity ?? []).map((item) => ({
+        month: String(item.month ?? ""),
+        count: Number(item.count ?? 0),
+      })),
+      recentRequests: (data.recent_requests ?? []).map((item) => ({
+        id: String(item.id ?? ""),
+        address: String(item.address ?? ""),
+        categoryName: String(item.category_name ?? ""),
+        status: String(item.status ?? "pending") as RequestStatus,
+        createdAt: String(item.created_at ?? ""),
+        updatedAt: String(item.updated_at ?? ""),
+      })),
+    };
   },
 
   async getSavedLocations(): Promise<SavedLocation[]> {

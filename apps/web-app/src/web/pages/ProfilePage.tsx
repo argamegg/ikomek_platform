@@ -26,6 +26,7 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { CivicRequest, Locale, RequestStatus, UserRole } from "../../types/platform";
+import { OperatorStats } from "../../components/OperatorStats";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -314,6 +315,10 @@ export function ProfilePage() {
       </motion.section>
 
       <div className="cabinet-main">
+        {currentUser?.primaryRole === "operator" ? (
+          <OperatorStats />
+        ) : (
+          <>
         <motion.section
           className="cabinet-section"
           variants={sectionVariants}
@@ -445,6 +450,8 @@ export function ProfilePage() {
           )}
         </motion.section>
 
+          </>
+        )}
       </div>
     </div>
   );

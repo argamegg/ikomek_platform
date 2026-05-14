@@ -773,6 +773,21 @@ const resources = {
         title: "Operator workspace",
         description: "Prioritize the queue, review details, and update statuses without leaving the shared system.",
         update: "Update status",
+        stats: {
+          title: "My Operator Statistics",
+          assigned: "Taken In Work",
+          closed: "Closed",
+          inProgress: "Currently In Progress",
+          queue: "Pending Queue",
+          avgDays: "Average closing time",
+          days: "days",
+        },
+        activity: {
+          title: "My Monthly Workload",
+        },
+        recent: {
+          title: "Recently Processed Requests",
+        },
       },
       admin: {
         title: "Admin studio",
@@ -1594,6 +1609,21 @@ const resources = {
         title: "Рабочее место оператора",
         description: "Приоритизируйте очередь, проверяйте детали и обновляйте статусы внутри общей системы.",
         update: "Обновить статус",
+        stats: {
+          title: "Моя статистика оператора",
+          assigned: "Взято в работу",
+          closed: "Закрыто",
+          inProgress: "Сейчас в работе",
+          queue: "Очередь ожидает",
+          avgDays: "Среднее время закрытия",
+          days: "дней",
+        },
+        activity: {
+          title: "Моя нагрузка по месяцам",
+        },
+        recent: {
+          title: "Последние обработанные заявки",
+        },
       },
       admin: {
         title: "Админ-студия",
@@ -2415,6 +2445,21 @@ const resources = {
         description:
           "Кезекті басқарыңыз, деректерді тексеріңіз және статустарды ортақ жүйеден шықпай жаңартыңыз.",
         update: "Статусты жаңарту",
+        stats: {
+          title: "Менің оператор статистикам",
+          assigned: "Жұмысқа алынды",
+          closed: "Жабылды",
+          inProgress: "Қазір жұмыста",
+          queue: "Кезек күтуде",
+          avgDays: "Орташа жабылу уақыты",
+          days: "күн",
+        },
+        activity: {
+          title: "Айлар бойынша жүктемем",
+        },
+        recent: {
+          title: "Соңғы өңделген өтініштер",
+        },
       },
       admin: {
         title: "Әкімші студиясы",

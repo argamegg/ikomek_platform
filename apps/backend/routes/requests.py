@@ -17,6 +17,32 @@ from services.translation import translate_to_all_languages
 
 router = APIRouter()
 
+def _parse_datetime(value):
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00")).replace(tzinfo=None)
+        except ValueError:
+            return None
+    return None
+
+def _serialize_datetime(value):
+    parsed = _parse_datetime(value)
+    return parsed.isoformat() if parsed else None
+
+def _last_six_month_keys():
+    now = datetime.utcnow()
+    months = []
+    for offset in range(5, -1, -1):
+        month = now.month - offset
+        year = now.year
+        while month <= 0:
+            month += 12
+            year -= 1
+        months.append(f"{year}-{month:02d}")
+    return months
+
 # ================================
 # REQUESTS ENDPOINTS - CITIZEN
 # ================================
@@ -92,6 +118,74 @@ async def get_request(request_id: str, lang: str = "ru", current_user: dict = De
 # ================================
 # REQUESTS ENDPOINTS - OPERATOR
 # ================================
+
+@router.get("/operator/my-stats")
+async def get_operator_my_stats(current_user: dict = Depends(get_current_user)):
+    if current_user.get("role") != ROLE_OPERATOR:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+    operator_id = current_user["id"]
+    assigned_query = {"operator_id": operator_id}
+    pending_queue_query = {
+        "status": "pending",
+        "$or": [
+            {"operator_id": None},
+            {"operator_id": {"$exists": False}},
+        ],
+    }
+
+    total_assigned = await db.requests.count_documents(assigned_query)
+    in_progress = await db.requests.count_documents({**assigned_query, "status": "in_progress"})
+    closed = await db.requests.count_documents({**assigned_query, "status": "closed"})
+    pending_queue = await db.requests.count_documents(pending_queue_query)
+
+    operator_requests = await db.requests.find(assigned_query).sort("updated_at", -1).to_list(500)
+    closed_durations = []
+    for request in operator_requests:
+        if request.get("status") != "closed":
+            continue
+        created_at = _parse_datetime(request.get("created_at"))
+        closed_at = _parse_datetime(request.get("closed_at")) or _parse_datetime(request.get("updated_at"))
+        if created_at and closed_at:
+            closed_durations.append(max((closed_at - created_at).total_seconds(), 0) / 86400)
+
+    avg_close_days = 0
+    if closed_durations:
+        avg_close_days = round(sum(closed_durations) / len(closed_durations), 1)
+
+    month_keys = _last_six_month_keys()
+    monthly_counts = {month: 0 for month in month_keys}
+    for request in operator_requests:
+        created_at = _parse_datetime(request.get("created_at"))
+        if not created_at:
+            continue
+        month_key = f"{created_at.year}-{created_at.month:02d}"
+        if month_key in monthly_counts:
+            monthly_counts[month_key] += 1
+
+    recent_requests = []
+    for request in operator_requests[:5]:
+        recent_requests.append({
+            "id": request.get("id"),
+            "address": request.get("address", ""),
+            "category_name": request.get("category_name", ""),
+            "status": request.get("status", "pending"),
+            "created_at": _serialize_datetime(request.get("created_at")),
+            "updated_at": _serialize_datetime(request.get("updated_at")),
+        })
+
+    return {
+        "total_assigned": total_assigned,
+        "in_progress": in_progress,
+        "closed": closed,
+        "pending_queue": pending_queue,
+        "avg_close_days": avg_close_days,
+        "monthly_activity": [
+            {"month": month, "count": monthly_counts[month]}
+            for month in month_keys
+        ],
+        "recent_requests": recent_requests,
+    }
 
 @router.get("/operator/requests")
 async def get_operator_requests(
