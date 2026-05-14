@@ -344,7 +344,27 @@
     "executorTitle": "Опциональная роль департамента или исполнителя",
     "executorDescription": "Пользователи департаментов получают назначенные заявки, обновляют прогресс, загружают доказательства выполнения и закрывают work orders через тот же shared request lifecycle.",
     "futureTitle": "Дальнейшее масштабирование",
-    "futureDescription": "Архитектура поддерживает развитие в SLA-dashboard, AI-assisted categorization, district scorecards и отдельные рабочие зоны департаментов без разделения модели данных."
+    "futureDescription": "Архитектура поддерживает развитие в SLA-dashboard, AI-assisted categorization, district scorecards и отдельные рабочие зоны департаментов без разделения модели данных.",
+    "stats": {
+      "title": "Статистика платформы",
+      "totalRequests": "Всего заявок",
+      "citizens": "Жителей",
+      "operators": "Операторов",
+      "closed": "Закрыто"
+    },
+    "activity": {
+      "title": "Активность платформы"
+    },
+    "categories": {
+      "title": "Топ категорий"
+    },
+    "workload": {
+      "title": "Нагрузка операторов",
+      "operator": "Оператор",
+      "inProgress": "В работе",
+      "closed": "Закрыто",
+      "total": "Всего"
+    }
   },
   "cabinet": {
     "title": "Личный кабинет",

@@ -273,6 +273,8 @@ export function normalizeCategory(payload: unknown): RequestCategory {
       pick(record, [...localizedKeys("name", locale), ...localizedKeys("title", locale)]),
       "Category",
     ),
+    nameRu: asString(pick(record, ["name_ru", "nameRu"])),
+    nameKz: asString(pick(record, ["name_kz", "name_kk", "nameKz", "nameKk"])),
     code: asString(pick(record, ["code", "slug"]), id),
     icon: asString(pick(record, ["icon", "icon_name"])),
   };

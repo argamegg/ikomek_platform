@@ -4,6 +4,7 @@ import type {
   AuthLoginInput,
   AuthRegistrationChallenge,
   AuthRegisterInput,
+  AdminPlatformStats,
   AIAssistantInput,
   AIAssistantResponse,
   CivicRequest,
@@ -139,6 +140,7 @@ export const queryKeys = {
   request: (requestId: string) => ["request", requestId] as const,
   metrics: ["metrics"] as const,
   operatorStats: ["operator-stats"] as const,
+  adminStats: ["admin-stats"] as const,
   savedLocations: ["saved-locations"] as const,
   notifications: ["notifications"] as const,
 };
@@ -634,6 +636,52 @@ export const platformApi = {
         status: String(item.status ?? "pending") as RequestStatus,
         createdAt: String(item.created_at ?? ""),
         updatedAt: String(item.updated_at ?? ""),
+      })),
+    };
+  },
+
+  async getAdminStats(): Promise<AdminPlatformStats> {
+    const response = await platformClient.get("/admin/platform-stats");
+    const data = response.data as {
+      total_requests?: number;
+      pending?: number;
+      in_progress?: number;
+      closed?: number;
+      total_users?: number;
+      total_operators?: number;
+      top_categories?: Array<{ id?: string; name?: string; count?: number }>;
+      monthly_activity?: Array<{ month?: string; count?: number }>;
+      operators_workload?: Array<{
+        operator_id?: string;
+        operator_name?: string;
+        in_progress?: number;
+        closed?: number;
+        total?: number;
+      }>;
+    };
+
+    return {
+      totalRequests: Number(data.total_requests ?? 0),
+      pending: Number(data.pending ?? 0),
+      inProgress: Number(data.in_progress ?? 0),
+      closed: Number(data.closed ?? 0),
+      totalUsers: Number(data.total_users ?? 0),
+      totalOperators: Number(data.total_operators ?? 0),
+      topCategories: (data.top_categories ?? []).map((item) => ({
+        id: String(item.id ?? item.name ?? ""),
+        name: String(item.name ?? ""),
+        count: Number(item.count ?? 0),
+      })),
+      monthlyActivity: (data.monthly_activity ?? []).map((item) => ({
+        month: String(item.month ?? ""),
+        count: Number(item.count ?? 0),
+      })),
+      operatorsWorkload: (data.operators_workload ?? []).map((item) => ({
+        operatorId: String(item.operator_id ?? ""),
+        operatorName: String(item.operator_name ?? ""),
+        inProgress: Number(item.in_progress ?? 0),
+        closed: Number(item.closed ?? 0),
+        total: Number(item.total ?? 0),
       })),
     };
   },

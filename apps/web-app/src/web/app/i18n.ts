@@ -794,10 +794,27 @@ const resources = {
         description: "Monitor request metrics and publish city updates with a product-grade editorial workflow.",
         publish: "Publish news",
         stats: {
-          totalRequests: "Total requests",
+          title: "Platform Statistics",
+          totalRequests: "Total Requests",
           activeRequests: "Active requests",
           pendingRequests: "Pending requests",
+          citizens: "Citizens",
+          operators: "Operators",
+          closed: "Closed",
           topCategory: "Top category",
+        },
+        activity: {
+          title: "Platform Activity",
+        },
+        categories: {
+          title: "Top Categories",
+        },
+        workload: {
+          title: "Operator Workload",
+          operator: "Operator",
+          inProgress: "In Progress",
+          closed: "Closed",
+          total: "Total",
         },
         news: {
           created: "News item published.",
@@ -1630,10 +1647,27 @@ const resources = {
         description: "Контролируйте метрики и публикуйте городские обновления в аккуратном workflow.",
         publish: "Опубликовать новость",
         stats: {
+          title: "Статистика платформы",
           totalRequests: "Всего заявок",
           activeRequests: "Активные заявки",
           pendingRequests: "Ожидающие заявки",
+          citizens: "Жителей",
+          operators: "Операторов",
+          closed: "Закрыто",
           topCategory: "Топ-категория",
+        },
+        activity: {
+          title: "Активность платформы",
+        },
+        categories: {
+          title: "Топ категорий",
+        },
+        workload: {
+          title: "Нагрузка операторов",
+          operator: "Оператор",
+          inProgress: "В работе",
+          closed: "Закрыто",
+          total: "Всего",
         },
         news: {
           created: "Новость опубликована.",
@@ -2466,10 +2500,27 @@ const resources = {
         description: "Метрикаларды бақылап, қалалық жаңартуларды жинақы workflow арқылы жариялаңыз.",
         publish: "Жаңалық жариялау",
         stats: {
+          title: "Платформа статистикасы",
           totalRequests: "Барлық өтінімдер",
           activeRequests: "Белсенді өтінімдер",
           pendingRequests: "Күтудегі өтінімдер",
+          citizens: "Тұрғындар",
+          operators: "Операторлар",
+          closed: "Жабылды",
           topCategory: "Үздік санат",
+        },
+        activity: {
+          title: "Платформа белсенділігі",
+        },
+        categories: {
+          title: "Үздік санаттар",
+        },
+        workload: {
+          title: "Операторлар жүктемесі",
+          operator: "Оператор",
+          inProgress: "Жұмыста",
+          closed: "Жабылды",
+          total: "Барлығы",
         },
         news: {
           created: "Жаңалық жарияланды.",

@@ -119,6 +119,77 @@ async def get_request(request_id: str, lang: str = "ru", current_user: dict = De
 # REQUESTS ENDPOINTS - OPERATOR
 # ================================
 
+@router.get("/admin/platform-stats")
+async def get_admin_platform_stats(current_user: dict = Depends(get_current_user)):
+    if current_user.get("role") != ROLE_ADMIN:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+    total_requests = await db.requests.count_documents({})
+    pending = await db.requests.count_documents({"status": "pending"})
+    in_progress = await db.requests.count_documents({"status": "in_progress"})
+    closed = await db.requests.count_documents({"status": "closed"})
+    total_users = await db.users.count_documents({"role": "citizen"})
+    total_operators = await db.users.count_documents({"role": "operator"})
+
+    all_requests = await db.requests.find({}).to_list(10000)
+    category_counts = {}
+    category_names = {}
+    month_keys = _last_six_month_keys()
+    monthly_counts = {month: 0 for month in month_keys}
+
+    for request in all_requests:
+        category_id = request.get("category_id") or "other"
+        category_counts[category_id] = category_counts.get(category_id, 0) + 1
+        category_names[category_id] = request.get("category_name") or category_id
+
+        created_at = _parse_datetime(request.get("created_at"))
+        if not created_at:
+            continue
+        month_key = f"{created_at.year}-{created_at.month:02d}"
+        if month_key in monthly_counts:
+            monthly_counts[month_key] += 1
+
+    top_categories = [
+        {"id": category_id, "name": category_names.get(category_id, category_id), "count": count}
+        for category_id, count in sorted(category_counts.items(), key=lambda item: item[1], reverse=True)[:5]
+    ]
+
+    operators = await db.users.find({"role": "operator"}).to_list(500)
+    operators_workload = []
+    for operator in operators:
+        operator_id = operator.get("id")
+        if not operator_id:
+            continue
+
+        operator_query = {"operator_id": operator_id}
+        operator_in_progress = await db.requests.count_documents({**operator_query, "status": "in_progress"})
+        operator_closed = await db.requests.count_documents({**operator_query, "status": "closed"})
+        operator_total = await db.requests.count_documents(operator_query)
+        operators_workload.append({
+            "operator_id": operator_id,
+            "operator_name": operator.get("full_name") or operator.get("email") or operator_id,
+            "in_progress": operator_in_progress,
+            "closed": operator_closed,
+            "total": operator_total,
+        })
+
+    operators_workload.sort(key=lambda item: item["total"], reverse=True)
+
+    return {
+        "total_requests": total_requests,
+        "pending": pending,
+        "in_progress": in_progress,
+        "closed": closed,
+        "total_users": total_users,
+        "total_operators": total_operators,
+        "top_categories": top_categories,
+        "monthly_activity": [
+            {"month": month, "count": monthly_counts[month]}
+            for month in month_keys
+        ],
+        "operators_workload": operators_workload,
+    }
+
 @router.get("/operator/my-stats")
 async def get_operator_my_stats(current_user: dict = Depends(get_current_user)):
     if current_user.get("role") != ROLE_OPERATOR:

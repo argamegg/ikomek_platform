@@ -68,6 +68,8 @@ export type SavedLocation = {
 export type RequestCategory = {
   id: string;
   name: string;
+  nameRu?: string;
+  nameKz?: string;
   code: string;
   icon?: string;
 };
@@ -238,6 +240,32 @@ export type OperatorStats = {
   avgCloseDays: number;
   monthlyActivity: OperatorMonthlyActivity[];
   recentRequests: OperatorStatsRecentRequest[];
+};
+
+export type AdminTopCategory = {
+  id: string;
+  name: string;
+  count: number;
+};
+
+export type AdminOperatorWorkload = {
+  operatorId: string;
+  operatorName: string;
+  inProgress: number;
+  closed: number;
+  total: number;
+};
+
+export type AdminPlatformStats = {
+  totalRequests: number;
+  pending: number;
+  inProgress: number;
+  closed: number;
+  totalUsers: number;
+  totalOperators: number;
+  topCategories: AdminTopCategory[];
+  monthlyActivity: OperatorMonthlyActivity[];
+  operatorsWorkload: AdminOperatorWorkload[];
 };
 
 export type PublicPlatformData = {

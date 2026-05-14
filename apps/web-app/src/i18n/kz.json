@@ -344,7 +344,27 @@
     "executorTitle": "Опционалды department немесе executor рөлі",
     "executorDescription": "Department users assigned requests қабылдап, progress жаңартып, completion evidence жүктеп және сол shared request lifecycle арқылы жұмыс тапсырысын жабады.",
     "futureTitle": "Болашақ масштабтау",
-    "futureDescription": "Бұл архитектура SLA dashboards, AI-assisted categorization, district scorecards және бөлек departmental workspaces бағытында data model-ді бөлмей кеңеюге мүмкіндік береді."
+    "futureDescription": "Бұл архитектура SLA dashboards, AI-assisted categorization, district scorecards және бөлек departmental workspaces бағытында data model-ді бөлмей кеңеюге мүмкіндік береді.",
+    "stats": {
+      "title": "Платформа статистикасы",
+      "totalRequests": "Барлық өтініштер",
+      "citizens": "Тұрғындар",
+      "operators": "Операторлар",
+      "closed": "Жабылды"
+    },
+    "activity": {
+      "title": "Платформа белсенділігі"
+    },
+    "categories": {
+      "title": "Үздік санаттар"
+    },
+    "workload": {
+      "title": "Операторлар жүктемесі",
+      "operator": "Оператор",
+      "inProgress": "Жұмыста",
+      "closed": "Жабылды",
+      "total": "Барлығы"
+    }
   },
   "cabinet": {
     "title": "Жеке кабинет",

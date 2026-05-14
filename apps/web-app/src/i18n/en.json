@@ -344,7 +344,27 @@
     "executorTitle": "Optional department or executor role",
     "executorDescription": "Department users receive assigned requests, update progress, upload completion evidence, and close work orders through the same shared request lifecycle.",
     "futureTitle": "Future scaling",
-    "futureDescription": "This architecture supports modular expansion into SLA dashboards, AI-assisted categorization, district scorecards, and dedicated departmental workspaces without splitting the data model."
+    "futureDescription": "This architecture supports modular expansion into SLA dashboards, AI-assisted categorization, district scorecards, and dedicated departmental workspaces without splitting the data model.",
+    "stats": {
+      "title": "Platform Statistics",
+      "totalRequests": "Total Requests",
+      "citizens": "Citizens",
+      "operators": "Operators",
+      "closed": "Closed"
+    },
+    "activity": {
+      "title": "Platform Activity"
+    },
+    "categories": {
+      "title": "Top Categories"
+    },
+    "workload": {
+      "title": "Operator Workload",
+      "operator": "Operator",
+      "inProgress": "In Progress",
+      "closed": "Closed",
+      "total": "Total"
+    }
   },
   "cabinet": {
     "title": "My Cabinet",
