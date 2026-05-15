@@ -3,7 +3,7 @@ from datetime import timedelta
 from typing import Optional
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
 
 from core.config import (
     EMAIL_VERIFICATION_EXPIRE_MINUTES,
@@ -33,6 +33,7 @@ from schemas import (
     TokenResponse,
     UserCreate,
     UserLogin,
+    UserProfileUpdate,
     UserResponse,
     VerificationCodeRequest,
     VerificationResendRequest,
@@ -131,6 +132,10 @@ async def login(credentials: UserLogin):
             email=user["email"],
             full_name=user["full_name"],
             phone=user.get("phone"),
+            display_name=user.get("display_name"),
+            gender=user.get("gender"),
+            birth_date=user.get("birth_date"),
+            avatar_url=user.get("avatar_url"),
             role=user.get("role", ROLE_CITIZEN),
             language=user.get("language", "ru"),
             created_at=user["created_at"]
@@ -193,6 +198,10 @@ async def verify_email_code(payload: VerificationCodeRequest):
             email=user_doc["email"],
             full_name=user_doc["full_name"],
             phone=user_doc.get("phone"),
+            display_name=user_doc.get("display_name"),
+            gender=user_doc.get("gender"),
+            birth_date=user_doc.get("birth_date"),
+            avatar_url=user_doc.get("avatar_url"),
             role=user_doc["role"],
             language=user_doc["language"],
             created_at=user_doc["created_at"],
@@ -242,6 +251,10 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         email=current_user["email"],
         full_name=current_user["full_name"],
         phone=current_user.get("phone"),
+        display_name=current_user.get("display_name"),
+        gender=current_user.get("gender"),
+        birth_date=current_user.get("birth_date"),
+        avatar_url=current_user.get("avatar_url"),
         role=current_user.get("role", ROLE_CITIZEN),
         language=current_user.get("language", "ru"),
         created_at=current_user["created_at"]
@@ -249,15 +262,37 @@ async def get_me(current_user: dict = Depends(get_current_user)):
 
 @router.put("/auth/profile")
 async def update_profile(
+    data: Optional[UserProfileUpdate] = Body(default=None),
     full_name: Optional[str] = None,
     phone: Optional[str] = None,
+    display_name: Optional[str] = None,
+    gender: Optional[str] = None,
+    birth_date: Optional[str] = None,
     current_user: dict = Depends(get_current_user)
 ):
+    if data:
+        full_name = data.full_name if data.full_name is not None else full_name
+        phone = data.phone if data.phone is not None else phone
+        display_name = data.display_name if data.display_name is not None else display_name
+        gender = data.gender if data.gender is not None else gender
+        birth_date = data.birth_date if data.birth_date is not None else birth_date
+        avatar_url = data.avatar_url
+    else:
+        avatar_url = None
+
     update_data = {}
     if full_name:
         update_data["full_name"] = full_name
     if phone:
         update_data["phone"] = phone
+    if display_name is not None:
+        update_data["display_name"] = display_name
+    if gender is not None:
+        update_data["gender"] = gender
+    if birth_date is not None:
+        update_data["birth_date"] = birth_date
+    if avatar_url is not None:
+        update_data["avatar_url"] = avatar_url
     
     if update_data:
         await db.users.update_one({"id": current_user["id"]}, {"$set": update_data})

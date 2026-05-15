@@ -32,9 +32,21 @@ class UserResponse(BaseModel):
     email: str
     full_name: str
     phone: Optional[str] = None
+    display_name: Optional[str] = None
+    gender: Optional[str] = None
+    birth_date: Optional[str] = None
+    avatar_url: Optional[str] = None
     role: str
     language: str = "ru"
     created_at: datetime
+
+class UserProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+    display_name: Optional[str] = None
+    gender: Optional[str] = None
+    birth_date: Optional[str] = None
+    avatar_url: Optional[str] = None
 
 class TokenResponse(BaseModel):
     access_token: str

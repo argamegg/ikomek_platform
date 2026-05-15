@@ -41,6 +41,9 @@ export type User = {
   name: string;
   email: string;
   phone?: string;
+  displayName?: string;
+  gender?: string;
+  birthDate?: string;
   primaryRole: UserRole;
   roles: UserRole[];
   language: Locale;
@@ -382,6 +385,10 @@ export type AIAssistantResponse = {
 export type UserProfileUpdateInput = {
   name: string;
   phone: string;
+  displayName?: string;
+  gender?: string;
+  birthDate?: string;
+  avatarUrl?: string;
   language: Locale;
   notificationsEnabled: boolean;
 };

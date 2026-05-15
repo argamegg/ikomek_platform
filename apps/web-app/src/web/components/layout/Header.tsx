@@ -73,11 +73,15 @@ export function Header({
               aria-label={t("shell.account")}
             >
               <span className="topbar__avatar">
-                {currentUser.name
-                  .split(" ")
-                  .map((part) => part[0])
-                  .join("")
-                  .slice(0, 2)}
+                {currentUser.avatarUrl ? (
+                  <img src={currentUser.avatarUrl} alt="" />
+                ) : (
+                  currentUser.name
+                    .split(" ")
+                    .map((part) => part[0])
+                    .join("")
+                    .slice(0, 2)
+                )}
               </span>
               <span className="topbar__profile-copy">
                 <strong>{currentUser.name}</strong>
