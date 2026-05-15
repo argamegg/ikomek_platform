@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
   ScrollView, Modal, useWindowDimensions
@@ -37,6 +37,7 @@ const WEEKDAY_DATES = Array.from({ length: 7 }, (_, index) => new Date(Date.UTC(
 const LOCALE_TAGS = { ru: 'ru-RU', en: 'en-US', kz: 'kk-KZ' } as const;
 
 type LocaleKey = keyof typeof LOCALE_TAGS;
+type Hotspot = { address: string; count: number; points: MapPoint[] };
 
 const normalizeLocale = (language?: string): LocaleKey => {
   if (language?.startsWith('en')) return 'en';
@@ -91,6 +92,7 @@ export default function MapScreen() {
   const mapHeight = isTablet ? Math.min(Math.round(height * 0.56), 560) : Math.max(340, Math.min(Math.round(height * 0.46), 440));
   const listMinHeight = Math.max(280, Math.min(mapHeight, isTablet ? 500 : 420));
   const locale = normalizeLocale(i18n.language);
+  const contentScrollRef = useRef<ScrollView | null>(null);
 
   const [points, setPoints] = useState<MapPoint[]>([]);
   const [filteredPoints, setFilteredPoints] = useState<MapPoint[]>([]);
@@ -100,6 +102,7 @@ export default function MapScreen() {
   const [selectedPoint, setSelectedPoint] = useState<MapPoint | null>(null);
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
   const [selectedTimelineMonth, setSelectedTimelineMonth] = useState<string | null>(null);
+  const [activeHotspotAddress, setActiveHotspotAddress] = useState<string | null>(null);
 
   const loadPoints = useCallback(async () => {
     try {
@@ -137,7 +140,7 @@ export default function MapScreen() {
       pending: 0,
       closed: 0,
     }]));
-    const hotspotBuckets = new Map<string, { address: string; count: number; point: MapPoint }>();
+    const hotspotBuckets = new Map<string, Hotspot>();
     const activityMatrix = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0));
     const noAddress = t('map.analytics.noAddress');
 
@@ -161,8 +164,9 @@ export default function MapScreen() {
       const hotspot = hotspotBuckets.get(address);
       if (hotspot) {
         hotspot.count += 1;
+        hotspot.points.push(point);
       } else {
-        hotspotBuckets.set(address, { address, count: 1, point });
+        hotspotBuckets.set(address, { address, count: 1, points: [point] });
       }
     });
 
@@ -194,6 +198,22 @@ export default function MapScreen() {
     || analytics.timeline.slice().reverse().find((item) => item.all > 0)
     || analytics.timeline[analytics.timeline.length - 1]
   ), [analytics.timeline, selectedTimelineMonth]);
+
+  const activeHotspot = useMemo(
+    () => analytics.hotspots.find((item) => item.address === activeHotspotAddress) ?? null,
+    [activeHotspotAddress, analytics.hotspots],
+  );
+
+  const mapPoints = activeHotspot ? activeHotspot.points : filteredPoints;
+
+  const focusHotspot = useCallback((hotspot: Hotspot) => {
+    setViewMode('map');
+    setSelectedPoint(null);
+    setActiveHotspotAddress(hotspot.address);
+    requestAnimationFrame(() => {
+      contentScrollRef.current?.scrollTo({ y: 0, animated: true });
+    });
+  }, []);
 
   const renderPointCard = (item: MapPoint) => {
     const catColor = CATEGORY_COLORS[item.category] || '#9E9E9E';
@@ -289,6 +309,7 @@ export default function MapScreen() {
       </View>
 
       <ScrollView
+        ref={contentScrollRef}
         style={styles.contentScroll}
         contentContainerStyle={[styles.content, { paddingBottom: contentBottomPadding }]}
         showsVerticalScrollIndicator={false}
@@ -296,11 +317,33 @@ export default function MapScreen() {
         {viewMode === 'map' ? (
           <View style={[styles.mapContainer, { height: mapHeight, marginHorizontal: horizontalPadding }]}>
             <RequestsMap
-              points={filteredPoints}
+              points={mapPoints}
               categoryColors={CATEGORY_COLORS}
               statusColors={STATUS_COLORS}
               onPointPress={setSelectedPoint}
+              focusPoints={activeHotspot?.points ?? null}
             />
+            {activeHotspot ? (
+              <View style={styles.hotspotMapCallout}>
+                <View style={styles.hotspotMapHeader}>
+                  <View style={styles.hotspotMapTitleWrap}>
+                    <Text style={styles.hotspotMapTitle} numberOfLines={1}>{activeHotspot.address}</Text>
+                    <Text style={styles.hotspotMapSubtitle}>{t('map.analytics.requestsCount', { count: activeHotspot.count })}</Text>
+                  </View>
+                  <TouchableOpacity style={styles.hotspotMapClose} onPress={() => setActiveHotspotAddress(null)} activeOpacity={0.72}>
+                    <Ionicons name="close" size={18} color="#64748B" />
+                  </TouchableOpacity>
+                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hotspotMapRequests}>
+                  {activeHotspot.points.map((point) => (
+                    <TouchableOpacity key={point.id} style={styles.hotspotMapRequest} onPress={() => setSelectedPoint(point)} activeOpacity={0.76}>
+                      <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[point.status] || '#FF9500' }]} />
+                      <Text style={styles.hotspotMapRequestTitle} numberOfLines={1}>{localizeProblemType(point.category, point.title, t)}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            ) : null}
             <View style={[styles.legend, isCompact && styles.legendCompact]}>
               {Object.entries(STATUS_COLORS).map(([key, color]) => (
                 <View key={key} style={styles.legendItem}>
@@ -432,7 +475,7 @@ export default function MapScreen() {
                 </View>
                 <View style={styles.hotspotList}>
                   {analytics.hotspots.map((item, index) => (
-                    <TouchableOpacity key={`${item.address}-${index}`} style={styles.hotspotRow} activeOpacity={0.78} onPress={() => setSelectedPoint(item.point)}>
+                    <TouchableOpacity key={`${item.address}-${index}`} style={styles.hotspotRow} activeOpacity={0.78} onPress={() => focusHotspot(item)}>
                       <View style={styles.hotspotRank}>
                         <Text style={styles.hotspotRankText}>{index + 1}</Text>
                       </View>
@@ -560,6 +603,15 @@ const styles = StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6, marginRight: 4 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
   legendText: { fontSize: 11, color: '#334155', fontWeight: '600' },
+  hotspotMapCallout: { position: 'absolute', top: 12, left: 12, right: 12, padding: 12, borderRadius: 18, backgroundColor: 'rgba(255, 255, 255, 0.94)', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.08)', shadowColor: '#0F172A', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.12, shadowRadius: 22, elevation: 6 },
+  hotspotMapHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  hotspotMapTitleWrap: { flex: 1, minWidth: 0 },
+  hotspotMapTitle: { fontSize: 15, fontWeight: '900', color: '#111827' },
+  hotspotMapSubtitle: { marginTop: 2, fontSize: 12, fontWeight: '700', color: '#64748B' },
+  hotspotMapClose: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
+  hotspotMapRequests: { gap: 8, paddingTop: 10, paddingRight: 2 },
+  hotspotMapRequest: { maxWidth: 190, minHeight: 36, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 10, borderRadius: 12, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.05)' },
+  hotspotMapRequestTitle: { flex: 1, minWidth: 0, fontSize: 12, fontWeight: '800', color: '#334155' },
   listSurface: { backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: 28, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.06)', shadowColor: '#0F172A', shadowOffset: { width: 0, height: 18 }, shadowOpacity: 0.08, shadowRadius: 26, elevation: 6 },
   list: { flex: 1, width: '100%', backgroundColor: 'transparent' },
   listContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16 },

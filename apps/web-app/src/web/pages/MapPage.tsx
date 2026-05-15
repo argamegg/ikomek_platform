@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Activity, BarChart3, MapPin, RotateCcw } from "lucide-react";
@@ -42,7 +42,7 @@ const WEEKDAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 
 type PriorityFilter = (typeof PRIORITY_OPTIONS)[number];
 type StatusFilter = "all" | RequestStatus;
-type Hotspot = { address: string; count: number; request: CivicRequest };
+type Hotspot = { address: string; count: number; requests: CivicRequest[] };
 type TranslationFn = (key: string, options?: Record<string, unknown>) => string;
 
 function normalizeLocale(language: string) {
@@ -129,6 +129,8 @@ export function MapPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedHotspotAddress, setSelectedHotspotAddress] = useState<string | null>(null);
+  const mapShellRef = useRef<HTMLElement | null>(null);
 
   const mode = (searchParams.get("mode") as MapMode | null) ?? "all";
   const category = searchParams.get("category") ?? "all";
@@ -182,7 +184,6 @@ export function MapPage() {
     });
   }, [allRequests, category, currentUser?.id, mapMode, priority, status]);
 
-  const selectedRequest = filteredRequests.find((request) => request.id === selectedId) ?? null;
   const isLoading = publicRequestsQuery.isLoading || myRequestsQuery.isLoading;
   const hasActiveFilters = mapMode !== "all" || category !== "all" || status !== "all" || priority !== "all";
 
@@ -240,13 +241,22 @@ export function MapPage() {
       const current = groups.get(address);
       if (current) {
         current.count += 1;
+        current.requests.push(request);
       } else {
-        groups.set(address, { address, count: 1, request });
+        groups.set(address, { address, count: 1, requests: [request] });
       }
     }
 
     return Array.from(groups.values()).sort((a, b) => b.count - a.count).slice(0, 7);
   }, [allRequests]);
+
+  const selectedHotspot = useMemo(
+    () => hotspots.find((item) => item.address === selectedHotspotAddress) ?? null,
+    [hotspots, selectedHotspotAddress],
+  );
+  const selectedRequest = selectedHotspot ? null : filteredRequests.find((request) => request.id === selectedId) ?? null;
+  const mapRequests = selectedHotspot ? selectedHotspot.requests : filteredRequests;
+  const activeMapMode: MapMode = selectedHotspot ? "all" : mapMode;
 
   const activityData = useMemo(() => {
     const matrix = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0));
@@ -261,6 +271,7 @@ export function MapPage() {
   }, [allRequests]);
 
   function updateFilter(key: "mode" | "category" | "status" | "priority", value: string) {
+    setSelectedHotspotAddress(null);
     const next = new URLSearchParams(searchParams);
     if (value === "all") {
       next.delete(key);
@@ -271,11 +282,16 @@ export function MapPage() {
   }
 
   function resetFilters() {
+    setSelectedHotspotAddress(null);
     setSearchParams(new URLSearchParams(), { replace: true });
   }
 
   function focusHotspot(hotspot: Hotspot) {
-    setSelectedId(hotspot.request.id);
+    setSelectedId(null);
+    setSelectedHotspotAddress(hotspot.address);
+    requestAnimationFrame(() => {
+      mapShellRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
   }
 
   return (
@@ -293,14 +309,17 @@ export function MapPage() {
         </div>
       </section>
 
-      <section className="map-page__map-shell">
+      <section ref={mapShellRef} className="map-page__map-shell">
         {isLoading ? <div className="map-page__skeleton" /> : null}
         <IssueMap
-          requests={filteredRequests}
+          requests={mapRequests}
           currentUserId={currentUser?.id}
-          mode={mapMode}
-          onSelectRequest={(request) => setSelectedId(request.id)}
-          focusRequestId={selectedId}
+          mode={activeMapMode}
+          onSelectRequest={(request) => {
+            setSelectedHotspotAddress(null);
+            setSelectedId(request.id);
+          }}
+          focusRequestId={selectedHotspot ? null : selectedId}
         />
 
         <div className="map-page__filters">
@@ -346,16 +365,47 @@ export function MapPage() {
           ) : null}
         </div>
 
-        {selectedRequest ? (
+        {selectedHotspot ? (
+          <article className="map-page__popup map-page__popup--hotspot">
+            <div className="map-page__popup-header">
+              <div>
+                <strong>{selectedHotspot.address}</strong>
+                <span>{formatRequestCount(selectedHotspot.count, i18n.language)}</span>
+              </div>
+              <button
+                type="button"
+                className="map-page__popup-close"
+                onClick={() => setSelectedHotspotAddress(null)}
+                aria-label={t("common.close")}
+              >
+                ×
+              </button>
+            </div>
+            <div className="map-page__hotspot-requests">
+              {selectedHotspot.requests.map((request) => (
+                <button
+                  key={request.id}
+                  type="button"
+                  className="map-page__hotspot-request"
+                  onClick={() => navigate(`/requests/${request.id}`)}
+                >
+                  <strong>{localizeRequestProblemType(request.categoryId, request.title, t)}</strong>
+                  <span>{localizeRequestStatus(request.statusLabel || request.status, t)}</span>
+                  <small>{formatRequestDate(request.createdAt, i18n.language)}</small>
+                </button>
+              ))}
+            </div>
+          </article>
+        ) : selectedRequest ? (
           <article className="map-page__popup">
             <strong>{localizeRequestProblemType(selectedRequest.categoryId, selectedRequest.title, t)}</strong>
             <span>{selectedRequest.address}</span>
             <small>{localizeRequestCategory(selectedRequest.categoryId || selectedRequest.categoryName, t)}</small>
-            <div>
+            <div className="map-page__popup-meta">
               <b>{localizeRequestStatus(selectedRequest.statusLabel || selectedRequest.status, t)}</b>
               <small>{formatRequestDate(selectedRequest.createdAt, i18n.language)}</small>
             </div>
-            <button type="button" onClick={() => navigate(`/requests/${selectedRequest.id}`)}>
+            <button type="button" className="map-page__popup-action" onClick={() => navigate(`/requests/${selectedRequest.id}`)}>
               {t("common.details", "Подробнее")}
             </button>
           </article>

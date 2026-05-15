@@ -6,14 +6,17 @@ type RequestsMapProps = {
   categoryColors: Record<string, string>;
   statusColors: Record<string, string>;
   onPointPress: (point: MapPoint) => void;
+  focusPoints?: MapPoint[] | null;
 };
 
 function generateMapHTML(
   points: MapPoint[],
   categoryColors: Record<string, string>,
   statusColors: Record<string, string>,
+  focusPoints?: MapPoint[] | null,
 ) {
   const pointsJSON = JSON.stringify(points);
+  const focusPointsJSON = JSON.stringify(focusPoints ?? []);
 
   return `<!DOCTYPE html>
 <html><head>
@@ -28,6 +31,7 @@ function generateMapHTML(
 var CATEGORY_COLORS = ${JSON.stringify(categoryColors)};
 var STATUS_COLORS = ${JSON.stringify(statusColors)};
 var points = ${pointsJSON};
+var focusPoints = ${focusPointsJSON};
 var map = L.map('map',{zoomControl:false}).setView([51.1282,71.4306],12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM',maxZoom:19}).addTo(map);
 L.control.zoom({position:'topright'}).addTo(map);
@@ -42,6 +46,16 @@ points.forEach(function(p){
     try { window.parent.postMessage(JSON.stringify({type:'markerClick',point:p}),'*'); } catch(e){}
   });
 });
+function fitPointList(list) {
+  if (!list || !list.length) return;
+  if (list.length === 1) {
+    map.setView([list[0].lat, list[0].lng], 15);
+    return;
+  }
+  var bounds = L.latLngBounds(list.map(function(p){ return [p.lat, p.lng]; }));
+  if (bounds.isValid()) map.fitBounds(bounds, { padding: [48, 48], maxZoom: 15 });
+}
+fitPointList(focusPoints.length ? focusPoints : points);
 <\/script>
 </body></html>`;
 }
@@ -51,6 +65,7 @@ export function RequestsMap({
   categoryColors,
   statusColors,
   onPointPress,
+  focusPoints,
 }: RequestsMapProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -69,8 +84,8 @@ export function RequestsMap({
   }, [onPointPress]);
 
   const html = useMemo(
-    () => generateMapHTML(points, categoryColors, statusColors),
-    [categoryColors, points, statusColors],
+    () => generateMapHTML(points, categoryColors, statusColors, focusPoints),
+    [categoryColors, focusPoints, points, statusColors],
   );
 
   const blobUrl = useMemo(() => {

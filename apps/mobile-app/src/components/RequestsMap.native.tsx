@@ -43,6 +43,7 @@ type RequestsMapProps = {
   categoryColors: Record<string, string>;
   statusColors: Record<string, string>;
   onPointPress: (point: MapPoint) => void;
+  focusPoints?: MapPoint[] | null;
 };
 
 export function RequestsMap({
@@ -50,6 +51,7 @@ export function RequestsMap({
   categoryColors: _categoryColors,
   statusColors: _statusColors,
   onPointPress,
+  focusPoints,
 }: RequestsMapProps) {
   const { t } = useTranslation();
   const cameraRef = useRef<any>(null);
@@ -184,6 +186,42 @@ export function RequestsMap({
       700,
     );
   }, [points]);
+
+  useEffect(() => {
+    if (!MapLibre) return;
+    if (!cameraRef.current) return;
+    if (!focusPoints?.length) return;
+
+    const validPoints = focusPoints.filter((point) => (
+      Number.isFinite(point.lng) && Number.isFinite(point.lat)
+    ));
+
+    if (validPoints.length === 0) return;
+
+    const lngs = validPoints.map((point) => point.lng);
+    const lats = validPoints.map((point) => point.lat);
+    const minLng = Math.min(...lngs);
+    const maxLng = Math.max(...lngs);
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    const isSingleCoordinate = Math.abs(maxLng - minLng) < 0.0001 && Math.abs(maxLat - minLat) < 0.0001;
+
+    if (validPoints.length === 1 || isSingleCoordinate) {
+      cameraRef.current.setCamera({
+        centerCoordinate: [validPoints[0].lng, validPoints[0].lat],
+        zoomLevel: 15,
+        animationDuration: 600,
+      });
+      return;
+    }
+
+    cameraRef.current.fitBounds(
+      [maxLng, maxLat],
+      [minLng, minLat],
+      96,
+      700,
+    );
+  }, [focusPoints]);
 
   if (!MapLibre) {
     return (
