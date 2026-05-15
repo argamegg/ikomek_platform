@@ -17,7 +17,8 @@ export function IssueMap({ requests, currentUserId, mode, onSelectRequest, focus
     onSelectRequest,
     focusRequestId,
     palette: {
-      mine: "rgba(255, 107, 0, 0.92)",
+      mine: "rgba(15, 23, 42, 0.92)",
+      public: "rgba(255, 255, 255, 0.92)",
       critical: "rgba(225, 29, 72, 0.9)",
       default: "rgba(15, 23, 42, 0.75)",
     },

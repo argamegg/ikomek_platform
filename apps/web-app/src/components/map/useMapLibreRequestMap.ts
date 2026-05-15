@@ -17,6 +17,8 @@ const HEATMAP_LAYER_ID = "request-heatmap";
 const CLUSTER_LAYER_ID = "request-clusters";
 const CLUSTER_COUNT_LAYER_ID = "request-cluster-count";
 const UNCLUSTERED_LAYER_ID = "request-unclustered-points";
+const CLUSTER_COLOR = "rgba(255, 149, 0, 0.92)";
+const DEFAULT_STROKE_COLOR = "rgba(255,255,255,0.92)";
 
 type UseMapLibreRequestMapOptions = {
   requests: CivicRequest[];
@@ -41,7 +43,7 @@ function setLayerVisibility(map: maplibregl.Map, layerId: string, isVisible: boo
 
 function getInteractiveLayerIds(map: maplibregl.Map, clustered: boolean) {
   const layerIds = clustered
-    ? [CLUSTER_LAYER_ID, UNCLUSTERED_LAYER_ID]
+    ? [CLUSTER_LAYER_ID, CLUSTER_COUNT_LAYER_ID, UNCLUSTERED_LAYER_ID]
     : [POINT_LAYER_ID];
 
   return layerIds.filter((layerId) => map.getLayer(layerId));
@@ -60,11 +62,6 @@ function addMapLayers(map: maplibregl.Map, clustered: boolean) {
       cluster: true,
       clusterMaxZoom: 15,
       clusterRadius: 44,
-      clusterProperties: {
-        pendingCount: ["+", ["case", ["==", ["get", "status"], "pending"], 1, 0]],
-        inProgressCount: ["+", ["case", ["==", ["get", "status"], "in_progress"], 1, 0]],
-        closedCount: ["+", ["case", ["==", ["get", "status"], "closed"], 1, 0]],
-      },
     });
   }
 
@@ -118,14 +115,7 @@ function addMapLayers(map: maplibregl.Map, clustered: boolean) {
       source: CLUSTER_SOURCE_ID,
       filter: ["has", "point_count"],
       paint: {
-        "circle-color": [
-          "case",
-          [">", ["coalesce", ["get", "pendingCount"], 0], 0],
-          "rgba(255, 149, 0, 0.92)",
-          [">", ["coalesce", ["get", "inProgressCount"], 0], 0],
-          "rgba(0, 122, 255, 0.88)",
-          "rgba(52, 199, 89, 0.88)",
-        ],
+        "circle-color": CLUSTER_COLOR,
         "circle-radius": [
           "interpolate",
           ["linear"],
@@ -137,7 +127,7 @@ function addMapLayers(map: maplibregl.Map, clustered: boolean) {
           25,
           24,
         ],
-        "circle-stroke-color": "rgba(255,255,255,0.92)",
+        "circle-stroke-color": DEFAULT_STROKE_COLOR,
         "circle-stroke-width": 3,
       },
     });
@@ -165,7 +155,7 @@ function addMapLayers(map: maplibregl.Map, clustered: boolean) {
       paint: {
         "circle-color": ["coalesce", ["get", "color"], "#f47b20"],
         "circle-radius": ["coalesce", ["get", "radius"], 8],
-        "circle-stroke-color": "rgba(255,255,255,0.92)",
+        "circle-stroke-color": ["coalesce", ["get", "strokeColor"], DEFAULT_STROKE_COLOR],
         "circle-stroke-width": 3,
       },
     });
@@ -177,7 +167,7 @@ function addMapLayers(map: maplibregl.Map, clustered: boolean) {
       paint: {
         "circle-color": ["coalesce", ["get", "color"], "#f47b20"],
         "circle-radius": ["coalesce", ["get", "radius"], 6],
-        "circle-stroke-color": "#ffffff",
+        "circle-stroke-color": ["coalesce", ["get", "strokeColor"], DEFAULT_STROKE_COLOR],
         "circle-stroke-width": 2,
       },
     });
@@ -194,35 +184,45 @@ function fitMapToRequests(
   }
 
   if (requests.length === 0) {
-    map.easeTo({ center: ASTANA_CENTER, zoom: 11.5, duration: 400 });
+    map.flyTo({ center: ASTANA_CENTER, zoom: 11.5, duration: 550, essential: true });
     return;
   }
 
-  if (requests.length === 1) {
-    map.easeTo({
-      center: [requests[0].point.lng || ASTANA_CENTER[0], requests[0].point.lat || ASTANA_CENTER[1]],
-      zoom: 14,
-      duration: 400,
+  const coordinates = requests.map((request) => ([
+    request.point.lng || ASTANA_CENTER[0],
+    request.point.lat || ASTANA_CENTER[1],
+  ] as [number, number]));
+
+  const lngs = coordinates.map(([lng]) => lng);
+  const lats = coordinates.map(([, lat]) => lat);
+  const minLng = Math.min(...lngs);
+  const maxLng = Math.max(...lngs);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const isSingleCoordinate = Math.abs(maxLng - minLng) < 0.0001 && Math.abs(maxLat - minLat) < 0.0001;
+
+  if (requests.length === 1 || isSingleCoordinate) {
+    map.flyTo({
+      center: coordinates[0],
+      zoom: 14.75,
+      duration: 650,
+      essential: true,
     });
     return;
   }
 
-  const bounds = requests.reduce(
-    (accumulator, request) =>
-      accumulator.extend([
-        request.point.lng || ASTANA_CENTER[0],
-        request.point.lat || ASTANA_CENTER[1],
-      ]),
-    new maplibregl.LngLatBounds(
-      [requests[0].point.lng || ASTANA_CENTER[0], requests[0].point.lat || ASTANA_CENTER[1]],
-      [requests[0].point.lng || ASTANA_CENTER[0], requests[0].point.lat || ASTANA_CENTER[1]],
-    ),
+  const bounds = coordinates.reduce(
+    (accumulator, coordinate) => accumulator.extend(coordinate),
+    new maplibregl.LngLatBounds(coordinates[0], coordinates[0]),
   );
 
+  map.stop();
+
   map.fitBounds(bounds, {
-    padding: 36,
-    duration: 450,
+    padding: 56,
+    duration: 700,
     maxZoom: 15,
+    essential: true,
   });
 }
 
@@ -296,17 +296,26 @@ export function useMapLibreRequestMap({
         return;
       }
 
-      if (clustered && feature.layer.id === CLUSTER_LAYER_ID) {
+      if (clustered && (feature.layer.id === CLUSTER_LAYER_ID || feature.layer.id === CLUSTER_COUNT_LAYER_ID)) {
         const clusterId = feature.properties?.cluster_id;
         const geometry = feature.geometry;
         const clusterSource = map.getSource(CLUSTER_SOURCE_ID) as GeoJSONSource | undefined;
 
         if (clusterSource && typeof clusterId !== "undefined" && geometry.type === "Point") {
           void clusterSource.getClusterExpansionZoom(Number(clusterId)).then((zoom) => {
-            map.easeTo({
+            map.stop();
+            map.flyTo({
               center: geometry.coordinates as [number, number],
-              zoom,
-              duration: 350,
+              zoom: Math.min(zoom + 0.35, 16),
+              duration: 650,
+              essential: true,
+            });
+          }).catch(() => {
+            map.flyTo({
+              center: geometry.coordinates as [number, number],
+              zoom: Math.min(map.getZoom() + 1.4, 16),
+              duration: 550,
+              essential: true,
             });
           });
         }
@@ -404,10 +413,12 @@ export function useMapLibreRequestMap({
       return;
     }
 
-    map.easeTo({
+    map.stop();
+    map.flyTo({
       center: [request.point.lng || ASTANA_CENTER[0], request.point.lat || ASTANA_CENTER[1]],
       zoom: Math.max(map.getZoom(), 14.5),
-      duration: 420,
+      duration: 580,
+      essential: true,
     });
   }, [filteredRequests, focusRequestId]);
 
@@ -421,20 +432,21 @@ export function useMapLibreRequestMap({
 
   const locateUser = () => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
-      mapRef.current?.easeTo({ center: ASTANA_CENTER, zoom: 12.5, duration: 300 });
+      mapRef.current?.flyTo({ center: ASTANA_CENTER, zoom: 12.5, duration: 450, essential: true });
       return;
     }
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        mapRef.current?.easeTo({
+        mapRef.current?.flyTo({
           center: [position.coords.longitude, position.coords.latitude],
           zoom: 14.5,
-          duration: 420,
+          duration: 580,
+          essential: true,
         });
       },
       () => {
-        mapRef.current?.easeTo({ center: ASTANA_CENTER, zoom: 12.5, duration: 300 });
+        mapRef.current?.flyTo({ center: ASTANA_CENTER, zoom: 12.5, duration: 450, essential: true });
       },
       { enableHighAccuracy: true, timeout: 6000 },
     );

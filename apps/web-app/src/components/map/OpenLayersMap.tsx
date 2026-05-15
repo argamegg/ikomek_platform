@@ -21,11 +21,12 @@ export function OpenLayersMap({
     onSelectRequest,
     palette: {
       mine: "#17314a",
+      public: "rgba(255, 255, 255, 0.92)",
       critical: "#db5a43",
       default: "#f47b20",
     },
     mineRadius: 8,
-    defaultRadius: 6,
+    defaultRadius: 8,
     clustered: false,
     fitToData: false,
   });

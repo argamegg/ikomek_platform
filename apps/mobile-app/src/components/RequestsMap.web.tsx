@@ -11,7 +11,6 @@ type RequestsMapProps = {
 
 function generateMapHTML(
   points: MapPoint[],
-  categoryColors: Record<string, string>,
   statusColors: Record<string, string>,
   focusPoints?: MapPoint[] | null,
 ) {
@@ -28,32 +27,34 @@ function generateMapHTML(
 </head><body>
 <div id="map"></div>
 <script>
-var CATEGORY_COLORS = ${JSON.stringify(categoryColors)};
-var STATUS_COLORS = ${JSON.stringify(statusColors)};
-var points = ${pointsJSON};
-var focusPoints = ${focusPointsJSON};
+	var STATUS_COLORS = ${JSON.stringify(statusColors)};
+	var PUBLIC_MARKER_STROKE = 'rgba(255,255,255,0.92)';
+	var MY_MARKER_STROKE = 'rgba(15,23,42,0.92)';
+	var points = ${pointsJSON};
+	var focusPoints = ${focusPointsJSON};
 var map = L.map('map',{zoomControl:false}).setView([51.1282,71.4306],12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM',maxZoom:19}).addTo(map);
 L.control.zoom({position:'topright'}).addTo(map);
 points.forEach(function(p){
-  var color = STATUS_COLORS[p.status] || '#FF9500';
-  var catColor = CATEGORY_COLORS[p.category] || '#9E9E9E';
+  var statusColor = STATUS_COLORS[p.status] || '#334155';
+  var strokeColor = p.is_mine ? MY_MARKER_STROKE : PUBLIC_MARKER_STROKE;
   var marker = L.circleMarker([p.lat,p.lng],{
-    radius:8, fillColor:catColor, color:color, weight:3, fillOpacity:0.85, opacity:1
+    radius:8.5, fillColor:statusColor, color:strokeColor, weight:3, fillOpacity:0.92, opacity:1
   }).addTo(map);
   marker.bindPopup('<div style="font-family:sans-serif"><b>'+p.title+'</b><br><span style="color:#666">'+p.address+'</span></div>');
   marker.on('click',function(){
+    map.flyTo([p.lat,p.lng], Math.max(map.getZoom(), 15), { duration: 0.55 });
     try { window.parent.postMessage(JSON.stringify({type:'markerClick',point:p}),'*'); } catch(e){}
   });
 });
 function fitPointList(list) {
   if (!list || !list.length) return;
   if (list.length === 1) {
-    map.setView([list[0].lat, list[0].lng], 15);
+    map.flyTo([list[0].lat, list[0].lng], 15, { duration: 0.65 });
     return;
   }
   var bounds = L.latLngBounds(list.map(function(p){ return [p.lat, p.lng]; }));
-  if (bounds.isValid()) map.fitBounds(bounds, { padding: [48, 48], maxZoom: 15 });
+  if (bounds.isValid()) map.flyToBounds(bounds, { padding: [48, 48], maxZoom: 15, duration: 0.65 });
 }
 fitPointList(focusPoints.length ? focusPoints : points);
 <\/script>
@@ -62,7 +63,7 @@ fitPointList(focusPoints.length ? focusPoints : points);
 
 export function RequestsMap({
   points,
-  categoryColors,
+  categoryColors: _categoryColors,
   statusColors,
   onPointPress,
   focusPoints,
@@ -84,8 +85,8 @@ export function RequestsMap({
   }, [onPointPress]);
 
   const html = useMemo(
-    () => generateMapHTML(points, categoryColors, statusColors, focusPoints),
-    [categoryColors, focusPoints, points, statusColors],
+    () => generateMapHTML(points, statusColors, focusPoints),
+    [focusPoints, points, statusColors],
   );
 
   const blobUrl = useMemo(() => {

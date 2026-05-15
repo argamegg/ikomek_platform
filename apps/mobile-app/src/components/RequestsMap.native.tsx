@@ -15,8 +15,9 @@ try {
 const ASTANA_CENTER: [number, number] = [71.4306, 51.1282];
 const CLUSTER_COLOR = 'rgba(255, 107, 0, 0.9)';
 const MARKER_COLOR = 'rgba(51, 65, 85, 0.86)';
-const MY_MARKER_COLOR = 'rgba(255, 107, 0, 0.94)';
 const MARKER_STROKE = 'rgba(255,255,255,0.92)';
+const MY_MARKER_STROKE = 'rgba(15, 23, 42, 0.92)';
+const CAMERA_ANIMATION = 'flyTo';
 const NATIVE_MAP_STYLE = {
   version: 8,
   glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
@@ -49,7 +50,7 @@ type RequestsMapProps = {
 export function RequestsMap({
   points,
   categoryColors: _categoryColors,
-  statusColors: _statusColors,
+  statusColors,
   onPointPress,
   focusPoints,
 }: RequestsMapProps) {
@@ -65,9 +66,11 @@ export function RequestsMap({
         id: point.id,
         properties: {
           pointId: point.id,
+          status: point.status,
           is_mine: point.is_mine ? 1 : 0,
-          color: point.is_mine ? MY_MARKER_COLOR : MARKER_COLOR,
-          radius: point.is_mine ? 9 : 8,
+          color: statusColors[point.status] || MARKER_COLOR,
+          strokeColor: point.is_mine ? MY_MARKER_STROKE : MARKER_STROKE,
+          radius: 8.5,
         },
         geometry: {
           type: 'Point',
@@ -75,7 +78,7 @@ export function RequestsMap({
         },
       })),
     }),
-    [points],
+    [points, statusColors],
   );
 
   const clusterCircleStyle = useMemo(
@@ -118,8 +121,8 @@ export function RequestsMap({
       ({
         circleColor: ['coalesce', ['get', 'color'], MARKER_COLOR],
         circleRadius: ['coalesce', ['get', 'radius'], 10],
-        circleStrokeColor: MARKER_STROKE,
-        circleStrokeWidth: 2.5,
+        circleStrokeColor: ['coalesce', ['get', 'strokeColor'], MARKER_STROKE],
+        circleStrokeWidth: 3,
         circleOpacity: 1,
       }) as any,
     [],
@@ -131,14 +134,25 @@ export function RequestsMap({
       if (!feature) return;
 
       if (feature.properties?.cluster) {
-        const zoomLevel = await shapeSourceRef.current?.getClusterExpansionZoom(feature);
         const coordinates = feature.geometry?.coordinates;
 
         if (Array.isArray(coordinates) && coordinates.length >= 2) {
+          let zoomLevel = 14;
+
+          try {
+            const clusterZoom = await shapeSourceRef.current?.getClusterExpansionZoom(feature);
+            if (typeof clusterZoom === 'number' && Number.isFinite(clusterZoom)) {
+              zoomLevel = Math.min(clusterZoom + 0.35, 16);
+            }
+          } catch (error) {
+            console.warn('Unable to expand request cluster', error);
+          }
+
           cameraRef.current?.setCamera({
             centerCoordinate: [coordinates[0], coordinates[1]],
-            zoomLevel: typeof zoomLevel === 'number' ? zoomLevel : 14,
-            animationDuration: 350,
+            zoomLevel,
+            animationMode: CAMERA_ANIMATION,
+            animationDuration: 650,
           });
         }
         return;
@@ -148,7 +162,15 @@ export function RequestsMap({
       if (!pointId) return;
 
       const point = points.find((item) => item.id === pointId);
-      if (point) onPointPress(point);
+      if (point) {
+        cameraRef.current?.setCamera({
+          centerCoordinate: [point.lng, point.lat],
+          zoomLevel: 15,
+          animationMode: CAMERA_ANIMATION,
+          animationDuration: 500,
+        });
+        onPointPress(point);
+      }
     },
     [onPointPress, points],
   );
@@ -157,35 +179,48 @@ export function RequestsMap({
     if (!MapLibre) return;
     if (!cameraRef.current) return;
 
-    if (points.length === 0) {
+    if (focusPoints?.length) return;
+
+    const validPoints = points.filter((point) => (
+      Number.isFinite(point.lng) && Number.isFinite(point.lat)
+    ));
+
+    if (validPoints.length === 0) {
       cameraRef.current.setCamera({
         centerCoordinate: ASTANA_CENTER,
         zoomLevel: 11.5,
+        animationMode: CAMERA_ANIMATION,
         animationDuration: 600,
       });
       return;
     }
 
-    if (points.length === 1) {
-      const point = points[0];
+    const lngs = validPoints.map((point) => point.lng);
+    const lats = validPoints.map((point) => point.lat);
+    const minLng = Math.min(...lngs);
+    const maxLng = Math.max(...lngs);
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    const isSingleCoordinate = Math.abs(maxLng - minLng) < 0.0001 && Math.abs(maxLat - minLat) < 0.0001;
+
+    if (validPoints.length === 1 || isSingleCoordinate) {
+      const point = validPoints[0];
       cameraRef.current.setCamera({
         centerCoordinate: [point.lng, point.lat],
-        zoomLevel: 14,
+        zoomLevel: 14.5,
+        animationMode: CAMERA_ANIMATION,
         animationDuration: 600,
       });
       return;
     }
 
-    const lngs = points.map((point) => point.lng);
-    const lats = points.map((point) => point.lat);
-
     cameraRef.current.fitBounds(
-      [Math.max(...lngs), Math.max(...lats)],
-      [Math.min(...lngs), Math.min(...lats)],
+      [maxLng, maxLat],
+      [minLng, minLat],
       96,
       700,
     );
-  }, [points]);
+  }, [focusPoints, points]);
 
   useEffect(() => {
     if (!MapLibre) return;
@@ -210,6 +245,7 @@ export function RequestsMap({
       cameraRef.current.setCamera({
         centerCoordinate: [validPoints[0].lng, validPoints[0].lat],
         zoomLevel: 15,
+        animationMode: CAMERA_ANIMATION,
         animationDuration: 600,
       });
       return;

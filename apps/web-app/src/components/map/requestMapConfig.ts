@@ -25,8 +25,15 @@ export const REQUEST_MAP_STYLE: StyleSpecification = {
 
 export type RequestMapPalette = {
   mine: string;
+  public: string;
   critical: string;
   default: string;
+};
+
+const STATUS_COLORS: Partial<Record<CivicRequest["status"], string>> = {
+  pending: "rgba(255, 149, 0, 0.92)",
+  in_progress: "rgba(0, 122, 255, 0.88)",
+  closed: "rgba(52, 199, 89, 0.88)",
 };
 
 export function getFilteredRequests(
@@ -53,26 +60,22 @@ export function getRequestWeight(request: CivicRequest) {
 
 export function getRequestColor(
   request: CivicRequest,
+  palette: RequestMapPalette,
+) {
+  const statusColor = STATUS_COLORS[request.status];
+  if (statusColor) return statusColor;
+
+  return request.priority === "critical" ? palette.critical : palette.default;
+}
+
+export function getRequestStrokeColor(
+  request: CivicRequest,
   currentUserId: string | undefined,
   palette: RequestMapPalette,
 ) {
-  if (request.citizenId === currentUserId) {
-    return palette.mine;
-  }
-
-  if (request.status === "pending") {
-    return "rgba(255, 149, 0, 0.92)";
-  }
-
-  if (request.status === "in_progress") {
-    return "rgba(0, 122, 255, 0.88)";
-  }
-
-  if (request.status === "closed") {
-    return "rgba(52, 199, 89, 0.88)";
-  }
-
-  return request.priority === "critical" ? palette.critical : palette.default;
+  return currentUserId && request.citizenId === currentUserId
+    ? palette.mine
+    : palette.public;
 }
 
 export function buildRequestFeatureCollection(
@@ -93,7 +96,8 @@ export function buildRequestFeatureCollection(
       properties: {
         requestId: request.id,
         status: request.status,
-        color: getRequestColor(request, currentUserId, palette),
+        color: getRequestColor(request, palette),
+        strokeColor: getRequestStrokeColor(request, currentUserId, palette),
         weight: getRequestWeight(request),
         radius: request.citizenId === currentUserId ? mineRadius : defaultRadius,
       },
