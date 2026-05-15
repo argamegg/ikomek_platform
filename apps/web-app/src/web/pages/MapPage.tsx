@@ -185,6 +185,7 @@ export function MapPage() {
   }, [allRequests, category, currentUser?.id, mapMode, priority, status]);
 
   const isLoading = publicRequestsQuery.isLoading || myRequestsQuery.isLoading;
+  const [filtersVisible, setFiltersVisible] = useState(true);
   const hasActiveFilters = mapMode !== "all" || category !== "all" || status !== "all" || priority !== "all";
 
   const statusCounts = useMemo(
@@ -302,10 +303,19 @@ export function MapPage() {
           <h1>{t("map.title")}</h1>
           <p>{t("map.subtitleWithCount", { count: allRequests.length })}</p>
         </div>
-        <div className="map-page__status-row">
-          <span><i style={{ background: "#ff9500" }} />{statusCounts.pending} {localizeRequestStatus("pending", t)}</span>
-          <span><i style={{ background: "#007aff" }} />{statusCounts.inProgress} {localizeRequestStatus("in_progress", t)}</span>
-          <span><i style={{ background: "#34c759" }} />{statusCounts.closed} {localizeRequestStatus("closed", t)}</span>
+        <div className="map-page__hero-actions">
+          <div className="map-page__status-row">
+            <span><i style={{ background: "#ff9500" }} />{statusCounts.pending} {localizeRequestStatus("pending", t)}</span>
+            <span><i style={{ background: "#007aff" }} />{statusCounts.inProgress} {localizeRequestStatus("in_progress", t)}</span>
+            <span><i style={{ background: "#34c759" }} />{statusCounts.closed} {localizeRequestStatus("closed", t)}</span>
+          </div>
+          <button
+            type="button"
+            className="map-page__filter-toggle"
+            onClick={() => setFiltersVisible((value) => !value)}
+          >
+            {filtersVisible ? t("map.filters.hideFilters") : t("map.filters.showFilters")}
+          </button>
         </div>
       </section>
 
@@ -322,7 +332,8 @@ export function MapPage() {
           focusRequestId={selectedHotspot ? null : selectedId}
         />
 
-        <div className="map-page__filters">
+        {filtersVisible ? (
+          <div className="map-page__filters">
           <Tabs
             value={mapMode}
             onChange={(value) => updateFilter("mode", value)}
@@ -363,7 +374,8 @@ export function MapPage() {
               <RotateCcw size={15} /> {t("map.filters.reset")}
             </button>
           ) : null}
-        </div>
+          </div>
+        ) : null}
 
         {selectedHotspot ? (
           <article className="map-page__popup map-page__popup--hotspot">
