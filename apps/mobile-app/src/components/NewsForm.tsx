@@ -199,7 +199,12 @@ export function NewsForm({
   const fields = getTabFields(activeTab);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+    >
       <Text style={styles.sectionLabel}>{t('admin.news.titleLabel')}</Text>
       <TextInput
         style={styles.input}

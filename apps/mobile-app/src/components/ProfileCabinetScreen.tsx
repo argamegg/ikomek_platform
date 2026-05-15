@@ -1,15 +1,22 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { isAxiosError } from 'axios';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -17,6 +24,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   AdminPlatformStatsResponse,
   apiService,
+  getApiErrorMessage,
   OperatorStatsResponse,
   Request,
 } from '../utils/api';
@@ -37,6 +45,16 @@ type RecentItem = {
   created_at: string;
   updated_at: string;
 };
+type ProfileEditForm = {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  gender: string;
+  birthDate: string;
+  avatarUrl: string;
+};
+
+const GENDER_OPTIONS = ['male', 'female'] as const;
 
 function getInitials(name?: string) {
   return (name || 'IK')
@@ -46,6 +64,14 @@ function getInitials(name?: string) {
     .join('')
     .slice(0, 2)
     .toUpperCase();
+}
+
+function splitName(name?: string) {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  return {
+    firstName: parts[0] || '',
+    lastName: parts.slice(1).join(' '),
+  };
 }
 
 function getMonthKey(date: Date) {
@@ -130,7 +156,7 @@ function getActivityTime(createdAt?: string, updatedAt?: string) {
 
 export function ProfileCabinetScreen() {
   const { t, i18n } = useTranslation();
-  const { user, token, isLoading: isAuthLoading, isAdmin, isOperator } = useAuth();
+  const { user, token, isLoading: isAuthLoading, isAdmin, isOperator, updateProfile } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [citizenRequests, setCitizenRequests] = useState<Request[]>([]);
@@ -138,6 +164,18 @@ export function ProfileCabinetScreen() {
   const [adminStats, setAdminStats] = useState<AdminPlatformStatsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState<ProfileEditForm>({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    gender: '',
+    birthDate: '',
+    avatarUrl: '',
+  });
+
+  const isCitizen = Boolean(user) && (user?.role === 'citizen' || (!isAdmin && !isOperator && !user?.role));
 
   const loadData = useCallback(async () => {
     if (isAuthLoading) {
@@ -201,6 +239,72 @@ export function ProfileCabinetScreen() {
   const onRefresh = () => {
     setIsRefreshing(true);
     void loadData();
+  };
+
+  const openProfileEditor = () => {
+    const name = splitName(user?.full_name);
+    setProfileForm({
+      firstName: name.firstName,
+      lastName: name.lastName,
+      phone: user?.phone || '',
+      gender: user?.gender || '',
+      birthDate: user?.birth_date || '',
+      avatarUrl: user?.avatar_url || '',
+    });
+    setIsProfileEditorOpen(true);
+  };
+
+  const updateProfileForm = <K extends keyof ProfileEditForm>(key: K, value: ProfileEditForm[K]) => {
+    setProfileForm((current) => ({ ...current, [key]: value }));
+  };
+
+  const pickAvatar = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(t('profile.photoPermissionTitle'), t('profile.photoPermissionMessage'));
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.75,
+      base64: true,
+    });
+
+    if (!result.canceled && result.assets[0]?.base64) {
+      updateProfileForm('avatarUrl', `data:image/jpeg;base64,${result.assets[0].base64}`);
+    }
+  };
+
+  const saveProfile = async () => {
+    const firstName = profileForm.firstName.trim();
+    const lastName = profileForm.lastName.trim();
+    const fullName = `${firstName} ${lastName}`.trim();
+
+    if (!firstName || !lastName) {
+      Alert.alert(t('common.error'), t('profile.nameRequired'));
+      return;
+    }
+
+    setIsSavingProfile(true);
+    try {
+      await updateProfile({
+        fullName,
+        phone: profileForm.phone.trim(),
+        displayName: fullName,
+        gender: profileForm.gender || undefined,
+        birthDate: profileForm.birthDate.trim(),
+        avatarUrl: profileForm.avatarUrl,
+      });
+      setIsProfileEditorOpen(false);
+      Alert.alert(t('common.success'), t('profile.profileSaved'));
+    } catch (error) {
+      Alert.alert(t('common.error'), getApiErrorMessage(error, t('profile.profileSaveError')));
+    } finally {
+      setIsSavingProfile(false);
+    }
   };
 
   const roleLabel = isAdmin ? t('roles.admin') : isOperator ? t('roles.operator') : t('roles.citizen');
@@ -291,16 +395,28 @@ export function ProfileCabinetScreen() {
 
         <View style={styles.profileCard}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{getInitials(user?.full_name)}</Text>
+            {user?.avatar_url ? (
+              <Image source={{ uri: user.avatar_url }} style={styles.avatarImage} />
+            ) : (
+              <Text style={styles.avatarText}>{getInitials(user?.full_name)}</Text>
+            )}
           </View>
           <Text style={styles.profileName}>{user?.full_name}</Text>
           <Text style={styles.profileEmail}>{user?.email}</Text>
+          {user?.phone ? <Text style={styles.profileSecondary}>{user.phone}</Text> : null}
+          {user?.birth_date ? <Text style={styles.profileSecondary}>{user.birth_date}</Text> : null}
           <View style={[styles.roleBadge, { backgroundColor: `${roleColor}18` }]}>
             <Text style={[styles.roleText, { color: roleColor }]}>{roleLabel}</Text>
           </View>
           <Text style={styles.memberSince}>
             {t('profile.memberSince')} {formatMemberSince(user?.created_at, i18n.language)}
           </Text>
+          {isCitizen ? (
+            <TouchableOpacity style={styles.profileEditButton} onPress={openProfileEditor}>
+              <Ionicons name="create-outline" size={18} color={ORANGE} />
+              <Text style={styles.profileEditButtonText}>{t('profile.editProfile')}</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         <View style={styles.statsGrid}>
@@ -393,6 +509,157 @@ export function ProfileCabinetScreen() {
           </View>
         )}
       </ScrollView>
+
+      <Modal
+        visible={isProfileEditorOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsProfileEditorOpen(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.editorBackdrop}
+        >
+          <TouchableOpacity
+            style={styles.editorBackdropPressable}
+            activeOpacity={1}
+            onPress={() => setIsProfileEditorOpen(false)}
+          >
+            <TouchableOpacity activeOpacity={1} style={styles.editorSheet}>
+              <View style={styles.editorHandle} />
+              <View style={styles.editorHeader}>
+                <View>
+                  <Text style={styles.editorEyebrow}>{t('profile.title')}</Text>
+                  <Text style={styles.editorTitle}>{t('profile.editTitle')}</Text>
+                </View>
+                <TouchableOpacity style={styles.editorCloseButton} onPress={() => setIsProfileEditorOpen(false)}>
+                  <Ionicons name="close" size={22} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView
+                contentContainerStyle={styles.editorContent}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="interactive"
+              >
+                <View style={styles.editorAvatarBlock}>
+                  <View style={styles.editorAvatar}>
+                    {profileForm.avatarUrl ? (
+                      <Image source={{ uri: profileForm.avatarUrl }} style={styles.avatarImage} />
+                    ) : (
+                      <Text style={styles.editorAvatarText}>{getInitials(`${profileForm.firstName} ${profileForm.lastName}`)}</Text>
+                    )}
+                  </View>
+                  <View style={styles.editorAvatarActions}>
+                    <TouchableOpacity style={styles.editorGhostButton} onPress={pickAvatar}>
+                      <Ionicons name="image-outline" size={17} color={ORANGE} />
+                      <Text style={styles.editorGhostButtonText}>{t('profile.changePhoto')}</Text>
+                    </TouchableOpacity>
+                    {profileForm.avatarUrl ? (
+                      <TouchableOpacity style={styles.editorGhostButton} onPress={() => updateProfileForm('avatarUrl', '')}>
+                        <Ionicons name="trash-outline" size={17} color="#EF4444" />
+                        <Text style={[styles.editorGhostButtonText, { color: '#EF4444' }]}>{t('profile.removePhoto')}</Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+                </View>
+
+                <View style={styles.editorGrid}>
+                  <View style={styles.editorField}>
+                    <Text style={styles.editorLabel}>{t('profile.firstName')}</Text>
+                    <TextInput
+                      value={profileForm.firstName}
+                      onChangeText={(value) => updateProfileForm('firstName', value)}
+                      style={styles.editorInput}
+                      placeholder={t('profile.firstName')}
+                      placeholderTextColor="#94A3B8"
+                    />
+                  </View>
+                  <View style={styles.editorField}>
+                    <Text style={styles.editorLabel}>{t('profile.lastName')}</Text>
+                    <TextInput
+                      value={profileForm.lastName}
+                      onChangeText={(value) => updateProfileForm('lastName', value)}
+                      style={styles.editorInput}
+                      placeholder={t('profile.lastName')}
+                      placeholderTextColor="#94A3B8"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.editorField}>
+                  <Text style={styles.editorLabel}>{t('profile.phone')}</Text>
+                  <TextInput
+                    value={profileForm.phone}
+                    onChangeText={(value) => updateProfileForm('phone', value)}
+                    style={styles.editorInput}
+                    placeholder="+7"
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="phone-pad"
+                  />
+                </View>
+
+                <View style={styles.editorField}>
+                  <Text style={styles.editorLabel}>{t('profile.gender')}</Text>
+                  <View style={styles.genderRow}>
+                    {GENDER_OPTIONS.map((gender) => (
+                      <TouchableOpacity
+                        key={gender}
+                        style={[
+                          styles.genderChip,
+                          profileForm.gender === gender && styles.genderChipActive,
+                        ]}
+                        onPress={() => updateProfileForm('gender', profileForm.gender === gender ? '' : gender)}
+                      >
+                        <Text
+                          style={[
+                            styles.genderChipText,
+                            profileForm.gender === gender && styles.genderChipTextActive,
+                          ]}
+                        >
+                          {t(`profile.genders.${gender}`)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                <View style={styles.editorField}>
+                  <Text style={styles.editorLabel}>{t('profile.birthDate')}</Text>
+                  <TextInput
+                    value={profileForm.birthDate}
+                    onChangeText={(value) => updateProfileForm('birthDate', value)}
+                    style={styles.editorInput}
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor="#94A3B8"
+                  />
+                </View>
+              </ScrollView>
+
+              <View style={styles.editorActions}>
+                <TouchableOpacity
+                  style={styles.editorCancelButton}
+                  onPress={() => setIsProfileEditorOpen(false)}
+                  disabled={isSavingProfile}
+                >
+                  <Text style={styles.editorCancelText}>{t('common.cancel')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.editorSaveButton, isSavingProfile && styles.editorSaveButtonDisabled]}
+                  onPress={() => void saveProfile()}
+                  disabled={isSavingProfile}
+                >
+                  {isSavingProfile ? (
+                    <ActivityIndicator color="#FFF" />
+                  ) : (
+                    <Text style={styles.editorSaveText}>{t('common.save')}</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -413,13 +680,17 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 28, fontWeight: '800', color: '#1C1C1E' },
   settingsButton: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center', ...shadow },
   profileCard: { backgroundColor: '#FFF', borderRadius: 16, padding: 20, alignItems: 'center', ...shadow },
-  avatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  avatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center', marginBottom: 12, overflow: 'hidden' },
+  avatarImage: { width: '100%', height: '100%', resizeMode: 'cover' },
   avatarText: { color: '#FFF', fontSize: 26, fontWeight: '800' },
   profileName: { fontSize: 22, fontWeight: '800', color: '#1C1C1E', textAlign: 'center' },
   profileEmail: { fontSize: 14, color: '#64748B', marginTop: 4 },
+  profileSecondary: { color: '#94A3B8', fontSize: 13, fontWeight: '700', marginTop: 3 },
   roleBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, marginTop: 12 },
   roleText: { fontSize: 12, fontWeight: '800' },
   memberSince: { marginTop: 10, color: '#64748B', fontSize: 14, fontWeight: '600' },
+  profileEditButton: { marginTop: 16, minHeight: 46, alignSelf: 'stretch', borderRadius: 14, backgroundColor: '#FFF3EC', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  profileEditButtonText: { color: ORANGE, fontWeight: '800', fontSize: 15 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   statCard: { width: '48%', minHeight: 132, backgroundColor: '#FFF', borderRadius: 16, padding: 16, justifyContent: 'space-between', ...shadow },
   statIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
@@ -451,4 +722,34 @@ const styles = StyleSheet.create({
   categoryCount: { color: '#64748B', fontWeight: '800' },
   categoryTrack: { height: 9, borderRadius: 999, backgroundColor: '#FFE3D3', overflow: 'hidden' },
   categoryBar: { height: '100%', borderRadius: 999, backgroundColor: ORANGE },
+  editorBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(15, 23, 42, 0.46)' },
+  editorBackdropPressable: { flex: 1, justifyContent: 'flex-end' },
+  editorSheet: { maxHeight: '92%', paddingHorizontal: 18, paddingTop: 10, paddingBottom: 18, borderTopLeftRadius: 28, borderTopRightRadius: 28, backgroundColor: '#FFF' },
+  editorHandle: { alignSelf: 'center', width: 48, height: 5, borderRadius: 999, backgroundColor: '#E5E7EB', marginBottom: 16 },
+  editorHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 16 },
+  editorEyebrow: { color: ORANGE, fontSize: 12, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.8 },
+  editorTitle: { color: '#0F172A', fontSize: 24, fontWeight: '900', marginTop: 4 },
+  editorCloseButton: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
+  editorContent: { gap: 14, paddingBottom: 12 },
+  editorAvatarBlock: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: 20, backgroundColor: '#F8FAFC' },
+  editorAvatar: { width: 78, height: 78, borderRadius: 39, backgroundColor: ORANGE, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  editorAvatarText: { color: '#FFF', fontSize: 26, fontWeight: '900' },
+  editorAvatarActions: { flex: 1, gap: 8 },
+  editorGhostButton: { minHeight: 38, paddingHorizontal: 12, borderRadius: 999, backgroundColor: '#FFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderWidth: 1, borderColor: '#E5E7EB' },
+  editorGhostButtonText: { color: ORANGE, fontSize: 13, fontWeight: '800' },
+  editorGrid: { flexDirection: 'row', gap: 10 },
+  editorField: { flex: 1, gap: 8 },
+  editorLabel: { color: '#0F172A', fontSize: 13, fontWeight: '800' },
+  editorInput: { minHeight: 52, borderRadius: 16, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#FFF', paddingHorizontal: 14, color: '#0F172A', fontSize: 15, fontWeight: '700' },
+  genderRow: { flexDirection: 'row', gap: 10 },
+  genderChip: { flex: 1, minHeight: 46, borderRadius: 16, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10 },
+  genderChipActive: { borderColor: ORANGE, backgroundColor: '#FFF3EC' },
+  genderChipText: { color: '#64748B', fontSize: 14, fontWeight: '800' },
+  genderChipTextActive: { color: ORANGE },
+  editorActions: { flexDirection: 'row', gap: 10, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
+  editorCancelButton: { flex: 1, minHeight: 50, borderRadius: 16, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
+  editorCancelText: { color: '#475569', fontWeight: '900', fontSize: 15 },
+  editorSaveButton: { flex: 1, minHeight: 50, borderRadius: 16, backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center' },
+  editorSaveButtonDisabled: { opacity: 0.68 },
+  editorSaveText: { color: '#FFF', fontWeight: '900', fontSize: 15 },
 });

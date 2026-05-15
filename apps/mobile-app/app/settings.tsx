@@ -2,12 +2,16 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   ActivityIndicator,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -284,78 +288,98 @@ export default function SettingsScreen() {
       </Modal>
 
       <Modal visible={isAddressModalOpen} transparent animationType="slide" onRequestClose={() => setIsAddressModalOpen(false)}>
-        <View style={styles.langModalOverlay}>
-          <View style={[styles.langModalContent, { paddingBottom: insets.bottom + 16 }]}>
-            <View style={styles.langModalHandle} />
-            <Text style={styles.langModalTitle}>{t('locations.addLocation')}</Text>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardAvoidingOverlay}
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+            <View style={styles.langModalOverlay}>
+              <View style={[styles.langModalContent, styles.addressModalContent, { paddingBottom: insets.bottom + 16 }]}>
+                <View style={styles.langModalHandle} />
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  keyboardDismissMode="interactive"
+                  contentContainerStyle={styles.addressModalScrollContent}
+                >
+                  <Text style={styles.langModalTitle}>{t('locations.addLocation')}</Text>
 
-            <Text style={styles.modalLabel}>{t('locations.locationType')}</Text>
-            <View style={styles.typeGrid}>
-              {LOCATION_TYPES.map((type) => {
-                const active = addressForm.type === type;
-                const config = LOCATION_ICONS[type];
-                return (
-                  <TouchableOpacity
-                    key={type}
-                    style={[styles.typeChip, active && styles.typeChipActive]}
-                    onPress={() => setAddressForm((current) => ({ ...current, type }))}
-                  >
-                    <Ionicons name={config.icon} size={16} color={active ? ORANGE : '#64748B'} />
-                    <Text style={[styles.typeChipText, active && styles.typeChipTextActive]}>{t(`locations.${type}`)}</Text>
+                  <Text style={styles.modalLabel}>{t('locations.locationType')}</Text>
+                  <View style={styles.typeGrid}>
+                    {LOCATION_TYPES.map((type) => {
+                      const active = addressForm.type === type;
+                      const config = LOCATION_ICONS[type];
+                      return (
+                        <TouchableOpacity
+                          key={type}
+                          style={[styles.typeChip, active && styles.typeChipActive]}
+                          onPress={() => setAddressForm((current) => ({ ...current, type }))}
+                        >
+                          <Ionicons name={config.icon} size={16} color={active ? ORANGE : '#64748B'} />
+                          <Text style={[styles.typeChipText, active && styles.typeChipTextActive]}>{t(`locations.${type}`)}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  <TextInput
+                    style={styles.addressModalInput}
+                    value={addressForm.label}
+                    onChangeText={(label) => setAddressForm((current) => ({ ...current, label }))}
+                    placeholder={t('locations.labelPlaceholder')}
+                    placeholderTextColor="#C7C7CC"
+                    returnKeyType="next"
+                  />
+                  <TextInput
+                    style={[styles.addressModalInput, styles.addressModalTextArea]}
+                    value={addressForm.address}
+                    onChangeText={(address) => setAddressForm((current) => ({ ...current, address }))}
+                    placeholder={t('locations.addressPlaceholder')}
+                    placeholderTextColor="#C7C7CC"
+                    multiline
+                    scrollEnabled
+                    textAlignVertical="top"
+                    returnKeyType="done"
+                    blurOnSubmit
+                  />
+                  <View style={styles.coordinateRow}>
+                    <TextInput
+                      style={[styles.addressModalInput, styles.coordinateInput]}
+                      value={addressForm.latitude}
+                      onChangeText={(latitude) => setAddressForm((current) => ({ ...current, latitude }))}
+                      placeholder={t('locations.latitude')}
+                      placeholderTextColor="#C7C7CC"
+                      keyboardType="decimal-pad"
+                    />
+                    <TextInput
+                      style={[styles.addressModalInput, styles.coordinateInput]}
+                      value={addressForm.longitude}
+                      onChangeText={(longitude) => setAddressForm((current) => ({ ...current, longitude }))}
+                      placeholder={t('locations.longitude')}
+                      placeholderTextColor="#C7C7CC"
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                  <Text style={styles.modalHint}>{t('locations.coordinatesHint')}</Text>
+
+                  <TouchableOpacity style={[styles.saveAddressButton, isSavingAddress && styles.disabledButton]} onPress={saveLocation} disabled={isSavingAddress}>
+                    {isSavingAddress ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveAddressText}>{t('locations.saveAddress')}</Text>}
                   </TouchableOpacity>
-                );
-              })}
+                  <TouchableOpacity
+                    style={styles.langCloseBtn}
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      setIsAddressModalOpen(false);
+                      resetAddressForm();
+                    }}
+                  >
+                    <Text style={styles.langCloseText}>{t('common.cancel')}</Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              </View>
             </View>
-
-            <TextInput
-              style={styles.addressModalInput}
-              value={addressForm.label}
-              onChangeText={(label) => setAddressForm((current) => ({ ...current, label }))}
-              placeholder={t('locations.labelPlaceholder')}
-              placeholderTextColor="#C7C7CC"
-            />
-            <TextInput
-              style={[styles.addressModalInput, styles.addressModalTextArea]}
-              value={addressForm.address}
-              onChangeText={(address) => setAddressForm((current) => ({ ...current, address }))}
-              placeholder={t('locations.addressPlaceholder')}
-              placeholderTextColor="#C7C7CC"
-              multiline
-            />
-            <View style={styles.coordinateRow}>
-              <TextInput
-                style={[styles.addressModalInput, styles.coordinateInput]}
-                value={addressForm.latitude}
-                onChangeText={(latitude) => setAddressForm((current) => ({ ...current, latitude }))}
-                placeholder={t('locations.latitude')}
-                placeholderTextColor="#C7C7CC"
-                keyboardType="decimal-pad"
-              />
-              <TextInput
-                style={[styles.addressModalInput, styles.coordinateInput]}
-                value={addressForm.longitude}
-                onChangeText={(longitude) => setAddressForm((current) => ({ ...current, longitude }))}
-                placeholder={t('locations.longitude')}
-                placeholderTextColor="#C7C7CC"
-                keyboardType="decimal-pad"
-              />
-            </View>
-            <Text style={styles.modalHint}>{t('locations.coordinatesHint')}</Text>
-
-            <TouchableOpacity style={[styles.saveAddressButton, isSavingAddress && styles.disabledButton]} onPress={saveLocation} disabled={isSavingAddress}>
-              {isSavingAddress ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveAddressText}>{t('locations.saveAddress')}</Text>}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.langCloseBtn}
-              onPress={() => {
-                setIsAddressModalOpen(false);
-                resetAddressForm();
-              }}
-            >
-              <Text style={styles.langCloseText}>{t('common.cancel')}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -387,8 +411,11 @@ const styles = StyleSheet.create({
   languageFlag: { fontSize: 16 },
   logoutButton: { backgroundColor: '#FFF', borderRadius: 12, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   logoutText: { fontSize: 16, color: '#FF3B30', fontWeight: '700' },
+  keyboardAvoidingOverlay: { flex: 1 },
   langModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   langModalContent: { backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
+  addressModalContent: { maxHeight: '88%' },
+  addressModalScrollContent: { paddingBottom: 12 },
   langModalHandle: { width: 36, height: 4, backgroundColor: '#E5E5EA', borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
   langModalTitle: { fontSize: 20, fontWeight: '800', color: '#1C1C1E', marginBottom: 16 },
   langOption: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 12, marginBottom: 8, backgroundColor: '#F2F2F7' },

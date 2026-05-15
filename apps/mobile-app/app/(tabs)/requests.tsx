@@ -151,7 +151,11 @@ export default function RequestsScreen() {
             <View style={{ width: 44 }} />
           </View>
           
-          <ScrollView style={styles.modalContent}>
+          <ScrollView
+            style={styles.modalContent}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+          >
             <View style={styles.detailHeader}>
               <View style={styles.detailIconContainer}>
                 <Ionicons name={categoryIcon} size={24} color={ORANGE} />
