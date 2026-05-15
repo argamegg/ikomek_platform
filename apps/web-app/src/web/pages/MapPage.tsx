@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Activity, BarChart3, MapPin, RotateCcw } from "lucide-react";
+import { Activity, BarChart3, MapPin, RotateCcw, SlidersHorizontal, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -594,13 +594,6 @@ export function MapPage() {
             <span><i style={{ background: "#007aff" }} />{statusCounts.inProgress} {localizeRequestStatus("in_progress", t)}</span>
             <span><i style={{ background: "#34c759" }} />{statusCounts.closed} {localizeRequestStatus("closed", t)}</span>
           </div>
-          <button
-            type="button"
-            className="map-page__filter-toggle"
-            onClick={() => setFiltersVisible((value) => !value)}
-          >
-            {filtersVisible ? t("map.filters.hideFilters") : t("map.filters.showFilters")}
-          </button>
         </div>
       </section>
 
@@ -619,11 +612,22 @@ export function MapPage() {
 
         {filtersVisible ? (
           <div className="map-page__filters">
-          <Tabs
-            value={mapMode}
-            onChange={(value) => updateFilter("mode", value)}
-            options={mapModeOptions}
-          />
+          <div className="map-page__filters-top">
+            <Tabs
+              value={mapMode}
+              onChange={(value) => updateFilter("mode", value)}
+              options={mapModeOptions}
+            />
+            <button
+              type="button"
+              className="map-page__filters-toggle"
+              onClick={() => setFiltersVisible(false)}
+              aria-label={t("map.filters.hideFilters")}
+              title={t("map.filters.hideFilters")}
+            >
+              <X size={17} strokeWidth={2.6} />
+            </button>
+          </div>
           <select value={category} onChange={(event) => updateFilter("category", event.target.value)}>
             <option value="all">{t("map.filters.allCategories")}</option>
             {(categoriesQuery.data ?? []).map((item) => (
@@ -666,7 +670,17 @@ export function MapPage() {
             </button>
           ) : null}
           </div>
-        ) : null}
+        ) : (
+          <button
+            type="button"
+            className="map-page__filters-open"
+            onClick={() => setFiltersVisible(true)}
+            aria-label={t("map.filters.showFilters")}
+            title={t("map.filters.showFilters")}
+          >
+            <SlidersHorizontal size={18} strokeWidth={2.4} />
+          </button>
+        )}
 
         {selectedHotspot ? (
           <article className="map-page__popup map-page__popup--hotspot">
