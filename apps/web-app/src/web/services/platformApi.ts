@@ -659,14 +659,22 @@ export const platformApi = {
         month: String(item.month ?? ""),
         count: Number(item.count ?? 0),
       })),
-      recentRequests: (data.recent_requests ?? []).map((item) => ({
-        id: String(item.id ?? ""),
-        address: String(item.address ?? ""),
-        categoryName: String(item.category_name ?? ""),
-        status: String(item.status ?? "pending") as RequestStatus,
-        createdAt: String(item.created_at ?? ""),
-        updatedAt: String(item.updated_at ?? ""),
-      })),
+      recentRequests: (data.recent_requests ?? [])
+        .map((item) => ({
+          id: String(item.id ?? ""),
+          address: String(item.address ?? ""),
+          categoryName: String(item.category_name ?? ""),
+          status: String(item.status ?? "pending") as RequestStatus,
+          createdAt: String(item.created_at ?? ""),
+          updatedAt: String(item.updated_at ?? ""),
+        }))
+        .sort((first, second) => {
+          const firstRawTime = new Date(first.updatedAt || first.createdAt).getTime();
+          const secondRawTime = new Date(second.updatedAt || second.createdAt).getTime();
+          const firstTime = Number.isFinite(firstRawTime) ? firstRawTime : 0;
+          const secondTime = Number.isFinite(secondRawTime) ? secondRawTime : 0;
+          return secondTime - firstTime;
+        }),
     };
   },
 

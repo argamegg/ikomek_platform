@@ -247,7 +247,7 @@ export function OperatorStats() {
                 <span className="cabinet-recent-item__content">
                   <strong>{request.categoryName || t("requestDetails.title")}</strong>
                   <small className="cabinet-recent-item__meta-line">📍 {request.address}</small>
-                  <small className="cabinet-recent-item__meta-line">🕐 {formatDate(request.createdAt, locale)}</small>
+                  <small className="cabinet-recent-item__meta-line">🕐 {formatDate(request.updatedAt || request.createdAt, locale)}</small>
                   <small className="cabinet-recent-item__meta-line">
                     💬 {t("cabinet.recent.category")}: {request.categoryName || "—"}
                   </small>

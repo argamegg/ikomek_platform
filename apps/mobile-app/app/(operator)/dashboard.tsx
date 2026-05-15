@@ -27,6 +27,14 @@ const PRIORITY_META: Record<RequestPriority, { background: string; text: string;
 const STATS_HORIZONTAL_PADDING = 16;
 const STATS_GAP = 8;
 
+function getRequestActivityTime(request: Request) {
+  const updated = new Date(request.updated_at || '').getTime();
+  if (Number.isFinite(updated)) return updated;
+
+  const created = new Date(request.created_at).getTime();
+  return Number.isFinite(created) ? created : 0;
+}
+
 export default function OperatorDashboard() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -45,7 +53,11 @@ export default function OperatorDashboard() {
   const fetchRequests = useCallback(async () => {
     try {
       const res = await apiService.getOperatorRequests();
-      setAllRequests(res.data);
+      setAllRequests(
+        res.data
+          .slice()
+          .sort((first, second) => getRequestActivityTime(second) - getRequestActivityTime(first)),
+      );
     } catch (e) { console.error(e); }
     finally { setIsLoading(false); setIsRefreshing(false); }
   }, []);
@@ -125,7 +137,7 @@ export default function OperatorDashboard() {
           </View>
           <Text style={styles.cardAddress} numberOfLines={1}>{item.address}</Text>
           <View style={styles.cardMeta}>
-            <Text style={styles.cardDate}>{format(new Date(item.created_at), 'dd.MM.yy HH:mm')}</Text>
+            <Text style={styles.cardDate}>{format(new Date(item.updated_at || item.created_at), 'dd.MM.yy HH:mm')}</Text>
           </View>
         </View>
       </TouchableOpacity>

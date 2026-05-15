@@ -407,7 +407,7 @@ export function ProfilePage() {
                   <span className="cabinet-recent-item__content">
                     <strong>{localizeRequestProblemType(request.categoryId || request.categoryName, request.title, t)}</strong>
                     <small className="cabinet-recent-item__meta-line">📍 {request.address}</small>
-                    <small className="cabinet-recent-item__meta-line">🕐 {formatDate(request.createdAt, locale)}</small>
+                    <small className="cabinet-recent-item__meta-line">🕐 {formatDate(request.updatedAt || request.createdAt, locale)}</small>
                     <small className="cabinet-recent-item__meta-line">
                       💬 {t("cabinet.recent.category")}: {request.categoryName || localizeRequestProblemType(request.categoryId, request.title, t)}
                     </small>

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { isAxiosError } from 'axios';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -35,6 +35,7 @@ type RecentItem = {
   category: string;
   status: Request['status'];
   created_at: string;
+  updated_at: string;
 };
 
 function getInitials(name?: string) {
@@ -119,6 +120,14 @@ function getStatusColor(status: Request['status']) {
   return AMBER;
 }
 
+function getActivityTime(createdAt?: string, updatedAt?: string) {
+  const updated = updatedAt ? new Date(updatedAt).getTime() : NaN;
+  if (Number.isFinite(updated)) return updated;
+
+  const created = createdAt ? new Date(createdAt).getTime() : NaN;
+  return Number.isFinite(created) ? created : 0;
+}
+
 export function ProfileCabinetScreen() {
   const { t, i18n } = useTranslation();
   const { user, token, isLoading: isAuthLoading, isAdmin, isOperator } = useAuth();
@@ -183,9 +192,11 @@ export function ProfileCabinetScreen() {
     }
   }, [isAdmin, isAuthLoading, isOperator, token, user]);
 
-  useEffect(() => {
-    void loadData();
-  }, [loadData]);
+  useFocusEffect(
+    useCallback(() => {
+      void loadData();
+    }, [loadData]),
+  );
 
   const onRefresh = () => {
     setIsRefreshing(true);
@@ -231,14 +242,18 @@ export function ProfileCabinetScreen() {
   const maxMonthCount = Math.max(...monthlyActivity.map((item) => item.count), 1);
 
   const recentRequests: RecentItem[] = isOperator
-    ? (operatorStats?.recent_requests ?? []).map((request) => ({
-        id: request.id,
-        title: request.category_name || t('request.details'),
-        address: request.address,
-        category: request.category_name || '—',
-        status: request.status,
-        created_at: request.created_at,
-      }))
+    ? (operatorStats?.recent_requests ?? [])
+        .slice()
+        .sort((a, b) => getActivityTime(b.created_at, b.updated_at) - getActivityTime(a.created_at, a.updated_at))
+        .map((request) => ({
+          id: request.id,
+          title: request.category_name || t('request.details'),
+          address: request.address,
+          category: request.category_name || '—',
+          status: request.status,
+          created_at: request.created_at,
+          updated_at: request.updated_at,
+        }))
     : citizenRequests
         .slice()
         .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
@@ -250,6 +265,7 @@ export function ProfileCabinetScreen() {
           category: localizeCategory(request.category_id || request.category_name, t),
           status: request.status,
           created_at: request.created_at,
+          updated_at: request.updated_at,
         }));
 
   if (isLoading) {
@@ -366,7 +382,7 @@ export function ProfileCabinetScreen() {
                     </View>
                   </View>
                   <Text style={styles.requestMeta}>📍 {request.address}</Text>
-                  <Text style={styles.requestMeta}>🕐 {formatDate(request.created_at, i18n.language)}</Text>
+                  <Text style={styles.requestMeta}>🕐 {formatDate(request.updated_at || request.created_at, i18n.language)}</Text>
                   <Text style={styles.requestMeta}>💬 {t('admin.category')}: {request.category}</Text>
                 </TouchableOpacity>
               ))
