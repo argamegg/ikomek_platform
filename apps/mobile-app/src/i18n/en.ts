@@ -173,6 +173,7 @@ export const en = {
       sortCategory: 'By category',
       sortStatus: 'By status',
       reset: 'Reset',
+      apply: 'Apply filters',
       resultCount: '{{count}} on map',
     },
     analytics: {

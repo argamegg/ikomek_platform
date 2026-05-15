@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
+  Animated,
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
-  ScrollView, Modal, useWindowDimensions
+  ScrollView, Modal, useWindowDimensions, PanResponder, Pressable
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -38,13 +39,8 @@ const LOCALE_TAGS = { ru: 'ru-RU', en: 'en-US', kz: 'kk-KZ' } as const;
 
 type LocaleKey = keyof typeof LOCALE_TAGS;
 type Hotspot = { address: string; count: number; points: MapPoint[] };
-type SortMode = 'newest' | 'oldest' | 'category' | 'status';
-
-const STATUS_SORT_ORDER: Record<string, number> = {
-  pending: 0,
-  in_progress: 1,
-  closed: 2,
-};
+type CategoryOption = { id: string; label: string; color: string };
+type StatusOption = { key: string; label: string; count: number; color: string };
 
 const normalizeLocale = (language?: string): LocaleKey => {
   if (language?.startsWith('en')) return 'en';
@@ -88,6 +84,213 @@ const formatWeekdayLabel = (dayIndex: number, locale: LocaleKey) => {
   }
 };
 
+type MapFilterSheetProps = {
+  visible: boolean;
+  categoryOptions: CategoryOption[];
+  statusOptions: StatusOption[];
+  selectedCategory: string;
+  selectedStatus: string | null;
+  resultCount: number;
+  hasActiveFilters: boolean;
+  bottomInset: number;
+  onClose: () => void;
+  onApply: (value: { category: string; status: string | null }) => void;
+  onReset: () => void;
+};
+
+function MapFilterSheet({
+  visible,
+  categoryOptions,
+  statusOptions,
+  selectedCategory,
+  selectedStatus,
+  resultCount,
+  hasActiveFilters,
+  bottomInset,
+  onClose,
+  onApply,
+  onReset,
+}: MapFilterSheetProps) {
+  const { t } = useTranslation();
+  const [draftCategory, setDraftCategory] = useState(selectedCategory);
+  const [draftStatus, setDraftStatus] = useState<string | null>(selectedStatus);
+  const translateY = useRef(new Animated.Value(0)).current;
+  const statusTotal = statusOptions.reduce((sum, item) => sum + item.count, 0);
+  const canResetFilters = hasActiveFilters || draftCategory !== 'all' || draftStatus !== null;
+
+  useEffect(() => {
+    if (visible) {
+      setDraftCategory(selectedCategory);
+      setDraftStatus(selectedStatus);
+      translateY.setValue(0);
+    }
+  }, [selectedCategory, selectedStatus, translateY, visible]);
+
+  const closeAnimated = useCallback(() => {
+    Animated.timing(translateY, {
+      toValue: 520,
+      duration: 180,
+      useNativeDriver: true,
+    }).start(() => {
+      translateY.setValue(0);
+      onClose();
+    });
+  }, [onClose, translateY]);
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gesture) => gesture.dy > 6 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
+        onPanResponderMove: (_, gesture) => {
+          translateY.setValue(Math.max(0, gesture.dy));
+        },
+        onPanResponderRelease: (_, gesture) => {
+          if (gesture.dy > 120 || gesture.vy > 1.1) {
+            closeAnimated();
+            return;
+          }
+
+          Animated.spring(translateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 80,
+            friction: 12,
+          }).start();
+        },
+      }),
+    [closeAnimated, translateY],
+  );
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={closeAnimated}>
+      <View style={styles.mapFilterOverlay}>
+        <Pressable style={styles.mapFilterBackdrop} onPress={closeAnimated} />
+        <Animated.View
+          style={[styles.mapFilterSheet, { paddingBottom: bottomInset + 18, transform: [{ translateY }] }]}
+          {...panResponder.panHandlers}
+        >
+          <View style={styles.mapFilterHandle} />
+          <View style={styles.mapFilterHeader}>
+            <View style={styles.mapFilterHeaderText}>
+              <Text style={styles.mapFilterTitle}>{t('map.filters.title')}</Text>
+              <Text style={styles.mapFilterSubtitle}>{t('map.filters.resultCount', { count: resultCount })}</Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.mapFilterReset, !canResetFilters && styles.mapFilterResetDisabled]}
+              onPress={() => {
+                setDraftCategory('all');
+                setDraftStatus(null);
+                onReset();
+              }}
+              disabled={!canResetFilters}
+              activeOpacity={0.76}
+            >
+              <Text style={[styles.mapFilterResetText, !canResetFilters && styles.mapFilterResetTextDisabled]}>
+                {t('map.filters.reset')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.mapFilterScroll} contentContainerStyle={styles.mapFilterScrollContent} showsVerticalScrollIndicator={false}>
+            <View style={styles.mapFilterSection}>
+              <Text style={styles.mapFilterSectionTitle}>{t('map.filters.categories')}</Text>
+              <View style={styles.mapCategoryGrid}>
+                <TouchableOpacity
+                  style={[
+                    styles.mapCategoryOption,
+                    styles.mapCategoryOptionWide,
+                    draftCategory === 'all' && styles.mapCategoryOptionActive,
+                  ]}
+                  onPress={() => setDraftCategory('all')}
+                  activeOpacity={0.78}
+                >
+                  <View style={[styles.mapFilterOptionIcon, draftCategory === 'all' && styles.mapFilterOptionIconActive]}>
+                    <Ionicons name="apps-outline" size={17} color={draftCategory === 'all' ? '#FFF' : '#64748B'} />
+                  </View>
+                  <Text style={[styles.mapCategoryOptionText, draftCategory === 'all' && styles.mapFilterOptionTextActive]}>
+                    {t('map.filters.allCategories')}
+                  </Text>
+                  {draftCategory === 'all' ? <Ionicons name="checkmark-circle" size={20} color="#FFF" /> : null}
+                </TouchableOpacity>
+
+                {categoryOptions.map((item) => {
+                  const active = draftCategory === item.id;
+                  return (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={[styles.mapCategoryOption, active && styles.mapCategoryOptionActive]}
+                      onPress={() => setDraftCategory(item.id)}
+                      activeOpacity={0.78}
+                    >
+                      <View style={[styles.mapCategoryOptionDot, { backgroundColor: active ? '#FFF' : item.color }]} />
+                      <Text style={[styles.mapCategoryOptionText, active && styles.mapFilterOptionTextActive]} numberOfLines={2}>
+                        {item.label}
+                      </Text>
+                      {active ? <Ionicons name="checkmark-circle" size={18} color="#FFF" /> : null}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.mapFilterSeparator} />
+
+            <View style={styles.mapFilterSection}>
+              <Text style={styles.mapFilterSectionTitle}>{t('map.filters.status')}</Text>
+              <View style={styles.mapStatusGrid}>
+                <TouchableOpacity
+                  style={[styles.mapStatusOption, draftStatus === null && styles.mapStatusOptionActive]}
+                  onPress={() => setDraftStatus(null)}
+                  activeOpacity={0.78}
+                >
+                  <View style={[styles.mapStatusOptionDot, { backgroundColor: '#94A3B8' }]} />
+                  <Text style={[styles.mapStatusOptionText, draftStatus === null && styles.mapStatusOptionTextActive]}>
+                    {t('common.all')}
+                  </Text>
+                  <Text style={[styles.mapStatusOptionCount, draftStatus === null && styles.mapStatusOptionCountActive]}>
+                    {statusTotal}
+                  </Text>
+                </TouchableOpacity>
+
+                {statusOptions.map((item) => {
+                  const active = draftStatus === item.key;
+                  return (
+                    <TouchableOpacity
+                      key={item.key}
+                      style={[styles.mapStatusOption, active && styles.mapStatusOptionActive]}
+                      onPress={() => setDraftStatus(active ? null : item.key)}
+                      activeOpacity={0.78}
+                    >
+                      <View style={[styles.mapStatusOptionDot, { backgroundColor: item.color }]} />
+                      <Text style={[styles.mapStatusOptionText, active && styles.mapStatusOptionTextActive]} numberOfLines={1}>
+                        {item.label}
+                      </Text>
+                      <Text style={[styles.mapStatusOptionCount, active && styles.mapStatusOptionCountActive]}>
+                        {item.count}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </ScrollView>
+
+          <TouchableOpacity
+            style={styles.mapFilterApply}
+            onPress={() => {
+              onApply({ category: draftCategory, status: draftStatus });
+              closeAnimated();
+            }}
+            activeOpacity={0.82}
+          >
+            <Text style={styles.mapFilterApplyText}>{t('map.filters.apply')}</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function MapScreen() {
   const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -111,7 +314,6 @@ export default function MapScreen() {
   const [selectedTimelineMonth, setSelectedTimelineMonth] = useState<string | null>(null);
   const [activeHotspotAddress, setActiveHotspotAddress] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [sortMode, setSortMode] = useState<SortMode>('newest');
   const [isMapFiltersOpen, setIsMapFiltersOpen] = useState(false);
 
   const loadPoints = useCallback(async () => {
@@ -133,24 +335,8 @@ export default function MapScreen() {
     if (statusFilter) filtered = filtered.filter(p => p.status === statusFilter);
     if (categoryFilter !== 'all') filtered = filtered.filter(p => p.category === categoryFilter);
 
-    filtered.sort((a, b) => {
-      if (sortMode === 'oldest') {
-        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-      }
-
-      if (sortMode === 'category') {
-        return localizeCategory(a.category, t).localeCompare(localizeCategory(b.category, t), i18n.language);
-      }
-
-      if (sortMode === 'status') {
-        return (STATUS_SORT_ORDER[a.status] ?? 99) - (STATUS_SORT_ORDER[b.status] ?? 99);
-      }
-
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    });
-
     setFilteredPoints(filtered);
-  }, [categoryFilter, filter, i18n.language, points, sortMode, statusFilter, t]);
+  }, [categoryFilter, filter, points, statusFilter]);
 
   const counts = {
     pending: points.filter(p => p.status === 'pending').length,
@@ -167,17 +353,21 @@ export default function MapScreen() {
     [t],
   );
 
-  const sortOptions = useMemo(
-    () => [
-      { key: 'newest' as const, label: t('map.filters.sortNewest') },
-      { key: 'oldest' as const, label: t('map.filters.sortOldest') },
-      { key: 'category' as const, label: t('map.filters.sortCategory') },
-      { key: 'status' as const, label: t('map.filters.sortStatus') },
-    ],
-    [t],
-  );
+  const mapFilterStatusOptions = useMemo(() => {
+    const scopedPoints = points.filter((point) => {
+      const matchesOwnership = filter !== 'my' || point.is_mine;
+      const matchesCategory = categoryFilter === 'all' || point.category === categoryFilter;
+      return matchesOwnership && matchesCategory;
+    });
 
-  const hasMapFilters = filter !== 'all' || Boolean(statusFilter) || categoryFilter !== 'all' || sortMode !== 'newest';
+    return [
+      { key: 'pending', label: t('status.pending'), count: scopedPoints.filter((point) => point.status === 'pending').length, color: STATUS_COLORS.pending },
+      { key: 'in_progress', label: t('status.inProgress'), count: scopedPoints.filter((point) => point.status === 'in_progress').length, color: STATUS_COLORS.in_progress },
+      { key: 'closed', label: t('status.closed'), count: scopedPoints.filter((point) => point.status === 'closed').length, color: STATUS_COLORS.closed },
+    ];
+  }, [categoryFilter, filter, points, t]);
+
+  const hasMapFilters = Boolean(statusFilter) || categoryFilter !== 'all';
 
   const clearMapFocus = useCallback(() => {
     setActiveHotspotAddress(null);
@@ -194,22 +384,16 @@ export default function MapScreen() {
     setStatusFilter(nextStatus);
   }, [clearMapFocus]);
 
-  const updateCategoryFilter = useCallback((nextCategory: string) => {
-    clearMapFocus();
-    setCategoryFilter(nextCategory);
-  }, [clearMapFocus]);
-
-  const updateSortMode = useCallback((nextSort: SortMode) => {
-    clearMapFocus();
-    setSortMode(nextSort);
-  }, [clearMapFocus]);
-
   const resetMapFilters = useCallback(() => {
     clearMapFocus();
-    setFilter('all');
     setStatusFilter(null);
     setCategoryFilter('all');
-    setSortMode('newest');
+  }, [clearMapFocus]);
+
+  const applyMapFilters = useCallback((value: { category: string; status: string | null }) => {
+    clearMapFocus();
+    setCategoryFilter(value.category);
+    setStatusFilter(value.status);
   }, [clearMapFocus]);
 
   const analytics = useMemo(() => {
@@ -419,84 +603,15 @@ export default function MapScreen() {
               style={[styles.mapFilterFab, hasMapFilters && styles.mapFilterFabActive]}
               onPress={() => {
                 setActiveHotspotAddress(null);
-                setIsMapFiltersOpen((value) => !value);
+                setIsMapFiltersOpen(true);
               }}
               activeOpacity={0.76}
             >
-              <Ionicons name={isMapFiltersOpen ? 'close' : 'options-outline'} size={18} color={hasMapFilters ? '#FFF' : '#475569'} />
+              <Ionicons name="options-outline" size={18} color={hasMapFilters ? '#FFF' : '#475569'} />
               <Text style={[styles.mapFilterFabText, hasMapFilters && styles.mapFilterFabTextActive]}>
-                {isMapFiltersOpen ? t('map.filters.hide') : t('map.filters.show')}
+                {t('map.filters.show')}
               </Text>
             </TouchableOpacity>
-            {isMapFiltersOpen ? (
-              <View style={styles.mapFilterPanel}>
-                <View style={styles.mapFilterHeader}>
-                  <View>
-                    <Text style={styles.mapFilterTitle}>{t('map.filters.title')}</Text>
-                    <Text style={styles.mapFilterSubtitle}>{t('map.filters.resultCount', { count: filteredPoints.length })}</Text>
-                  </View>
-                  <TouchableOpacity style={styles.mapFilterClose} onPress={() => setIsMapFiltersOpen(false)} activeOpacity={0.72}>
-                    <Ionicons name="chevron-down" size={18} color="#64748B" />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.mapFilterMode}>
-                  <TouchableOpacity style={[styles.mapFilterModeBtn, filter === 'all' && styles.mapFilterModeBtnActive]} onPress={() => updateOwnershipFilter('all')} activeOpacity={0.72}>
-                    <Text style={[styles.mapFilterModeText, filter === 'all' && styles.mapFilterModeTextActive]}>{t('map.allRequests')}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.mapFilterModeBtn, filter === 'my' && styles.mapFilterModeBtnActive]} onPress={() => updateOwnershipFilter('my')} activeOpacity={0.72}>
-                    <Text style={[styles.mapFilterModeText, filter === 'my' && styles.mapFilterModeTextActive]}>{t('map.myRequests')}</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.mapFilterSection}>
-                  <Text style={styles.mapFilterSectionTitle}>{t('map.filters.categories')}</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mapFilterChips}>
-                    <TouchableOpacity style={[styles.mapCategoryChip, categoryFilter === 'all' && styles.mapCategoryChipActive]} onPress={() => updateCategoryFilter('all')} activeOpacity={0.72}>
-                      <Ionicons name="apps-outline" size={14} color={categoryFilter === 'all' ? '#FFF' : '#64748B'} />
-                      <Text style={[styles.mapCategoryChipText, categoryFilter === 'all' && styles.mapCategoryChipTextActive]}>{t('map.filters.allCategories')}</Text>
-                    </TouchableOpacity>
-                    {categoryOptions.map((item) => (
-                      <TouchableOpacity key={item.id} style={[styles.mapCategoryChip, categoryFilter === item.id && styles.mapCategoryChipActive]} onPress={() => updateCategoryFilter(item.id)} activeOpacity={0.72}>
-                        <View style={[styles.mapCategoryChipDot, { backgroundColor: item.color }]} />
-                        <Text style={[styles.mapCategoryChipText, categoryFilter === item.id && styles.mapCategoryChipTextActive]} numberOfLines={1}>{item.label}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-
-                <View style={styles.mapFilterSection}>
-                  <Text style={styles.mapFilterSectionTitle}>{t('map.filters.status')}</Text>
-                  <View style={styles.mapFilterWrap}>
-                    {[['pending', counts.pending], ['in_progress', counts.in_progress], ['closed', counts.closed]].map(([key, count]) => (
-                      <TouchableOpacity key={key as string} style={[styles.mapStatusChip, statusFilter === key && styles.mapStatusChipActive]} onPress={() => updateStatusFilter(statusFilter === key ? null : key as string)} activeOpacity={0.72}>
-                        <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[key as string] }]} />
-                        <Text style={[styles.mapStatusChipText, statusFilter === key && styles.mapStatusChipTextActive]}>{t(`status.${key === 'in_progress' ? 'inProgress' : key}`)}</Text>
-                        <Text style={[styles.mapStatusChipCount, statusFilter === key && styles.mapStatusChipTextActive]}>{count as number}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                <View style={styles.mapFilterSection}>
-                  <Text style={styles.mapFilterSectionTitle}>{t('map.filters.sort')}</Text>
-                  <View style={styles.mapFilterWrap}>
-                    {sortOptions.map((item) => (
-                      <TouchableOpacity key={item.key} style={[styles.mapSortChip, sortMode === item.key && styles.mapSortChipActive]} onPress={() => updateSortMode(item.key)} activeOpacity={0.72}>
-                        <Text style={[styles.mapSortChipText, sortMode === item.key && styles.mapSortChipTextActive]}>{item.label}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                {hasMapFilters ? (
-                  <TouchableOpacity style={styles.mapFilterReset} onPress={resetMapFilters} activeOpacity={0.76}>
-                    <Ionicons name="refresh" size={15} color={ORANGE} />
-                    <Text style={styles.mapFilterResetText}>{t('map.filters.reset')}</Text>
-                  </TouchableOpacity>
-                ) : null}
-              </View>
-            ) : null}
             {activeHotspot ? (
               <View style={styles.hotspotMapCallout}>
                 <View style={styles.hotspotMapHeader}>
@@ -727,6 +842,20 @@ export default function MapScreen() {
         </View>
       </ScrollView>
 
+      <MapFilterSheet
+        visible={isMapFiltersOpen}
+        categoryOptions={categoryOptions}
+        statusOptions={mapFilterStatusOptions}
+        selectedCategory={categoryFilter}
+        selectedStatus={statusFilter}
+        resultCount={filteredPoints.length}
+        hasActiveFilters={hasMapFilters}
+        bottomInset={insets.bottom}
+        onClose={() => setIsMapFiltersOpen(false)}
+        onApply={applyMapFilters}
+        onReset={resetMapFilters}
+      />
+
       {/* Point Detail Modal */}
       {selectedPoint && (
         <Modal visible transparent animationType="slide">
@@ -800,36 +929,42 @@ const styles = StyleSheet.create({
   mapFilterFabActive: { backgroundColor: ORANGE, borderColor: ORANGE },
   mapFilterFabText: { fontSize: 12, fontWeight: '900', color: '#475569' },
   mapFilterFabTextActive: { color: '#FFF' },
-  mapFilterPanel: { position: 'absolute', left: 12, right: 12, bottom: 64, zIndex: 9, maxHeight: '72%', padding: 14, borderRadius: 24, backgroundColor: 'rgba(255, 255, 255, 0.97)', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.08)', shadowColor: '#0F172A', shadowOffset: { width: 0, height: 18 }, shadowOpacity: 0.16, shadowRadius: 28, elevation: 10, gap: 12 },
+  mapFilterOverlay: { flex: 1, justifyContent: 'flex-end' },
+  mapFilterBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(15, 23, 42, 0.36)' },
+  mapFilterSheet: { maxHeight: '84%', paddingHorizontal: 20, paddingTop: 10, borderTopLeftRadius: 28, borderTopRightRadius: 28, backgroundColor: '#FFF', shadowColor: '#0F172A', shadowOffset: { width: 0, height: -12 }, shadowOpacity: 0.16, shadowRadius: 28, elevation: 12 },
+  mapFilterHandle: { alignSelf: 'center', width: 44, height: 5, borderRadius: 999, backgroundColor: '#CBD5E1', marginBottom: 16 },
   mapFilterHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  mapFilterTitle: { fontSize: 16, fontWeight: '900', color: '#111827' },
-  mapFilterSubtitle: { marginTop: 2, fontSize: 12, fontWeight: '700', color: '#64748B' },
-  mapFilterClose: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
-  mapFilterMode: { minHeight: 42, flexDirection: 'row', padding: 4, borderRadius: 16, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.05)' },
-  mapFilterModeBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 12, paddingHorizontal: 8 },
-  mapFilterModeBtnActive: { backgroundColor: '#FFF', shadowColor: '#0F172A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.07, shadowRadius: 12, elevation: 2 },
-  mapFilterModeText: { fontSize: 12, fontWeight: '800', color: '#64748B' },
-  mapFilterModeTextActive: { color: '#111827' },
-  mapFilterSection: { gap: 8 },
-  mapFilterSectionTitle: { fontSize: 11, fontWeight: '900', color: '#94A3B8', textTransform: 'uppercase' },
-  mapFilterChips: { gap: 8, paddingRight: 2 },
-  mapFilterWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  mapCategoryChip: { minHeight: 36, maxWidth: 190, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 10, borderRadius: 999, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.06)' },
-  mapCategoryChipActive: { backgroundColor: ORANGE, borderColor: ORANGE },
-  mapCategoryChipDot: { width: 9, height: 9, borderRadius: 4.5 },
-  mapCategoryChipText: { maxWidth: 142, fontSize: 12, fontWeight: '800', color: '#475569' },
-  mapCategoryChipTextActive: { color: '#FFF' },
-  mapStatusChip: { minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, borderRadius: 999, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.06)' },
-  mapStatusChipActive: { backgroundColor: '#FFF4EC', borderColor: ORANGE },
-  mapStatusChipText: { fontSize: 12, fontWeight: '800', color: '#475569' },
-  mapStatusChipTextActive: { color: ORANGE },
-  mapStatusChipCount: { fontSize: 12, fontWeight: '900', color: '#111827' },
-  mapSortChip: { minHeight: 34, justifyContent: 'center', paddingHorizontal: 11, borderRadius: 999, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.06)' },
-  mapSortChipActive: { backgroundColor: '#111827', borderColor: '#111827' },
-  mapSortChipText: { fontSize: 12, fontWeight: '800', color: '#475569' },
-  mapSortChipTextActive: { color: '#FFF' },
-  mapFilterReset: { minHeight: 36, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderRadius: 14, backgroundColor: '#FFF4EC', borderWidth: 1, borderColor: 'rgba(255, 107, 0, 0.18)' },
-  mapFilterResetText: { fontSize: 12, fontWeight: '900', color: ORANGE },
+  mapFilterHeaderText: { flex: 1, minWidth: 0 },
+  mapFilterTitle: { fontSize: 22, fontWeight: '900', color: '#111827' },
+  mapFilterSubtitle: { marginTop: 2, fontSize: 13, fontWeight: '700', color: '#64748B' },
+  mapFilterReset: { minHeight: 36, justifyContent: 'center', paddingHorizontal: 13, borderRadius: 999, backgroundColor: '#FFF4EC', borderWidth: 1, borderColor: 'rgba(255, 107, 0, 0.18)' },
+  mapFilterResetDisabled: { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' },
+  mapFilterResetText: { fontSize: 13, fontWeight: '900', color: ORANGE },
+  mapFilterResetTextDisabled: { color: '#94A3B8' },
+  mapFilterScroll: { flexGrow: 0, marginTop: 8 },
+  mapFilterScrollContent: { paddingBottom: 14 },
+  mapFilterSection: { paddingVertical: 16, gap: 12 },
+  mapFilterSectionTitle: { fontSize: 12, fontWeight: '900', color: '#94A3B8', textTransform: 'uppercase' },
+  mapFilterSeparator: { height: 1, backgroundColor: '#EEF2F7' },
+  mapCategoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  mapCategoryOption: { flexGrow: 1, flexBasis: '47%', minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0' },
+  mapCategoryOptionWide: { flexBasis: '100%' },
+  mapCategoryOptionActive: { backgroundColor: ORANGE, borderColor: ORANGE, shadowColor: ORANGE, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.14, shadowRadius: 16, elevation: 3 },
+  mapFilterOptionIcon: { width: 34, height: 34, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F5F9' },
+  mapFilterOptionIconActive: { backgroundColor: 'rgba(255, 255, 255, 0.18)' },
+  mapCategoryOptionDot: { width: 11, height: 11, borderRadius: 5.5 },
+  mapCategoryOptionText: { flex: 1, minWidth: 0, fontSize: 13, lineHeight: 17, fontWeight: '800', color: '#334155' },
+  mapFilterOptionTextActive: { color: '#FFF' },
+  mapStatusGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  mapStatusOption: { flexGrow: 1, flexBasis: '47%', minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0' },
+  mapStatusOptionActive: { backgroundColor: '#FFF4EC', borderColor: ORANGE },
+  mapStatusOptionDot: { width: 11, height: 11, borderRadius: 5.5 },
+  mapStatusOptionText: { flex: 1, minWidth: 0, fontSize: 14, fontWeight: '800', color: '#475569' },
+  mapStatusOptionTextActive: { color: ORANGE },
+  mapStatusOptionCount: { minWidth: 24, fontSize: 14, fontWeight: '900', color: '#111827', textAlign: 'right' },
+  mapStatusOptionCountActive: { color: '#111827' },
+  mapFilterApply: { minHeight: 54, alignItems: 'center', justifyContent: 'center', borderRadius: 18, backgroundColor: ORANGE, shadowColor: ORANGE, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 18, elevation: 4 },
+  mapFilterApplyText: { fontSize: 16, fontWeight: '900', color: '#FFF' },
   hotspotMapCallout: { position: 'absolute', top: 12, left: 12, right: 12, padding: 14, borderRadius: 24, backgroundColor: 'rgba(255, 255, 255, 0.96)', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.08)', shadowColor: '#0F172A', shadowOffset: { width: 0, height: 16 }, shadowOpacity: 0.14, shadowRadius: 26, elevation: 8 },
   hotspotMapHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   hotspotMapPin: { width: 38, height: 38, borderRadius: 14, backgroundColor: '#FFF4EC', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255, 107, 0, 0.16)' },

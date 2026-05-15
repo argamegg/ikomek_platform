@@ -173,6 +173,7 @@ export const ru = {
       sortCategory: 'По категории',
       sortStatus: 'По статусу',
       reset: 'Сбросить',
+      apply: 'Применить фильтры',
       resultCount: '{{count}} на карте',
     },
     analytics: {

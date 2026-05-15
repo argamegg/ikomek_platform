@@ -173,6 +173,7 @@ export const kz = {
       sortCategory: 'Санат бойынша',
       sortStatus: 'Статус бойынша',
       reset: 'Қалпына келтіру',
+      apply: 'Сүзгілерді қолдану',
       resultCount: 'Картада {{count}}',
     },
     analytics: {
