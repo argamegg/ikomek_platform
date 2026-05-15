@@ -754,6 +754,10 @@ export const platformApi = {
     return normalizeSavedLocation(response.data);
   },
 
+  async deleteSavedLocation(locationId: string) {
+    await platformClient.delete(`${apiConfig.endpoints.savedLocations}/${locationId}`);
+  },
+
   async updateProfile(payload: UserProfileUpdateInput) {
     await platformClient.put("/auth/profile", null, {
       params: {

@@ -1,14 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
+  ActivityIndicator,
   Modal,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -17,10 +20,14 @@ import { apiService, SavedLocation } from '../src/utils/api';
 
 const ORANGE = '#FF6B00';
 
+const LOCATION_TYPES = ['home', 'work', 'study', 'family', 'other'] as const;
+type SavedLocationType = (typeof LOCATION_TYPES)[number];
+
 const LOCATION_ICONS: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: string }> = {
   home: { icon: 'home', color: '#FF9500' },
   work: { icon: 'briefcase', color: '#007AFF' },
   study: { icon: 'school', color: '#5856D6' },
+  family: { icon: 'people', color: '#AF52DE' },
   other: { icon: 'location', color: '#34C759' },
 };
 
@@ -32,31 +39,92 @@ const LANGUAGES = [
 
 export default function SettingsScreen() {
   const { t, i18n } = useTranslation();
-  const { user, logout, updateLanguage } = useAuth();
+  const { user, logout, updateLanguage, isCitizen } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]);
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
+  const [addressForm, setAddressForm] = useState({
+    label: '',
+    type: 'home' as SavedLocationType,
+    address: '',
+    latitude: '',
+    longitude: '',
+  });
 
-  useEffect(() => {
-    void fetchLocations();
-  }, []);
-
-  const fetchLocations = async () => {
+  const fetchLocations = useCallback(async () => {
     try {
       const response = await apiService.getSavedLocations();
       setSavedLocations(response.data);
     } catch (error) {
       console.error('Error fetching locations:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isCitizen) {
+      void fetchLocations();
+    }
+  }, [fetchLocations, isCitizen]);
 
   const deleteLocation = async (id: string) => {
     try {
       await apiService.deleteSavedLocation(id);
       setSavedLocations((items) => items.filter((location) => location.id !== id));
-    } catch (error) {
+    } catch {
       Alert.alert(t('common.error'), t('errors.tryAgain'));
+    }
+  };
+
+  const resetAddressForm = () => {
+    setAddressForm({
+      label: '',
+      type: 'home',
+      address: '',
+      latitude: '',
+      longitude: '',
+    });
+  };
+
+  const saveLocation = async () => {
+    const label = addressForm.label.trim();
+    const address = addressForm.address.trim();
+    if (!label || !address) {
+      Alert.alert(t('common.error'), t('locations.fillRequired'));
+      return;
+    }
+
+    setIsSavingAddress(true);
+    try {
+      let latitude = Number(addressForm.latitude);
+      let longitude = Number(addressForm.longitude);
+
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        const [result] = await Location.geocodeAsync(`${address}, Астана, Казахстан`);
+        if (!result) {
+          Alert.alert(t('common.error'), t('locations.addressNotFound'));
+          return;
+        }
+        latitude = result.latitude;
+        longitude = result.longitude;
+      }
+
+      const response = await apiService.createSavedLocation({
+        name: addressForm.type,
+        label,
+        address,
+        latitude,
+        longitude,
+      });
+      setSavedLocations((items) => [response.data, ...items]);
+      resetAddressForm();
+      setIsAddressModalOpen(false);
+    } catch {
+      Alert.alert(t('common.error'), t('errors.tryAgain'));
+    } finally {
+      setIsSavingAddress(false);
     }
   };
 
@@ -92,10 +160,13 @@ export default function SettingsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}>
+        {isCitizen ? (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{t('locations.savedLocations')}</Text>
-            <Ionicons name="add-circle" size={24} color={ORANGE} />
+            <TouchableOpacity onPress={() => setIsAddressModalOpen(true)} style={styles.addAddressButton}>
+              <Ionicons name="add" size={20} color="#FFF" />
+            </TouchableOpacity>
           </View>
           {savedLocations.length === 0 ? (
             <View style={styles.emptyCard}>
@@ -130,6 +201,7 @@ export default function SettingsScreen() {
             })
           )}
         </View>
+        ) : null}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('profile.settings')}</Text>
@@ -210,6 +282,81 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal visible={isAddressModalOpen} transparent animationType="slide" onRequestClose={() => setIsAddressModalOpen(false)}>
+        <View style={styles.langModalOverlay}>
+          <View style={[styles.langModalContent, { paddingBottom: insets.bottom + 16 }]}>
+            <View style={styles.langModalHandle} />
+            <Text style={styles.langModalTitle}>{t('locations.addLocation')}</Text>
+
+            <Text style={styles.modalLabel}>{t('locations.locationType')}</Text>
+            <View style={styles.typeGrid}>
+              {LOCATION_TYPES.map((type) => {
+                const active = addressForm.type === type;
+                const config = LOCATION_ICONS[type];
+                return (
+                  <TouchableOpacity
+                    key={type}
+                    style={[styles.typeChip, active && styles.typeChipActive]}
+                    onPress={() => setAddressForm((current) => ({ ...current, type }))}
+                  >
+                    <Ionicons name={config.icon} size={16} color={active ? ORANGE : '#64748B'} />
+                    <Text style={[styles.typeChipText, active && styles.typeChipTextActive]}>{t(`locations.${type}`)}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <TextInput
+              style={styles.addressModalInput}
+              value={addressForm.label}
+              onChangeText={(label) => setAddressForm((current) => ({ ...current, label }))}
+              placeholder={t('locations.labelPlaceholder')}
+              placeholderTextColor="#C7C7CC"
+            />
+            <TextInput
+              style={[styles.addressModalInput, styles.addressModalTextArea]}
+              value={addressForm.address}
+              onChangeText={(address) => setAddressForm((current) => ({ ...current, address }))}
+              placeholder={t('locations.addressPlaceholder')}
+              placeholderTextColor="#C7C7CC"
+              multiline
+            />
+            <View style={styles.coordinateRow}>
+              <TextInput
+                style={[styles.addressModalInput, styles.coordinateInput]}
+                value={addressForm.latitude}
+                onChangeText={(latitude) => setAddressForm((current) => ({ ...current, latitude }))}
+                placeholder={t('locations.latitude')}
+                placeholderTextColor="#C7C7CC"
+                keyboardType="decimal-pad"
+              />
+              <TextInput
+                style={[styles.addressModalInput, styles.coordinateInput]}
+                value={addressForm.longitude}
+                onChangeText={(longitude) => setAddressForm((current) => ({ ...current, longitude }))}
+                placeholder={t('locations.longitude')}
+                placeholderTextColor="#C7C7CC"
+                keyboardType="decimal-pad"
+              />
+            </View>
+            <Text style={styles.modalHint}>{t('locations.coordinatesHint')}</Text>
+
+            <TouchableOpacity style={[styles.saveAddressButton, isSavingAddress && styles.disabledButton]} onPress={saveLocation} disabled={isSavingAddress}>
+              {isSavingAddress ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveAddressText}>{t('locations.saveAddress')}</Text>}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.langCloseBtn}
+              onPress={() => {
+                setIsAddressModalOpen(false);
+                resetAddressForm();
+              }}
+            >
+              <Text style={styles.langCloseText}>{t('common.cancel')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -223,6 +370,7 @@ const styles = StyleSheet.create({
   section: { marginBottom: 24 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   sectionTitle: { fontSize: 14, fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 },
+  addAddressButton: { width: 32, height: 32, borderRadius: 16, backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center' },
   emptyCard: { backgroundColor: '#FFF', borderRadius: 16, padding: 32, alignItems: 'center' },
   emptyText: { fontSize: 16, fontWeight: '700', color: '#8E8E93', marginTop: 12 },
   emptySubtext: { fontSize: 13, color: '#C7C7CC', marginTop: 4 },
@@ -250,4 +398,18 @@ const styles = StyleSheet.create({
   langNameActive: { fontWeight: '700', color: ORANGE },
   langCloseBtn: { backgroundColor: '#F2F2F7', borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 8 },
   langCloseText: { fontSize: 17, color: '#8E8E93', fontWeight: '700' },
+  modalLabel: { fontSize: 13, fontWeight: '800', color: '#64748B', textTransform: 'uppercase', marginBottom: 10 },
+  typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
+  typeChip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: '#FFF' },
+  typeChipActive: { borderColor: ORANGE, backgroundColor: `${ORANGE}10` },
+  typeChipText: { color: '#64748B', fontSize: 13, fontWeight: '800' },
+  typeChipTextActive: { color: ORANGE },
+  addressModalInput: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: '#1C1C1E', fontWeight: '600', marginBottom: 10 },
+  addressModalTextArea: { minHeight: 74, textAlignVertical: 'top' },
+  coordinateRow: { flexDirection: 'row', gap: 10 },
+  coordinateInput: { flex: 1 },
+  modalHint: { color: '#94A3B8', fontSize: 12, lineHeight: 17, marginBottom: 12 },
+  saveAddressButton: { minHeight: 52, borderRadius: 16, backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center' },
+  disabledButton: { opacity: 0.6 },
+  saveAddressText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
 });

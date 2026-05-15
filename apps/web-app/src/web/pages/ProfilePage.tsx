@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import {
@@ -19,13 +19,15 @@ import {
   FileText,
   LogOut,
   MapPinned,
+  MapPin,
   Pencil,
   Plus,
   Radio,
+  Trash2,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import type { CivicRequest, Locale, RequestStatus, UserRole } from "../../types/platform";
+import type { CivicRequest, Locale, RequestStatus, SavedLocationType, UserRole } from "../../types/platform";
 import { AdminStats } from "../../components/AdminStats";
 import { OperatorStats } from "../../components/OperatorStats";
 import { Badge } from "../components/ui/Badge";
@@ -35,9 +37,11 @@ import { formatDate, getStatusTone } from "../lib/format";
 import { localizeRequestProblemType, localizeRequestStatus } from "../lib/requestMeta";
 import { getErrorMessage, platformApi, queryKeys } from "../services/platformApi";
 import { applyLoggedOutQueryState } from "../lib/querySession";
+import { searchAstanaAddresses } from "../lib/locationGeocoding";
 
 const ACCENT = "#ff6b35";
 const MONTH_WINDOW = 6;
+const SAVED_LOCATION_TYPES: SavedLocationType[] = ["home", "work", "study", "family", "other"];
 
 type StatKey = "total" | "closed" | "inProgress" | "pending";
 
@@ -172,6 +176,14 @@ export function ProfilePage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const locale = normalizeLocale(i18n.language);
+  const [savedFormOpen, setSavedFormOpen] = useState(false);
+  const [savedForm, setSavedForm] = useState({
+    label: "",
+    type: "home" as SavedLocationType,
+    address: "",
+    lat: "",
+    lng: "",
+  });
 
   const currentUserQuery = useQuery({
     queryKey: queryKeys.currentUser,
@@ -184,10 +196,12 @@ export function ProfilePage() {
   const savedLocationsQuery = useQuery({
     queryKey: queryKeys.savedLocations,
     queryFn: platformApi.getSavedLocations,
+    enabled: currentUserQuery.data?.primaryRole === "citizen",
   });
 
   const currentUser = currentUserQuery.data;
-  const requests = myRequestsQuery.data ?? [];
+  const isCitizen = currentUser?.primaryRole === "citizen";
+  const requests = useMemo(() => myRequestsQuery.data ?? [], [myRequestsQuery.data]);
   const isLoading = currentUserQuery.isLoading || myRequestsQuery.isLoading;
   const savedLocations = savedLocationsQuery.data ?? [];
 
@@ -248,6 +262,51 @@ export function ProfilePage() {
   );
   const memberSince = formatMemberSince(currentUser?.createdAt, requests.at(-1)?.createdAt, locale);
   const userRoleLabel = currentUser ? t(`roles.${currentUser.primaryRole}`, currentUser.primaryRole) : "";
+  const createSavedLocationMutation = useMutation({
+    mutationFn: async () => {
+      const label = savedForm.label.trim();
+      const address = savedForm.address.trim();
+      let lat = Number(savedForm.lat);
+      let lng = Number(savedForm.lng);
+
+      if (!label || !address) {
+        throw new Error(t("cabinet.saved.formRequired"));
+      }
+
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        const [suggestion] = await searchAstanaAddresses(address, i18n.resolvedLanguage ?? "ru");
+        if (!suggestion) {
+          throw new Error(t("cabinet.saved.addressNotFound"));
+        }
+        lat = suggestion.lat;
+        lng = suggestion.lng;
+      }
+
+      return platformApi.createSavedLocation({
+        label,
+        type: savedForm.type,
+        address,
+        districtId: "",
+        lat,
+        lng,
+      });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.savedLocations });
+      setSavedForm({ label: "", type: "home", address: "", lat: "", lng: "" });
+      setSavedFormOpen(false);
+      toast.success(t("cabinet.saved.created"));
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  });
+  const deleteSavedLocationMutation = useMutation({
+    mutationFn: platformApi.deleteSavedLocation,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.savedLocations });
+      toast.success(t("cabinet.saved.deleted"));
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  });
 
   async function handleLogout() {
     try {
@@ -431,21 +490,109 @@ export function ProfilePage() {
           )}
         </motion.section>
 
+        {isCitizen ? (
         <motion.section className="cabinet-section" variants={sectionVariants} initial="hidden" animate="visible">
           <div className="cabinet-section__header">
             <div>
               <p className="cabinet-kicker">{t("profile.title")}</p>
               <h2>{t("cabinet.saved.title")}</h2>
             </div>
-            <MapPinned size={22} />
+            <Button
+              type="button"
+              variant="secondary"
+              iconLeft={<Plus size={16} />}
+              onClick={() => setSavedFormOpen((value) => !value)}
+            >
+              {t("cabinet.saved.add")}
+            </Button>
           </div>
+
+          {savedFormOpen ? (
+            <form
+              className="cabinet-saved-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                createSavedLocationMutation.mutate();
+              }}
+            >
+              <label>
+                <span>{t("cabinet.saved.label")}</span>
+                <input
+                  value={savedForm.label}
+                  onChange={(event) => setSavedForm((current) => ({ ...current, label: event.target.value }))}
+                  placeholder={t("cabinet.saved.labelPlaceholder")}
+                />
+              </label>
+              <label>
+                <span>{t("cabinet.saved.type")}</span>
+                <select
+                  value={savedForm.type}
+                  onChange={(event) => setSavedForm((current) => ({ ...current, type: event.target.value as SavedLocationType }))}
+                >
+                  {SAVED_LOCATION_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {t(`savedLocationTypes.${type}`)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="cabinet-saved-form__wide">
+                <span>{t("cabinet.saved.address")}</span>
+                <input
+                  value={savedForm.address}
+                  onChange={(event) => setSavedForm((current) => ({ ...current, address: event.target.value }))}
+                  placeholder={t("cabinet.saved.addressPlaceholder")}
+                />
+              </label>
+              <label>
+                <span>{t("cabinet.saved.latitude")}</span>
+                <input
+                  value={savedForm.lat}
+                  onChange={(event) => setSavedForm((current) => ({ ...current, lat: event.target.value }))}
+                  placeholder="51.1694"
+                  inputMode="decimal"
+                />
+              </label>
+              <label>
+                <span>{t("cabinet.saved.longitude")}</span>
+                <input
+                  value={savedForm.lng}
+                  onChange={(event) => setSavedForm((current) => ({ ...current, lng: event.target.value }))}
+                  placeholder="71.4149"
+                  inputMode="decimal"
+                />
+              </label>
+              <p className="cabinet-saved-form__hint">{t("cabinet.saved.coordinatesHint")}</p>
+              <Button
+                type="submit"
+                disabled={createSavedLocationMutation.isPending}
+                iconLeft={<MapPinned size={16} />}
+              >
+                {createSavedLocationMutation.isPending ? t("common.loading") : t("cabinet.saved.save")}
+              </Button>
+            </form>
+          ) : null}
 
           {savedLocations.length ? (
             <div className="cabinet-saved-grid">
-              {savedLocations.slice(0, 6).map((location) => (
+              {savedLocations.map((location) => (
                 <motion.article key={location.id} className="cabinet-saved-card" variants={cardVariants}>
+                  <div className="cabinet-saved-card__top">
+                    <span>{t(`savedLocationTypes.${location.type}`)}</span>
+                    <button
+                      type="button"
+                      onClick={() => deleteSavedLocationMutation.mutate(location.id)}
+                      aria-label={t("common.delete")}
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
                   <strong>{location.label}</strong>
                   <p>{location.address}</p>
+                  <small>
+                    <MapPin size={13} />
+                    {location.point.lat.toFixed(5)}, {location.point.lng.toFixed(5)}
+                  </small>
                 </motion.article>
               ))}
             </div>
@@ -453,6 +600,7 @@ export function ProfilePage() {
             <EmptyState title={t("cabinet.saved.title")} description={t("cabinet.saved.empty")} />
           )}
         </motion.section>
+        ) : null}
 
           </>
         )}

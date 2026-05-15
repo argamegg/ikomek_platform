@@ -300,11 +300,13 @@ export function normalizeSavedLocation(payload: unknown): SavedLocation {
   const record = isRecord(payload) ? payload : {};
   const pointValue = pick(record, ["point", "coordinates", "geo"]) as unknown;
   const pointRecord = isRecord(pointValue) ? pointValue : {};
+  const rawType = asString(pick(record, ["type", "name", "place_type"]), "other");
+  const type = (["home", "work", "study", "family", "other"].includes(rawType) ? rawType : "other") as SavedLocationType;
 
   return {
     id: asString(pick(record, ["id", "locationId", "uuid"]), crypto.randomUUID()),
     label: asString(pick(record, ["label", "name"]), "Saved place"),
-    type: asString(pick(record, ["type"]), "other") as SavedLocationType,
+    type,
     address: asString(pick(record, ["address", "fullAddress", "full_address"]), ""),
     districtId: asString(pick(record, ["districtId", "district_id"]), ""),
     point: {

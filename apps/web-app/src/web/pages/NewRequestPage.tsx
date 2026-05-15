@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import type { CivicRequest, SavedLocation } from "../../types/platform";
+import type { CivicRequest, SavedLocation, SavedLocationType } from "../../types/platform";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Input, Textarea } from "../components/ui/Input";
@@ -33,6 +33,7 @@ import {
 const EMPTY_VALUE = "—";
 const MIN_DESCRIPTION_LENGTH = 10;
 const STEP_ORDER = ["location", "type", "description", "media", "review"] as const;
+const SAVED_LOCATION_TYPES: SavedLocationType[] = ["home", "work", "study", "family", "other"];
 
 type StepKey = (typeof STEP_ORDER)[number];
 
@@ -67,6 +68,11 @@ export function NewRequestPage() {
   const [addressSuggestions, setAddressSuggestions] = useState<GeocodedAddressSuggestion[]>([]);
   const [searchPreview, setSearchPreview] = useState<GeocodedAddressSuggestion | null>(null);
   const [reverseLookupFailed, setReverseLookupFailed] = useState(false);
+  const [saveLocationOpen, setSaveLocationOpen] = useState(false);
+  const [saveLocationForm, setSaveLocationForm] = useState({
+    label: "",
+    type: "home" as SavedLocationType,
+  });
   const categoriesQuery = useQuery({
     queryKey: queryKeys.categories,
     queryFn: platformApi.getCategories,
@@ -313,6 +319,35 @@ export function NewRequestPage() {
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   });
+  const createSavedLocationMutation = useMutation({
+    mutationFn: () => {
+      if (!coordinatesAreValid || latitude === null || longitude === null) {
+        throw new Error(t("newRequest.invalidCoordinates"));
+      }
+
+      const label = saveLocationForm.label.trim();
+      if (!label) {
+        throw new Error(t("cabinet.saved.formRequired"));
+      }
+
+      return platformApi.createSavedLocation({
+        label,
+        type: saveLocationForm.type,
+        address: form.address.trim(),
+        districtId: "",
+        lat: latitude,
+        lng: longitude,
+      });
+    },
+    onSuccess: async (location) => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.savedLocations });
+      setForm((current) => ({ ...current, savedLocationId: location.id }));
+      setSaveLocationOpen(false);
+      setSaveLocationForm({ label: "", type: "home" });
+      toast.success(t("newRequest.locationSaved"));
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  });
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -428,6 +463,7 @@ export function NewRequestPage() {
       address: location?.address ?? current.address,
       lat: location ? String(location.point.lat) : current.lat,
       lng: location ? String(location.point.lng) : current.lng,
+      place: location?.type ?? current.place,
     }));
   }
 
@@ -514,6 +550,14 @@ export function NewRequestPage() {
       () => toast.error(t("newRequest.geolocateError")),
       { enableHighAccuracy: true, timeout: 10000 },
     );
+  }
+
+  function openSaveLocationForm() {
+    setSaveLocationForm((current) => ({
+      ...current,
+      label: current.label || selectedSavedLocation?.label || form.place || form.address.split(",")[0]?.trim() || t("cabinet.saved.labelPlaceholder"),
+    }));
+    setSaveLocationOpen(true);
   }
 
   function handleMapCoordinateChange(coordinate: { lat: number; lng: number }) {
@@ -665,10 +709,55 @@ export function NewRequestPage() {
                   onClick={() => applySavedLocation(location)}
                 >
                   <span>{location.label}</span>
-                  <small>{location.address}</small>
+                  <small>{t(`savedLocationTypes.${location.type}`)} · {location.address}</small>
                 </button>
               ))}
             </div>
+          </div>
+        ) : null}
+
+        {locationStepValid && !selectedSavedLocation ? (
+          <div className="request-flow-save-current">
+            <div>
+              <strong>{t("newRequest.saveCurrentLocation")}</strong>
+              <span>{t("newRequest.saveCurrentLocationHint")}</span>
+            </div>
+            <Button type="button" variant="secondary" iconLeft={<MapPin size={16} />} onClick={openSaveLocationForm}>
+              {t("cabinet.saved.add")}
+            </Button>
+          </div>
+        ) : null}
+
+        {saveLocationOpen ? (
+          <div className="request-flow-save-form">
+            <label>
+              <span>{t("cabinet.saved.label")}</span>
+              <input
+                value={saveLocationForm.label}
+                onChange={(event) => setSaveLocationForm((current) => ({ ...current, label: event.target.value }))}
+                placeholder={t("cabinet.saved.labelPlaceholder")}
+              />
+            </label>
+            <label>
+              <span>{t("cabinet.saved.type")}</span>
+              <select
+                value={saveLocationForm.type}
+                onChange={(event) => setSaveLocationForm((current) => ({ ...current, type: event.target.value as SavedLocationType }))}
+              >
+                {SAVED_LOCATION_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {t(`savedLocationTypes.${type}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Button
+              type="button"
+              onClick={() => createSavedLocationMutation.mutate()}
+              disabled={createSavedLocationMutation.isPending}
+            >
+              {createSavedLocationMutation.isPending ? t("common.loading") : t("cabinet.saved.save")}
+            </Button>
           </div>
         ) : null}
 

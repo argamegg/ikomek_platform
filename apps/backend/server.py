@@ -55,3 +55,7 @@ async def ensure_indexes():
         default_language="russian",
         name="news_text_search_index",
     )
+    await db.saved_locations.create_index(
+        [("user_id", 1), ("created_at", -1)],
+        name="saved_locations_user_created_index",
+    )

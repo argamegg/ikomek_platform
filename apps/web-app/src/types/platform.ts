@@ -19,8 +19,7 @@ export type SavedLocationType =
   | "home"
   | "work"
   | "study"
-  | "road"
-  | "environment"
+  | "family"
   | "other";
 
 export type MapMode = "all" | "my" | "heatmap";
