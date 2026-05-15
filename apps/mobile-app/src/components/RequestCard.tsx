@@ -35,8 +35,9 @@ const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
 };
 
 const PRIORITY_COLORS = {
-  low: { background: '#F2F4F7', text: '#667085' },
-  high: { background: '#FFF3E8', text: '#FF6B00' },
+  low: { background: '#F3F4F6', text: '#6B7280', border: '#D1D5DB' },
+  medium: { background: '#FEF9C3', text: '#CA8A04', border: '#FDE047' },
+  high: { background: '#FEE2E2', text: '#DC2626', border: '#FCA5A5' },
 } as const;
 
 interface RequestCardProps {
@@ -57,8 +58,8 @@ export const RequestCard = ({ request, onPress }: RequestCardProps) => {
     request.reason,
     t,
   );
-  const priority = request.priority ?? 'normal';
-  const priorityStyle = priority === 'low' || priority === 'high' ? PRIORITY_COLORS[priority] : null;
+  const priority = request.priority ?? 'medium';
+  const priorityStyle = PRIORITY_COLORS[priority] ?? PRIORITY_COLORS.medium;
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
@@ -72,13 +73,11 @@ export const RequestCard = ({ request, onPress }: RequestCardProps) => {
         </View>
         <View style={styles.badges}>
           <StatusBadge status={request.status} size="small" />
-          {priorityStyle && (
-            <View style={[styles.priorityBadge, { backgroundColor: priorityStyle.background }]}>
-              <Text style={[styles.priorityText, { color: priorityStyle.text }]}>
-                {localizeRequestPriority(priority, t)}
-              </Text>
-            </View>
-          )}
+          <View style={[styles.priorityBadge, { backgroundColor: priorityStyle.background, borderColor: priorityStyle.border }]}>
+            <Text style={[styles.priorityText, { color: priorityStyle.text }]}>
+              {localizeRequestPriority(priority, t)}
+            </Text>
+          </View>
         </View>
       </View>
       
@@ -140,7 +139,8 @@ const styles = StyleSheet.create({
   priorityBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 8
+    borderRadius: 8,
+    borderWidth: 1
   },
   priorityText: {
     fontSize: 11,

@@ -28,7 +28,7 @@ export const ru = {
 
   priority: {
     low: 'Низкий',
-    normal: 'Обычный',
+    medium: 'Средний',
     high: 'Высокий',
   },
 
@@ -268,7 +268,7 @@ export const ru = {
     },
     priorities: {
       low: 'Низкий',
-      normal: 'Обычный',
+      medium: 'Средний',
       high: 'Высокий',
     },
   },
@@ -528,7 +528,7 @@ export const ru = {
     filterByPriority: 'По приоритету',
     filterByDistrict: 'По району',
     highPriority: 'Высокий',
-    normal: 'Обычный',
+    mediumPriority: 'Средний',
     internalNotes: 'Внутренние заметки',
     internalNotesPlaceholder: 'Внутренние заметки...',
     assignDepartment: 'Назначить отдел',

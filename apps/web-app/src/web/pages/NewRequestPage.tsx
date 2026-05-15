@@ -277,7 +277,7 @@ export function NewRequestPage() {
       description: form.description || t("newRequest.summaryMapEmpty"),
       status: "pending",
       statusLabel: t("newRequest.summaryStatusDraft"),
-      priority: "normal",
+      priority: "medium",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       isPublic: form.isPublic,

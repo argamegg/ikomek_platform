@@ -37,7 +37,7 @@ const TIMELINE_COLORS = {
   closed: "#34c759",
 } as const;
 
-const PRIORITY_OPTIONS = ["all", "low", "normal", "high"] as const;
+const PRIORITY_OPTIONS = ["all", "low", "medium", "high"] as const;
 const WEEKDAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 
 type PriorityFilter = (typeof PRIORITY_OPTIONS)[number];

@@ -19,10 +19,10 @@ import { localizeRequestPriority } from '../../src/utils/requestMeta';
 
 const ORANGE = '#FF6B00';
 const STATUSES = ['pending', 'in_progress', 'closed'];
-const PRIORITY_META: Record<RequestPriority, { background: string; text: string; strip: string }> = {
-  low: { background: '#F2F4F7', text: '#667085', strip: '#98A2B3' },
-  normal: { background: '#EAF2FF', text: '#007AFF', strip: '#007AFF' },
-  high: { background: '#FFF3E8', text: '#FF6B00', strip: '#FF6B00' },
+const PRIORITY_META: Record<RequestPriority, { background: string; text: string; border: string; strip: string }> = {
+  low: { background: '#F3F4F6', text: '#6B7280', border: '#D1D5DB', strip: '#6B7280' },
+  medium: { background: '#FEF9C3', text: '#CA8A04', border: '#FDE047', strip: '#CA8A04' },
+  high: { background: '#FEE2E2', text: '#DC2626', border: '#FCA5A5', strip: '#DC2626' },
 };
 const STATS_HORIZONTAL_PADDING = 16;
 const STATS_GAP = 8;
@@ -97,12 +97,12 @@ export default function OperatorDashboard() {
   const statsColumns = viewportWidth >= 340 ? 4 : 2;
   const availableStatsWidth = Math.max(viewportWidth - (STATS_HORIZONTAL_PADDING * 2), 0);
   const statCardWidth = (availableStatsWidth - STATS_GAP * (statsColumns - 1)) / statsColumns;
-  const getPriorityValue = (priority?: Request['priority']) => priority ?? 'normal';
+  const getPriorityValue = (priority?: Request['priority']) => priority ?? 'medium';
   const renderPriorityBadge = (priorityValue?: Request['priority']) => {
     const priority = getPriorityValue(priorityValue);
     const meta = PRIORITY_META[priority];
     return (
-      <View style={[styles.priorityBadge, { backgroundColor: meta.background }]}>
+      <View style={[styles.priorityBadge, { backgroundColor: meta.background, borderColor: meta.border }]}>
         <Text style={[styles.priorityText, { color: meta.text }]}>
           {localizeRequestPriority(priority, t)}
         </Text>
@@ -112,10 +112,9 @@ export default function OperatorDashboard() {
 
   const renderCard = ({ item }: { item: Request }) => {
     const priority = getPriorityValue(item.priority);
-    const statusColor = (({ pending: '#FF9500', in_progress: '#007AFF', closed: '#34C759' } as any)[item.status] || '#FF9500');
     return (
       <TouchableOpacity style={styles.card} onPress={() => openDetail(item)} activeOpacity={0.8} data-testid={`op-req-${item.id}`}>
-        <View style={[styles.cardStrip, { backgroundColor: priority === 'high' ? PRIORITY_META.high.strip : statusColor }]} />
+        <View style={[styles.cardStrip, { backgroundColor: PRIORITY_META[priority].strip }]} />
         <View style={styles.cardBody}>
           <View style={styles.cardTop}>
             <Text style={styles.cardTitle} numberOfLines={1}>{localizeProblemType(item.category_id, item.problem_type, t)}</Text>
@@ -282,7 +281,7 @@ const styles = StyleSheet.create({
   cardAddress: { fontSize: 13, color: '#8E8E93', marginBottom: 6 },
   cardMeta: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardDate: { fontSize: 12, color: '#C7C7CC' },
-  priorityBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  priorityBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1 },
   priorityText: { fontSize: 10, fontWeight: '700' },
   emptyBox: { alignItems: 'center', padding: 60 },
   emptyText: { fontSize: 16, color: '#8E8E93', marginTop: 12 },

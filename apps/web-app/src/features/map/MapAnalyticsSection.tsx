@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { Copy } from "../../App";
 import { MapLegend } from "../../components/map/MapLegend";
 import { OpenLayersMap } from "../../components/map/OpenLayersMap";
@@ -20,6 +21,7 @@ export function MapAnalyticsSection({
   publicRequests,
   districts,
 }: MapAnalyticsSectionProps) {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<MapMode>("all");
   const [selectedRequest, setSelectedRequest] = useState<CivicRequest | null>(publicRequests[0] ?? null);
 
@@ -55,7 +57,7 @@ export function MapAnalyticsSection({
           <h3>Analytics summary</h3>
           <ul className="feature-list">
             <li>Total public requests: {publicRequests.length}</li>
-            <li>High priority issues: {publicRequests.filter((item) => item.priority === "high").length}</li>
+            <li>{t("priority.high")} priority issues: {publicRequests.filter((item) => item.priority === "high").length}</li>
             <li>Pending issues: {publicRequests.filter((item) => item.status === "pending").length}</li>
             <li>Astana districts in view: {districts.length}</li>
           </ul>

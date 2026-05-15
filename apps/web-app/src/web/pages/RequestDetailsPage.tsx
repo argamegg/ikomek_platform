@@ -7,7 +7,7 @@ import { Card } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { EmptyState } from "../components/ui/EmptyState";
 import { IssueMap } from "../components/maps/IssueMap";
-import { formatDate, getPriorityTone, getStatusTone } from "../lib/format";
+import { formatDate, getPriorityBadgeClass, getStatusTone } from "../lib/format";
 import {
   localizeAttachmentType,
   localizeRequestCategory,
@@ -70,7 +70,9 @@ export function RequestDetailsPage() {
                   <span className="section-card__eyebrow">{t("requestDetails.overview")}</span>
                   <h3>{request.address}</h3>
                 </div>
-                <Badge tone={getPriorityTone(request.priority)}>{localizeRequestPriority(request.priority, t)}</Badge>
+                <Badge className={getPriorityBadgeClass(request.priority)}>
+                  {localizeRequestPriority(request.priority, t)}
+                </Badge>
               </div>
               <div className="details-grid">
                 <div>

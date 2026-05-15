@@ -12,7 +12,7 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT_DIR))
 load_dotenv(ROOT_DIR / ".env")
 
-VALID_PRIORITIES = ["low", "normal", "high"]
+VALID_PRIORITIES = ["low", "medium", "high"]
 
 
 async def migrate_request_priorities(dry_run: bool) -> None:
@@ -22,22 +22,22 @@ async def migrate_request_priorities(dry_run: bool) -> None:
     db = client[database_name]
 
     try:
-        urgent_count = await db.requests.count_documents({"priority": "urgent"})
+        normal_count = await db.requests.count_documents({"priority": "normal"})
         invalid_query = {
             "$or": [
                 {"priority": {"$exists": False}},
-                {"priority": {"$nin": [*VALID_PRIORITIES, "urgent"]}},
+                {"priority": {"$nin": [*VALID_PRIORITIES, "normal"]}},
             ],
         }
         invalid_count = await db.requests.count_documents(invalid_query)
 
-        urgent_modified = 0
+        normal_modified = 0
         invalid_modified = 0
 
         if not dry_run:
-            urgent_result = await db.requests.update_many(
-                {"priority": "urgent"},
-                {"$set": {"priority": "high"}},
+            normal_result = await db.requests.update_many(
+                {"priority": "normal"},
+                {"$set": {"priority": "medium"}},
             )
             invalid_result = await db.requests.update_many(
                 {
@@ -46,15 +46,15 @@ async def migrate_request_priorities(dry_run: bool) -> None:
                         {"priority": {"$nin": VALID_PRIORITIES}},
                     ],
                 },
-                {"$set": {"priority": "normal"}},
+                {"$set": {"priority": "medium"}},
             )
-            urgent_modified = urgent_result.modified_count
+            normal_modified = normal_result.modified_count
             invalid_modified = invalid_result.modified_count
 
-        print(f"urgent_to_high_found={urgent_count}")
-        print(f"invalid_to_normal_found={invalid_count}")
-        print(f"urgent_to_high_modified={urgent_modified}")
-        print(f"invalid_to_normal_modified={invalid_modified}")
+        print(f"normal_to_medium_found={normal_count}")
+        print(f"invalid_to_medium_found={invalid_count}")
+        print(f"normal_to_medium_modified={normal_modified}")
+        print(f"invalid_to_medium_modified={invalid_modified}")
         print(f"dry_run={'true' if dry_run else 'false'}")
     finally:
         client.close()
@@ -62,7 +62,7 @@ async def migrate_request_priorities(dry_run: bool) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Normalize request priorities to low, normal, or high.",
+        description="Normalize request priorities to low, medium, or high.",
     )
     parser.add_argument(
         "--dry-run",

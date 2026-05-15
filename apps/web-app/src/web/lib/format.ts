@@ -15,10 +15,10 @@ const statusToneMap: Record<string, "neutral" | "warning" | "success" | "danger"
   rejected: "danger",
 };
 
-const priorityToneMap: Record<string, "neutral" | "warning" | "success" | "danger" | "info"> = {
-  high: "danger",
-  normal: "info",
-  low: "neutral",
+const priorityBadgeClassMap: Record<RequestPriority, string> = {
+  high: "ui-badge--priority-high",
+  medium: "ui-badge--priority-medium",
+  low: "ui-badge--priority-low",
 };
 
 export function formatDate(value: string, locale: Locale = "en") {
@@ -67,8 +67,8 @@ export function getStatusTone(status: RequestStatus) {
   return statusToneMap[status] ?? "neutral";
 }
 
-export function getPriorityTone(priority: RequestPriority) {
-  return priorityToneMap[priority] ?? "neutral";
+export function getPriorityBadgeClass(priority: RequestPriority) {
+  return priorityBadgeClassMap[priority] ?? priorityBadgeClassMap.medium;
 }
 
 export function formatRole(role: UserRole) {

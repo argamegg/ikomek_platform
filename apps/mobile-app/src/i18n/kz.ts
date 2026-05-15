@@ -28,7 +28,7 @@ export const kz = {
 
   priority: {
     low: 'Төмен',
-    normal: 'Қалыпты',
+    medium: 'Орташа',
     high: 'Жоғары',
   },
 
@@ -268,7 +268,7 @@ export const kz = {
     },
     priorities: {
       low: 'Төмен',
-      normal: 'Қалыпты',
+      medium: 'Орташа',
       high: 'Жоғары',
     },
   },
@@ -528,7 +528,7 @@ export const kz = {
     filterByPriority: 'Басымдық бойынша',
     filterByDistrict: 'Аудан бойынша',
     highPriority: 'Жоғары',
-    normal: 'Қалыпты',
+    mediumPriority: 'Орташа',
     internalNotes: 'Ішкі жазбалар',
     internalNotesPlaceholder: 'Ішкі жазбалар...',
     assignDepartment: 'Бөлімді тағайындау',

@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { Copy } from "../../App";
 import { Badge } from "../../components/ui/Badge";
 import { Card } from "../../components/ui/Card";
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import type { CivicRequest } from "../../types/platform";
-import { formatDate, formatPriority, formatStatus } from "../../utils/formatters";
+import { formatDate, formatStatus } from "../../utils/formatters";
 
 type RequestDetailsSectionProps = {
   copy: Copy;
@@ -17,6 +18,7 @@ export function RequestDetailsSection({
   requestId,
   loadRequest,
 }: RequestDetailsSectionProps) {
+  const { t } = useTranslation();
   const [request, setRequest] = useState<CivicRequest | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,7 +61,7 @@ export function RequestDetailsSection({
         <Card>
           <div className="badge-row">
             <Badge label={formatStatus(request.status)} tone="warning" />
-            <Badge label={formatPriority(request.priority)} tone="accent" />
+            <Badge label={t(`priority.${request.priority}`)} className={`badge--priority-${request.priority}`} />
           </div>
           <h3>{request.title}</h3>
           <ul className="feature-list">

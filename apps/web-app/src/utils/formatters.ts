@@ -1,4 +1,4 @@
-import type { RequestPriority, RequestStatus, UserRole } from "../types/platform";
+import type { RequestStatus, UserRole } from "../types/platform";
 
 export function formatMetric(value: number, suffix = "") {
   return `${value}${suffix}`;
@@ -18,14 +18,6 @@ export function formatStatus(status: RequestStatus) {
     in_progress: "In Progress",
     closed: "Closed",
   }[status];
-}
-
-export function formatPriority(priority: RequestPriority) {
-  return {
-    low: "Low",
-    normal: "Normal",
-    high: "High",
-  }[priority];
 }
 
 export function formatRole(role: UserRole) {

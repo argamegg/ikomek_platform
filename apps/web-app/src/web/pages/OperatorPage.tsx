@@ -9,7 +9,7 @@ import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { Input, Select, Textarea } from "../components/ui/Input";
 import { Modal } from "../components/ui/Modal";
-import { formatDate, getPriorityTone, getStatusTone } from "../lib/format";
+import { formatDate, getPriorityBadgeClass, getStatusTone } from "../lib/format";
 import {
   localizeRequestDescription,
   localizeRequestPriority,
@@ -18,14 +18,14 @@ import {
 } from "../lib/requestMeta";
 import { getErrorMessage, platformApi, queryKeys } from "../services/platformApi";
 
-const PRIORITY_OPTIONS: RequestPriority[] = ["low", "normal", "high"];
+const PRIORITY_OPTIONS: RequestPriority[] = ["low", "medium", "high"];
 
 export function OperatorPage() {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [status, setStatus] = useState<RequestStatus>("in_progress");
-  const [priority, setPriority] = useState<RequestPriority>("normal");
+  const [priority, setPriority] = useState<RequestPriority>("medium");
   const [departmentName, setDepartmentName] = useState("");
   const [internalNote, setInternalNote] = useState("");
   const requestsQuery = useQuery({
@@ -89,7 +89,9 @@ export function OperatorPage() {
           <Card key={request.id} className="request-card">
             <div className="request-card__top">
               <div>
-                <Badge tone={getPriorityTone(request.priority)}>{localizeRequestPriority(request.priority, t)}</Badge>
+                <Badge className={getPriorityBadgeClass(request.priority)}>
+                  {localizeRequestPriority(request.priority, t)}
+                </Badge>
                 <h3>{localizeRequestProblemType(request.categoryId || request.categoryName, request.title, t)}</h3>
               </div>
               <Badge tone={getStatusTone(request.status)}>{localizeRequestStatus(request.statusLabel || request.status, t)}</Badge>
@@ -132,11 +134,11 @@ export function OperatorPage() {
                 <button
                   key={item}
                   type="button"
-                  className={priority === item ? "is-active" : ""}
+                  className={`operator-priority-option operator-priority-option--${item}${priority === item ? " is-active" : ""}`}
                   onClick={() => setPriority(item)}
                   aria-pressed={priority === item}
                 >
-                  <Badge tone={getPriorityTone(item)}>{localizeRequestPriority(item, t)}</Badge>
+                  <Badge className={getPriorityBadgeClass(item)}>{localizeRequestPriority(item, t)}</Badge>
                 </button>
               ))}
             </div>

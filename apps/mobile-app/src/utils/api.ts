@@ -59,7 +59,7 @@ export function getApiErrorMessage(error: unknown, fallbackMessage: string): str
   return fallbackMessage;
 }
 
-export type RequestPriority = 'low' | 'normal' | 'high';
+export type RequestPriority = 'low' | 'medium' | 'high';
 
 export interface Category {
   id: string;

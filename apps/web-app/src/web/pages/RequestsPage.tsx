@@ -8,7 +8,7 @@ import { Input } from "../components/ui/Input";
 import { Tabs } from "../components/ui/Tabs";
 import { PageHeader } from "../components/ui/PageHeader";
 import { EmptyState } from "../components/ui/EmptyState";
-import { formatDate, getPriorityTone, getStatusTone } from "../lib/format";
+import { formatDate, getPriorityBadgeClass, getStatusTone } from "../lib/format";
 import {
   localizeRequestDescription,
   localizeRequestPriority,
@@ -77,7 +77,9 @@ export function RequestsPage() {
           <Card key={request.id} className="request-card">
             <div className="request-card__top">
               <div>
-                <Badge tone={getPriorityTone(request.priority)}>{localizeRequestPriority(request.priority, t)}</Badge>
+                <Badge className={getPriorityBadgeClass(request.priority)}>
+                  {localizeRequestPriority(request.priority, t)}
+                </Badge>
                 <h3>{localizeRequestProblemType(request.categoryId || request.categoryName, request.title, t)}</h3>
               </div>
               <Badge tone={getStatusTone(request.status)}>{localizeRequestStatus(request.statusLabel || request.status, t)}</Badge>

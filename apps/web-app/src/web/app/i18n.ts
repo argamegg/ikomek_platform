@@ -46,7 +46,7 @@ const resources = {
       },
       priority: {
         low: "Low",
-        normal: "Normal",
+        medium: "Medium",
         high: "High",
       },
       nav: {
@@ -372,7 +372,7 @@ const resources = {
         },
         priorities: {
           low: "Low",
-          normal: "Normal",
+          medium: "Medium",
           high: "High",
         },
         attachmentTypes: {
@@ -927,7 +927,7 @@ const resources = {
       },
       priority: {
         low: "Низкий",
-        normal: "Обычный",
+        medium: "Средний",
         high: "Высокий",
       },
       nav: {
@@ -1254,7 +1254,7 @@ const resources = {
         },
         priorities: {
           low: "Низкий",
-          normal: "Обычный",
+          medium: "Средний",
           high: "Высокий",
         },
         attachmentTypes: {
@@ -1812,7 +1812,7 @@ const resources = {
       },
       priority: {
         low: "Төмен",
-        normal: "Қалыпты",
+        medium: "Орташа",
         high: "Жоғары",
       },
       nav: {
@@ -2140,7 +2140,7 @@ const resources = {
         },
         priorities: {
           low: "Төмен",
-          normal: "Қалыпты",
+          medium: "Орташа",
           high: "Жоғары",
         },
         attachmentTypes: {

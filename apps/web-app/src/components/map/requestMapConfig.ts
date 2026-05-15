@@ -53,7 +53,7 @@ export function getRequestCoordinate(request: CivicRequest): [number, number] {
 export function getRequestWeight(request: CivicRequest) {
   return request.priority === "high"
     ? 1
-    : request.priority === "normal"
+    : request.priority === "medium"
       ? 0.66
       : 0.4;
 }

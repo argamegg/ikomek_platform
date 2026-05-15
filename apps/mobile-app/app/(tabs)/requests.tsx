@@ -27,6 +27,7 @@ import {
   localizeReason,
   localizeRequestDescription,
 } from '../../src/utils/requestLocalization';
+import { localizeRequestPriority } from '../../src/utils/requestMeta';
 
 const ORANGE = '#FF6B00';
 
@@ -40,6 +41,12 @@ const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   street_lighting: 'bulb',
   other: 'ellipsis-horizontal'
 };
+
+const PRIORITY_BADGE_STYLES = {
+  low: { background: '#F3F4F6', text: '#6B7280', border: '#D1D5DB' },
+  medium: { background: '#FEF9C3', text: '#CA8A04', border: '#FDE047' },
+  high: { background: '#FEE2E2', text: '#DC2626', border: '#FCA5A5' },
+} as const;
 
 export default function RequestsScreen() {
   const { t } = useTranslation();
@@ -127,6 +134,8 @@ export default function RequestsScreen() {
       selectedRequest.reason,
       t,
     );
+    const detailPriority = selectedRequest.priority ?? 'medium';
+    const detailPriorityStyle = PRIORITY_BADGE_STYLES[detailPriority] ?? PRIORITY_BADGE_STYLES.medium;
 
     return (
       <Modal visible={!!selectedRequest} animationType="slide" presentationStyle="pageSheet">
@@ -151,7 +160,14 @@ export default function RequestsScreen() {
                 <Text style={styles.detailTitle}>{detailProblem}</Text>
                 <Text style={styles.detailCategory}>{detailCategory}</Text>
               </View>
-              <StatusBadge status={selectedRequest.status} />
+              <View style={styles.detailBadges}>
+                <StatusBadge status={selectedRequest.status} />
+                <View style={[styles.priorityBadge, { backgroundColor: detailPriorityStyle.background, borderColor: detailPriorityStyle.border }]}>
+                  <Text style={[styles.priorityText, { color: detailPriorityStyle.text }]}>
+                    {localizeRequestPriority(detailPriority, t)}
+                  </Text>
+                </View>
+              </View>
             </View>
 
             <View style={styles.detailSection}>
@@ -449,7 +465,23 @@ const styles = StyleSheet.create({
     marginRight: 12
   },
   detailHeaderText: {
-    flex: 1
+    flex: 1,
+    minWidth: 0
+  },
+  detailBadges: {
+    alignItems: 'flex-end',
+    gap: 8,
+    marginLeft: 10
+  },
+  priorityBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: 1
+  },
+  priorityText: {
+    fontSize: 12,
+    fontWeight: '700'
   },
   detailTitle: {
     fontSize: 18,

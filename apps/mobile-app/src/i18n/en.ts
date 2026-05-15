@@ -28,7 +28,7 @@ export const en = {
 
   priority: {
     low: 'Low',
-    normal: 'Normal',
+    medium: 'Medium',
     high: 'High',
   },
 
@@ -268,7 +268,7 @@ export const en = {
     },
     priorities: {
       low: 'Low',
-      normal: 'Normal',
+      medium: 'Medium',
       high: 'High',
     },
   },
@@ -528,7 +528,7 @@ export const en = {
     filterByPriority: 'By Priority',
     filterByDistrict: 'By District',
     highPriority: 'High',
-    normal: 'Normal',
+    mediumPriority: 'Medium',
     internalNotes: 'Internal Notes',
     internalNotesPlaceholder: 'Internal notes...',
     assignDepartment: 'Assign Department',

@@ -2,6 +2,11 @@
   "nav": {
     "cabinet": "My Cabinet"
   },
+  "priority": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High"
+  },
   "navigation": [
     "Home",
     "Authentication",

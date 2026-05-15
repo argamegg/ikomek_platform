@@ -12,7 +12,7 @@ ROLE_ADMIN = "admin"
 
 class Priority(str, Enum):
     low = "low"
-    normal = "normal"
+    medium = "medium"
     high = "high"
 
 class UserCreate(BaseModel):
@@ -110,7 +110,7 @@ class RequestModel(BaseModel):
     source_lang: Optional[str] = "ru"
     photos: List[str] = []
     status: str = "pending"
-    priority: Priority = Priority.normal
+    priority: Priority = Priority.medium
     district: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

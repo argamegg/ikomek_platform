@@ -11,7 +11,7 @@ export type RequestStatus =
   | "rejected"
   | string;
 
-export type RequestPriority = "low" | "normal" | "high";
+export type RequestPriority = "low" | "medium" | "high";
 
 export type NewsPriority = "critical" | "warning" | "information";
 
