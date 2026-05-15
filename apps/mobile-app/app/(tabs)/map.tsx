@@ -338,10 +338,15 @@ export default function MapScreen() {
     setFilteredPoints(filtered);
   }, [categoryFilter, filter, points, statusFilter]);
 
+  const ownershipPoints = useMemo(
+    () => (filter === 'my' ? points.filter((point) => point.is_mine) : points),
+    [filter, points],
+  );
+
   const counts = {
-    pending: points.filter(p => p.status === 'pending').length,
-    in_progress: points.filter(p => p.status === 'in_progress').length,
-    closed: points.filter(p => p.status === 'closed').length
+    pending: ownershipPoints.filter(p => p.status === 'pending').length,
+    in_progress: ownershipPoints.filter(p => p.status === 'in_progress').length,
+    closed: ownershipPoints.filter(p => p.status === 'closed').length
   };
 
   const categoryOptions = useMemo(
@@ -410,7 +415,7 @@ export default function MapScreen() {
     const activityMatrix = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0));
     const noAddress = t('map.analytics.noAddress');
 
-    points.forEach((point) => {
+    ownershipPoints.forEach((point) => {
       categoryTotals[point.category] = (categoryTotals[point.category] || 0) + 1;
 
       const date = parsePointDate(point.created_at);
@@ -455,9 +460,11 @@ export default function MapScreen() {
       maxHotspot: Math.max(...hotspots.map((item) => item.count), 1),
       activityMatrix,
       maxActivity: Math.max(...activityMatrix.flat(), 1),
-      total: points.length,
+      total: ownershipPoints.length,
     };
-  }, [locale, points, t]);
+  }, [locale, ownershipPoints, t]);
+
+  const analyticsScopeLabel = filter === 'my' ? t('map.myRequests') : t('map.analytics.seriesAll');
 
   const activeTimelineItem = useMemo(() => (
     analytics.timeline.find((item) => item.key === selectedTimelineMonth)
@@ -553,7 +560,7 @@ export default function MapScreen() {
           contentContainerStyle={[styles.statsContent, { paddingHorizontal: horizontalPadding }]}
         >
           <TouchableOpacity style={[styles.statChip, !statusFilter && styles.statChipActive]} onPress={() => updateStatusFilter(null)}>
-            <Text style={[styles.statNum, !statusFilter && { color: ORANGE }]}>{points.length}</Text>
+            <Text style={[styles.statNum, !statusFilter && { color: ORANGE }]}>{ownershipPoints.length}</Text>
             <Text style={styles.statLabel}>{t('common.all')}</Text>
           </TouchableOpacity>
           {[['pending', counts.pending], ['in_progress', counts.in_progress], ['closed', counts.closed]].map(([key, count]) => (
@@ -682,7 +689,7 @@ export default function MapScreen() {
             <View style={styles.analyticsHeaderText}>
               <Text style={styles.analyticsTitle}>{t('map.analytics.title')}</Text>
               <Text style={styles.analyticsSubtitle}>
-                {t('map.analytics.seriesAll')} · {t('map.analytics.requestsCount', { count: analytics.total })}
+                {analyticsScopeLabel} · {t('map.analytics.requestsCount', { count: analytics.total })}
               </Text>
             </View>
           </View>
@@ -727,7 +734,7 @@ export default function MapScreen() {
                       <View style={styles.timelineSummaryItem}>
                         <View style={styles.timelineSummaryItemHeader}>
                           <View style={[styles.analyticsLegendDot, styles.timelineSummaryDot, { backgroundColor: TIMELINE_COLORS.all }]} />
-                          <Text style={styles.timelineSummaryLabel} numberOfLines={2}>{t('map.analytics.seriesAll')}</Text>
+                          <Text style={styles.timelineSummaryLabel} numberOfLines={2}>{analyticsScopeLabel}</Text>
                         </View>
                         <Text style={styles.timelineSummaryValue}>{activeTimelineItem.all}</Text>
                       </View>
@@ -770,7 +777,7 @@ export default function MapScreen() {
                   })}
                 </View>
                 <View style={styles.analyticsLegendRow}>
-                  <View style={styles.analyticsLegendItem}><View style={[styles.analyticsLegendDot, { backgroundColor: TIMELINE_COLORS.all }]} /><Text style={styles.analyticsLegendText}>{t('map.analytics.seriesAll')}</Text></View>
+                  <View style={styles.analyticsLegendItem}><View style={[styles.analyticsLegendDot, { backgroundColor: TIMELINE_COLORS.all }]} /><Text style={styles.analyticsLegendText}>{analyticsScopeLabel}</Text></View>
                   <View style={styles.analyticsLegendItem}><View style={[styles.analyticsLegendDot, { backgroundColor: TIMELINE_COLORS.pending }]} /><Text style={styles.analyticsLegendText}>{t('status.pending')}</Text></View>
                   <View style={styles.analyticsLegendItem}><View style={[styles.analyticsLegendDot, { backgroundColor: TIMELINE_COLORS.closed }]} /><Text style={styles.analyticsLegendText}>{t('status.closed')}</Text></View>
                 </View>

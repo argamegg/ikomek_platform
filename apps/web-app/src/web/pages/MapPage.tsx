@@ -184,23 +184,30 @@ export function MapPage() {
     });
   }, [allRequests, category, currentUser?.id, mapMode, priority, status]);
 
+  const analyticsRequests = useMemo(
+    () => (mapMode === "my" && currentUser
+      ? allRequests.filter((request) => request.citizenId === currentUser.id)
+      : allRequests),
+    [allRequests, currentUser, mapMode],
+  );
+
   const isLoading = publicRequestsQuery.isLoading || myRequestsQuery.isLoading;
   const [filtersVisible, setFiltersVisible] = useState(true);
   const hasActiveFilters = mapMode !== "all" || category !== "all" || status !== "all" || priority !== "all";
 
   const statusCounts = useMemo(
     () => ({
-      pending: getStatusCount(allRequests, "pending"),
-      inProgress: getStatusCount(allRequests, "in_progress"),
-      closed: getStatusCount(allRequests, "closed"),
+      pending: getStatusCount(analyticsRequests, "pending"),
+      inProgress: getStatusCount(analyticsRequests, "in_progress"),
+      closed: getStatusCount(analyticsRequests, "closed"),
     }),
-    [allRequests],
+    [analyticsRequests],
   );
 
   const categoryData = useMemo(() => {
     const counts = new Map<string, { id: string; fallbackName: string; count: number }>();
 
-    for (const request of allRequests) {
+    for (const request of analyticsRequests) {
       const id = request.categoryId || request.categoryName || "other";
       const current = counts.get(id);
 
@@ -218,12 +225,12 @@ export function MapPage() {
     return Array.from(counts.values())
       .sort((a, b) => b.count - a.count)
       .slice(0, 6);
-  }, [allRequests]);
+  }, [analyticsRequests]);
 
   const timelineData = useMemo(() => {
     const months = getLastMonthKeys(12);
     return months.map((month) => {
-      const monthRequests = allRequests.filter((request) => getMonthKey(new Date(request.createdAt)) === month);
+      const monthRequests = analyticsRequests.filter((request) => getMonthKey(new Date(request.createdAt)) === month);
       return {
         month,
         label: formatMonth(month, i18n.language),
@@ -232,12 +239,12 @@ export function MapPage() {
         closed: monthRequests.filter((request) => request.status === "closed").length,
       };
     });
-  }, [allRequests, i18n.language]);
+  }, [analyticsRequests, i18n.language]);
 
   const hotspots = useMemo<Hotspot[]>(() => {
     const groups = new Map<string, Hotspot>();
 
-    for (const request of allRequests) {
+    for (const request of analyticsRequests) {
       const address = request.address || "—";
       const current = groups.get(address);
       if (current) {
@@ -249,7 +256,7 @@ export function MapPage() {
     }
 
     return Array.from(groups.values()).sort((a, b) => b.count - a.count).slice(0, 7);
-  }, [allRequests]);
+  }, [analyticsRequests]);
 
   const selectedHotspot = useMemo(
     () => hotspots.find((item) => item.address === selectedHotspotAddress) ?? null,
@@ -261,7 +268,7 @@ export function MapPage() {
 
   const activityData = useMemo(() => {
     const matrix = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0));
-    for (const request of allRequests) {
+    for (const request of analyticsRequests) {
       const date = new Date(request.createdAt);
       if (Number.isNaN(date.getTime())) continue;
       const mondayFirstDay = (date.getDay() + 6) % 7;
@@ -269,7 +276,7 @@ export function MapPage() {
     }
     const max = Math.max(...matrix.flat(), 1);
     return { matrix, max };
-  }, [allRequests]);
+  }, [analyticsRequests]);
 
   function updateFilter(key: "mode" | "category" | "status" | "priority", value: string) {
     setSelectedHotspotAddress(null);
@@ -301,7 +308,7 @@ export function MapPage() {
         <div>
           <span className="map-page__eyebrow">iKOMEK 109</span>
           <h1>{t("map.title")}</h1>
-          <p>{t("map.subtitleWithCount", { count: allRequests.length })}</p>
+          <p>{t("map.subtitleWithCount", { count: analyticsRequests.length })}</p>
         </div>
         <div className="map-page__hero-actions">
           <div className="map-page__status-row">
