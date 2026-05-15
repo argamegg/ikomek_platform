@@ -25,6 +25,12 @@ const STATUS_COLORS: Record<string, string> = {
   pending: '#FF9500', in_progress: '#007AFF', closed: '#34C759'
 };
 
+const TIMELINE_COLORS = {
+  all: '#94A3B8',
+  pending: '#FF9500',
+  closed: '#34C759',
+} as const;
+
 const ANALYTICS_MONTHS = 12;
 const HOUR_MARKS = ['00', '06', '12', '18'];
 const WEEKDAY_DATES = Array.from({ length: 7 }, (_, index) => new Date(Date.UTC(2024, 0, index + 1, 12)));
@@ -93,6 +99,7 @@ export default function MapScreen() {
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [selectedPoint, setSelectedPoint] = useState<MapPoint | null>(null);
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
+  const [selectedTimelineMonth, setSelectedTimelineMonth] = useState<string | null>(null);
 
   const loadPoints = useCallback(async () => {
     try {
@@ -181,6 +188,12 @@ export default function MapScreen() {
       total: points.length,
     };
   }, [locale, points, t]);
+
+  const activeTimelineItem = useMemo(() => (
+    analytics.timeline.find((item) => item.key === selectedTimelineMonth)
+    || analytics.timeline.slice().reverse().find((item) => item.all > 0)
+    || analytics.timeline[analytics.timeline.length - 1]
+  ), [analytics.timeline, selectedTimelineMonth]);
 
   const renderPointCard = (item: MapPoint) => {
     const catColor = CATEGORY_COLORS[item.category] || '#9E9E9E';
@@ -356,22 +369,53 @@ export default function MapScreen() {
                   <Ionicons name="trending-up-outline" size={18} color="#0F172A" />
                   <Text style={styles.analyticsCardTitle}>{t('map.analytics.timeline')}</Text>
                 </View>
-                <View style={styles.timelineChart}>
-                  {analytics.timeline.map((item) => (
-                    <View key={item.key} style={styles.timelineColumn}>
-                      <View style={styles.timelineBars}>
-                        <View style={[styles.timelineBar, { height: Math.max((item.all / analytics.maxTimeline) * 82, item.all ? 8 : 2), backgroundColor: '#CBD5E1' }]} />
-                        <View style={[styles.timelineBar, { height: Math.max((item.pending / analytics.maxTimeline) * 82, item.pending ? 8 : 2), backgroundColor: STATUS_COLORS.pending }]} />
-                        <View style={[styles.timelineBar, { height: Math.max((item.closed / analytics.maxTimeline) * 82, item.closed ? 8 : 2), backgroundColor: STATUS_COLORS.closed }]} />
+                {activeTimelineItem ? (
+                  <View style={styles.timelineSummary}>
+                    <Text style={styles.timelineSummaryMonth}>{activeTimelineItem.label}</Text>
+                    <View style={styles.timelineSummaryStats}>
+                      <View style={styles.timelineSummaryItem}>
+                        <View style={[styles.analyticsLegendDot, { backgroundColor: TIMELINE_COLORS.all }]} />
+                        <Text style={styles.timelineSummaryLabel}>{t('map.analytics.seriesAll')}</Text>
+                        <Text style={styles.timelineSummaryValue}>{activeTimelineItem.all}</Text>
                       </View>
-                      <Text style={styles.timelineLabel} numberOfLines={1}>{item.label}</Text>
+                      <View style={styles.timelineSummaryItem}>
+                        <View style={[styles.analyticsLegendDot, { backgroundColor: TIMELINE_COLORS.pending }]} />
+                        <Text style={styles.timelineSummaryLabel}>{t('status.pending')}</Text>
+                        <Text style={styles.timelineSummaryValue}>{activeTimelineItem.pending}</Text>
+                      </View>
+                      <View style={styles.timelineSummaryItem}>
+                        <View style={[styles.analyticsLegendDot, { backgroundColor: TIMELINE_COLORS.closed }]} />
+                        <Text style={styles.timelineSummaryLabel}>{t('status.closed')}</Text>
+                        <Text style={styles.timelineSummaryValue}>{activeTimelineItem.closed}</Text>
+                      </View>
                     </View>
-                  ))}
+                  </View>
+                ) : null}
+                <View style={styles.timelineChart}>
+                  {analytics.timeline.map((item) => {
+                    const isActive = activeTimelineItem?.key === item.key;
+                    return (
+                      <TouchableOpacity
+                        key={item.key}
+                        style={[styles.timelineColumn, isActive && styles.timelineColumnActive]}
+                        onPress={() => setSelectedTimelineMonth(item.key)}
+                        activeOpacity={0.72}
+                      >
+                        <Text style={[styles.timelineCount, isActive && styles.timelineCountActive]}>{item.all}</Text>
+                        <View style={styles.timelineBars}>
+                          <View style={[styles.timelineBar, { height: Math.max((item.all / analytics.maxTimeline) * 76, item.all ? 8 : 2), backgroundColor: TIMELINE_COLORS.all }]} />
+                          <View style={[styles.timelineBar, { height: Math.max((item.pending / analytics.maxTimeline) * 76, item.pending ? 8 : 2), backgroundColor: TIMELINE_COLORS.pending }]} />
+                          <View style={[styles.timelineBar, { height: Math.max((item.closed / analytics.maxTimeline) * 76, item.closed ? 8 : 2), backgroundColor: TIMELINE_COLORS.closed }]} />
+                        </View>
+                        <Text style={styles.timelineLabel} numberOfLines={1}>{item.label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
                 <View style={styles.analyticsLegendRow}>
-                  <View style={styles.analyticsLegendItem}><View style={[styles.analyticsLegendDot, { backgroundColor: '#CBD5E1' }]} /><Text style={styles.analyticsLegendText}>{t('map.analytics.seriesAll')}</Text></View>
-                  <View style={styles.analyticsLegendItem}><View style={[styles.analyticsLegendDot, { backgroundColor: STATUS_COLORS.pending }]} /><Text style={styles.analyticsLegendText}>{t('status.pending')}</Text></View>
-                  <View style={styles.analyticsLegendItem}><View style={[styles.analyticsLegendDot, { backgroundColor: STATUS_COLORS.closed }]} /><Text style={styles.analyticsLegendText}>{t('status.closed')}</Text></View>
+                  <View style={styles.analyticsLegendItem}><View style={[styles.analyticsLegendDot, { backgroundColor: TIMELINE_COLORS.all }]} /><Text style={styles.analyticsLegendText}>{t('map.analytics.seriesAll')}</Text></View>
+                  <View style={styles.analyticsLegendItem}><View style={[styles.analyticsLegendDot, { backgroundColor: TIMELINE_COLORS.pending }]} /><Text style={styles.analyticsLegendText}>{t('status.pending')}</Text></View>
+                  <View style={styles.analyticsLegendItem}><View style={[styles.analyticsLegendDot, { backgroundColor: TIMELINE_COLORS.closed }]} /><Text style={styles.analyticsLegendText}>{t('status.closed')}</Text></View>
                 </View>
               </View>
 
@@ -546,9 +590,18 @@ const styles = StyleSheet.create({
   analyticsRowValue: { flexShrink: 0, fontSize: 12, fontWeight: '700', color: '#64748B' },
   analyticsBarTrack: { height: 7, borderRadius: 999, backgroundColor: '#E2E8F0', overflow: 'hidden' },
   analyticsBarFill: { height: '100%', borderRadius: 999 },
-  timelineChart: { minHeight: 116, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 5 },
-  timelineColumn: { flex: 1, minWidth: 0, alignItems: 'center', gap: 7 },
-  timelineBars: { height: 86, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 2 },
+  timelineSummary: { marginBottom: 14, padding: 12, borderRadius: 16, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.06)', gap: 10 },
+  timelineSummaryMonth: { fontSize: 13, fontWeight: '900', color: '#111827', textTransform: 'uppercase' },
+  timelineSummaryStats: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  timelineSummaryItem: { flexGrow: 1, flexBasis: '30%', minWidth: 92, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 8, paddingVertical: 7, borderRadius: 12, backgroundColor: '#FFF' },
+  timelineSummaryLabel: { flex: 1, minWidth: 0, fontSize: 11, fontWeight: '700', color: '#64748B' },
+  timelineSummaryValue: { fontSize: 14, fontWeight: '900', color: '#111827' },
+  timelineChart: { minHeight: 124, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 4 },
+  timelineColumn: { flex: 1, minWidth: 0, alignItems: 'center', gap: 6, paddingHorizontal: 2, paddingVertical: 6, borderRadius: 12 },
+  timelineColumnActive: { backgroundColor: '#F8FAFC' },
+  timelineCount: { minHeight: 12, fontSize: 9, color: '#94A3B8', fontWeight: '800' },
+  timelineCountActive: { color: '#111827' },
+  timelineBars: { height: 78, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 2 },
   timelineBar: { width: 4, borderRadius: 999 },
   timelineLabel: { width: '100%', fontSize: 9, color: '#64748B', textAlign: 'center', fontWeight: '700' },
   analyticsLegendRow: { marginTop: 14, flexDirection: 'row', flexWrap: 'wrap', gap: 10 },

@@ -31,12 +31,19 @@ const STATUS_OPTIONS: Array<{ key: "all" | RequestStatus; tone: string }> = [
   { key: "closed", tone: "#34c759" },
 ];
 
+const TIMELINE_COLORS = {
+  all: "#94a3b8",
+  pending: "#ff9500",
+  closed: "#34c759",
+} as const;
+
 const PRIORITY_OPTIONS = ["all", "low", "medium", "high"] as const;
 const WEEKDAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 
 type PriorityFilter = (typeof PRIORITY_OPTIONS)[number];
 type StatusFilter = "all" | RequestStatus;
 type Hotspot = { address: string; count: number; request: CivicRequest };
+type TranslationFn = (key: string, options?: Record<string, unknown>) => string;
 
 function normalizeLocale(language: string) {
   if (language.startsWith("kk") || language.startsWith("kz")) return "kk";
@@ -98,6 +105,12 @@ function formatRequestCount(count: number, language: string) {
       ? "заявки"
       : "заявок";
   return `${count} ${noun}`;
+}
+
+function getTimelineSeriesLabel(key: string, t: TranslationFn) {
+  if (key === "all") return t("map.analytics.seriesAll");
+  if (key === "pending") return localizeRequestStatus("pending", t);
+  return localizeRequestStatus("closed", t);
 }
 
 function getPriorityMatch(request: CivicRequest, priority: PriorityFilter) {
@@ -382,9 +395,9 @@ export function MapPage() {
             <ResponsiveContainer width="100%" height={230}>
               <AreaChart data={timelineData}>
                 <defs>
-                  <linearGradient id="mapTimelineOrange" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="5%" stopColor="#ff6b00" stopOpacity={0.28} />
-                    <stop offset="95%" stopColor="#ff6b00" stopOpacity={0} />
+                  <linearGradient id="mapTimelineAll" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="5%" stopColor={TIMELINE_COLORS.all} stopOpacity={0.22} />
+                    <stop offset="95%" stopColor={TIMELINE_COLORS.all} stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid stroke="#eef2f7" vertical={false} />
@@ -392,19 +405,20 @@ export function MapPage() {
                 <YAxis width={28} tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 11 }} />
                 <Tooltip
                   formatter={(value, name) => [
-                    value,
-                    name === "all"
-                      ? t("map.analytics.seriesAll")
-                      : name === "pending"
-                        ? localizeRequestStatus("pending", t)
-                        : localizeRequestStatus("closed", t),
+                    formatRequestCount(Number(value), i18n.language),
+                    getTimelineSeriesLabel(String(name), t),
                   ]}
                 />
-                <Area name={t("map.analytics.seriesAll")} type="monotone" dataKey="all" stroke="#ff6b00" fill="url(#mapTimelineOrange)" strokeWidth={3} />
-                <Area name={localizeRequestStatus("pending", t)} type="monotone" dataKey="pending" stroke="#ff9500" fill="transparent" strokeWidth={2} />
-                <Area name={localizeRequestStatus("closed", t)} type="monotone" dataKey="closed" stroke="#34c759" fill="transparent" strokeWidth={2} />
+                <Area name="all" type="monotone" dataKey="all" stroke={TIMELINE_COLORS.all} fill="url(#mapTimelineAll)" strokeWidth={3} />
+                <Area name="pending" type="monotone" dataKey="pending" stroke={TIMELINE_COLORS.pending} fill="transparent" strokeWidth={2} />
+                <Area name="closed" type="monotone" dataKey="closed" stroke={TIMELINE_COLORS.closed} fill="transparent" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
+            <div className="timeline-legend">
+              <span><i style={{ background: TIMELINE_COLORS.all }} />{t("map.analytics.seriesAll")}</span>
+              <span><i style={{ background: TIMELINE_COLORS.pending }} />{localizeRequestStatus("pending", t)}</span>
+              <span><i style={{ background: TIMELINE_COLORS.closed }} />{localizeRequestStatus("closed", t)}</span>
+            </div>
           </AnalyticsCard>
 
           <AnalyticsCard title={t("map.analytics.hotspots")}>

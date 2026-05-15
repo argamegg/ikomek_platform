@@ -2714,6 +2714,28 @@ button {
   color: var(--primary-strong);
 }
 
+.timeline-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.timeline-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.timeline-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
 .hotspot-list button {
   display: grid;
   grid-template-columns: 36px minmax(120px, 1fr) 1fr auto;
