@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
-  ScrollView, Modal, FlatList, useWindowDimensions
+  ScrollView, Modal, useWindowDimensions
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,28 +11,80 @@ import { apiService, MapPoint } from '../../src/utils/api';
 import { RequestsMap } from '../../src/components/RequestsMap';
 import { StatusBadge } from '../../src/components/StatusBadge';
 import { AIAssistantHeaderButton } from '../../src/components/AIAssistantWidget';
-import { localizeProblemType } from '../../src/utils/requestLocalization';
+import { localizeCategory, localizeProblemType } from '../../src/utils/requestLocalization';
 
 const ORANGE = '#FF6B00';
 
 const CATEGORY_COLORS: Record<string, string> = {
   electricity: '#FFB300', water: '#2196F3', heating: '#FF5722',
   public_order: '#4CAF50', sewage: '#607D8B', waste: '#795548',
-  roads: '#9E9E9E', other: '#9E9E9E'
+  street_lighting: '#FFC107', roads: '#9E9E9E', other: '#9E9E9E'
 };
 
 const STATUS_COLORS: Record<string, string> = {
   pending: '#FF9500', in_progress: '#007AFF', closed: '#34C759'
 };
 
+const ANALYTICS_MONTHS = 12;
+const HOUR_MARKS = ['00', '06', '12', '18'];
+const WEEKDAY_DATES = Array.from({ length: 7 }, (_, index) => new Date(Date.UTC(2024, 0, index + 1, 12)));
+const LOCALE_TAGS = { ru: 'ru-RU', en: 'en-US', kz: 'kk-KZ' } as const;
+
+type LocaleKey = keyof typeof LOCALE_TAGS;
+
+const normalizeLocale = (language?: string): LocaleKey => {
+  if (language?.startsWith('en')) return 'en';
+  if (language?.startsWith('kz') || language?.startsWith('kk')) return 'kz';
+  return 'ru';
+};
+
+const parsePointDate = (value?: string | null) => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const getMonthKey = (date: Date) => (
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+);
+
+const getLastMonthKeys = (count: number) => {
+  const now = new Date();
+  return Array.from({ length: count }, (_, index) => {
+    const date = new Date(now.getFullYear(), now.getMonth() - (count - 1 - index), 1);
+    return getMonthKey(date);
+  });
+};
+
+const formatMonthLabel = (monthKey: string, locale: LocaleKey) => {
+  const [year, month] = monthKey.split('-').map(Number);
+  const date = new Date(year, month - 1, 1);
+  try {
+    return new Intl.DateTimeFormat(LOCALE_TAGS[locale], { month: 'short' }).format(date).replace('.', '');
+  } catch {
+    return monthKey.slice(5);
+  }
+};
+
+const formatWeekdayLabel = (dayIndex: number, locale: LocaleKey) => {
+  try {
+    return new Intl.DateTimeFormat(LOCALE_TAGS[locale], { weekday: 'short' }).format(WEEKDAY_DATES[dayIndex]).replace('.', '');
+  } catch {
+    return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][dayIndex];
+  }
+};
+
 export default function MapScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const isCompact = width <= 430;
   const isTablet = width >= 768;
   const horizontalPadding = isTablet ? 24 : 16;
-  const mapBottomClearance = Math.max(insets.bottom + 112, isTablet ? 132 : 116);
+  const contentBottomPadding = Math.max(insets.bottom + 112, isTablet ? 132 : 116);
+  const mapHeight = isTablet ? Math.min(Math.round(height * 0.56), 560) : Math.max(340, Math.min(Math.round(height * 0.46), 440));
+  const listMinHeight = Math.max(280, Math.min(mapHeight, isTablet ? 500 : 420));
+  const locale = normalizeLocale(i18n.language);
 
   const [points, setPoints] = useState<MapPoint[]>([]);
   const [filteredPoints, setFilteredPoints] = useState<MapPoint[]>([]);
@@ -68,12 +120,74 @@ export default function MapScreen() {
     closed: points.filter(p => p.status === 'closed').length
   };
 
-  const renderPointCard = ({ item }: { item: MapPoint }) => {
+  const analytics = useMemo(() => {
+    const categoryTotals: Record<string, number> = {};
+    const monthKeys = getLastMonthKeys(ANALYTICS_MONTHS);
+    const timelineBuckets = new Map(monthKeys.map((key) => [key, {
+      key,
+      label: formatMonthLabel(key, locale),
+      all: 0,
+      pending: 0,
+      closed: 0,
+    }]));
+    const hotspotBuckets = new Map<string, { address: string; count: number; point: MapPoint }>();
+    const activityMatrix = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0));
+    const noAddress = t('map.analytics.noAddress');
+
+    points.forEach((point) => {
+      categoryTotals[point.category] = (categoryTotals[point.category] || 0) + 1;
+
+      const date = parsePointDate(point.created_at);
+      if (date) {
+        const timelineBucket = timelineBuckets.get(getMonthKey(date));
+        if (timelineBucket) {
+          timelineBucket.all += 1;
+          if (point.status === 'pending') timelineBucket.pending += 1;
+          if (point.status === 'closed') timelineBucket.closed += 1;
+        }
+
+        const dayIndex = (date.getDay() + 6) % 7;
+        activityMatrix[dayIndex][date.getHours()] += 1;
+      }
+
+      const address = point.address?.trim() || noAddress;
+      const hotspot = hotspotBuckets.get(address);
+      if (hotspot) {
+        hotspot.count += 1;
+      } else {
+        hotspotBuckets.set(address, { address, count: 1, point });
+      }
+    });
+
+    const categories = Object.entries(categoryTotals)
+      .map(([category, count]) => ({ category, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
+
+    const timeline = Array.from(timelineBuckets.values());
+    const hotspots = Array.from(hotspotBuckets.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 7);
+
+    return {
+      categories,
+      maxCategory: Math.max(...categories.map((item) => item.count), 1),
+      timeline,
+      maxTimeline: Math.max(...timeline.map((item) => item.all), 1),
+      hotspots,
+      maxHotspot: Math.max(...hotspots.map((item) => item.count), 1),
+      activityMatrix,
+      maxActivity: Math.max(...activityMatrix.flat(), 1),
+      total: points.length,
+    };
+  }, [locale, points, t]);
+
+  const renderPointCard = (item: MapPoint) => {
     const catColor = CATEGORY_COLORS[item.category] || '#9E9E9E';
     const statusColor = STATUS_COLORS[item.status] || '#FF9500';
     const title = localizeProblemType(item.category, item.title, t);
     return (
-      <TouchableOpacity style={styles.pointCard} onPress={() => setSelectedPoint(item)} activeOpacity={0.8} data-testid={`point-card-${item.id}`}>
+      <TouchableOpacity key={item.id} style={styles.pointCard} onPress={() => setSelectedPoint(item)} activeOpacity={0.8} data-testid={`point-card-${item.id}`}>
         <View style={[styles.statusIndicator, { backgroundColor: statusColor }]} />
         <View style={styles.pointContent}>
           <View style={styles.pointHeader}>
@@ -93,6 +207,13 @@ export default function MapScreen() {
       </TouchableOpacity>
     );
   };
+
+  const renderAnalyticsEmpty = () => (
+    <View style={styles.analyticsEmptyCard}>
+      <Ionicons name="analytics-outline" size={32} color="#CBD5E1" />
+      <Text style={styles.analyticsEmptyText}>{t('map.analytics.insufficientData')}</Text>
+    </View>
+  );
 
   if (isLoading) {
     return <View style={[styles.container, styles.centered]}><ActivityIndicator size="large" color={ORANGE} /></View>;
@@ -154,40 +275,171 @@ export default function MapScreen() {
         </View>
       </View>
 
-      {viewMode === 'map' ? (
-        <View style={[styles.mapContainer, { marginHorizontal: horizontalPadding, marginBottom: mapBottomClearance }]}>
-          <RequestsMap
-            points={filteredPoints}
-            categoryColors={CATEGORY_COLORS}
-            statusColors={STATUS_COLORS}
-            onPointPress={setSelectedPoint}
-          />
-          <View style={[styles.legend, isCompact && styles.legendCompact]}>
-            {Object.entries(STATUS_COLORS).map(([key, color]) => (
-              <View key={key} style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: color }]} />
-                <Text style={styles.legendText}>{t(`status.${key === 'in_progress' ? 'inProgress' : key}`)}</Text>
-              </View>
-            ))}
+      <ScrollView
+        style={styles.contentScroll}
+        contentContainerStyle={[styles.content, { paddingBottom: contentBottomPadding }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {viewMode === 'map' ? (
+          <View style={[styles.mapContainer, { height: mapHeight, marginHorizontal: horizontalPadding }]}>
+            <RequestsMap
+              points={filteredPoints}
+              categoryColors={CATEGORY_COLORS}
+              statusColors={STATUS_COLORS}
+              onPointPress={setSelectedPoint}
+            />
+            <View style={[styles.legend, isCompact && styles.legendCompact]}>
+              {Object.entries(STATUS_COLORS).map(([key, color]) => (
+                <View key={key} style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: color }]} />
+                  <Text style={styles.legendText}>{t(`status.${key === 'in_progress' ? 'inProgress' : key}`)}</Text>
+                </View>
+              ))}
+            </View>
           </View>
-        </View>
-      ) : (
-        <View style={[styles.listSurface, { marginHorizontal: horizontalPadding, marginBottom: mapBottomClearance }]}>
-          <FlatList
-            style={styles.list}
-            data={filteredPoints}
-            keyExtractor={(item) => item.id}
-            renderItem={renderPointCard}
-            contentContainerStyle={[styles.listContent, { paddingBottom: 20 }]}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Ionicons name="map-outline" size={48} color="#CBD5E1" />
-                <Text style={styles.emptyText}>{t('myRequests.noRequests')}</Text>
+        ) : (
+          <View style={[styles.listSurface, { minHeight: listMinHeight, marginHorizontal: horizontalPadding }]}>
+            <View style={styles.listContent}>
+              {filteredPoints.length > 0 ? filteredPoints.map(renderPointCard) : (
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="map-outline" size={48} color="#CBD5E1" />
+                  <Text style={styles.emptyText}>{t('myRequests.noRequests')}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
+        <View style={[styles.analyticsSection, { marginHorizontal: horizontalPadding }]}>
+          <View style={styles.analyticsHeader}>
+            <View style={styles.analyticsHeaderIcon}>
+              <Ionicons name="analytics-outline" size={21} color={ORANGE} />
+            </View>
+            <View style={styles.analyticsHeaderText}>
+              <Text style={styles.analyticsTitle}>{t('map.analytics.title')}</Text>
+              <Text style={styles.analyticsSubtitle}>
+                {t('map.analytics.seriesAll')} · {t('map.analytics.requestsCount', { count: analytics.total })}
+              </Text>
+            </View>
+          </View>
+
+          {analytics.total === 0 ? renderAnalyticsEmpty() : (
+            <>
+              <View style={styles.analyticsCard}>
+                <View style={styles.analyticsCardHeader}>
+                  <Ionicons name="grid-outline" size={18} color="#0F172A" />
+                  <Text style={styles.analyticsCardTitle}>{t('map.analytics.categories')}</Text>
+                </View>
+                <View style={styles.analyticsRows}>
+                  {analytics.categories.map((item) => {
+                    const color = CATEGORY_COLORS[item.category] || '#9E9E9E';
+                    return (
+                      <View key={item.category} style={styles.analyticsRow}>
+                        <View style={styles.analyticsRowTop}>
+                          <View style={styles.analyticsRowLabel}>
+                            <View style={[styles.analyticsDot, { backgroundColor: color }]} />
+                            <Text style={styles.analyticsRowName} numberOfLines={1}>{localizeCategory(item.category, t)}</Text>
+                          </View>
+                          <Text style={styles.analyticsRowValue}>{t('map.analytics.requestsCount', { count: item.count })}</Text>
+                        </View>
+                        <View style={styles.analyticsBarTrack}>
+                          <View style={[styles.analyticsBarFill, { width: `${Math.max((item.count / analytics.maxCategory) * 100, 8)}%`, backgroundColor: color }]} />
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
               </View>
-            }
-          />
+
+              <View style={styles.analyticsCard}>
+                <View style={styles.analyticsCardHeader}>
+                  <Ionicons name="trending-up-outline" size={18} color="#0F172A" />
+                  <Text style={styles.analyticsCardTitle}>{t('map.analytics.timeline')}</Text>
+                </View>
+                <View style={styles.timelineChart}>
+                  {analytics.timeline.map((item) => (
+                    <View key={item.key} style={styles.timelineColumn}>
+                      <View style={styles.timelineBars}>
+                        <View style={[styles.timelineBar, { height: Math.max((item.all / analytics.maxTimeline) * 82, item.all ? 8 : 2), backgroundColor: '#CBD5E1' }]} />
+                        <View style={[styles.timelineBar, { height: Math.max((item.pending / analytics.maxTimeline) * 82, item.pending ? 8 : 2), backgroundColor: STATUS_COLORS.pending }]} />
+                        <View style={[styles.timelineBar, { height: Math.max((item.closed / analytics.maxTimeline) * 82, item.closed ? 8 : 2), backgroundColor: STATUS_COLORS.closed }]} />
+                      </View>
+                      <Text style={styles.timelineLabel} numberOfLines={1}>{item.label}</Text>
+                    </View>
+                  ))}
+                </View>
+                <View style={styles.analyticsLegendRow}>
+                  <View style={styles.analyticsLegendItem}><View style={[styles.analyticsLegendDot, { backgroundColor: '#CBD5E1' }]} /><Text style={styles.analyticsLegendText}>{t('map.analytics.seriesAll')}</Text></View>
+                  <View style={styles.analyticsLegendItem}><View style={[styles.analyticsLegendDot, { backgroundColor: STATUS_COLORS.pending }]} /><Text style={styles.analyticsLegendText}>{t('status.pending')}</Text></View>
+                  <View style={styles.analyticsLegendItem}><View style={[styles.analyticsLegendDot, { backgroundColor: STATUS_COLORS.closed }]} /><Text style={styles.analyticsLegendText}>{t('status.closed')}</Text></View>
+                </View>
+              </View>
+
+              <View style={styles.analyticsCard}>
+                <View style={styles.analyticsCardHeader}>
+                  <Ionicons name="location-outline" size={18} color="#0F172A" />
+                  <Text style={styles.analyticsCardTitle}>{t('map.analytics.hotspots')}</Text>
+                </View>
+                <View style={styles.hotspotList}>
+                  {analytics.hotspots.map((item, index) => (
+                    <TouchableOpacity key={`${item.address}-${index}`} style={styles.hotspotRow} activeOpacity={0.78} onPress={() => setSelectedPoint(item.point)}>
+                      <View style={styles.hotspotRank}>
+                        <Text style={styles.hotspotRankText}>{index + 1}</Text>
+                      </View>
+                      <View style={styles.hotspotInfo}>
+                        <View style={styles.hotspotTop}>
+                          <Text style={styles.hotspotAddress} numberOfLines={1}>{item.address}</Text>
+                          <Text style={styles.hotspotCount}>{t('map.analytics.requestsCount', { count: item.count })}</Text>
+                        </View>
+                        <View style={styles.analyticsBarTrack}>
+                          <View style={[styles.analyticsBarFill, { width: `${Math.max((item.count / analytics.maxHotspot) * 100, 8)}%`, backgroundColor: ORANGE }]} />
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.analyticsCard}>
+                <View style={styles.analyticsCardHeader}>
+                  <Ionicons name="time-outline" size={18} color="#0F172A" />
+                  <Text style={styles.analyticsCardTitle}>{t('map.analytics.activity')}</Text>
+                </View>
+                <View style={styles.heatmapHourRow}>
+                  <View style={styles.heatmapDayLabelSpacer} />
+                  {HOUR_MARKS.map((hour) => (
+                    <Text key={hour} style={styles.heatmapHour}>{hour}</Text>
+                  ))}
+                </View>
+                <View style={styles.heatmapGrid}>
+                  {analytics.activityMatrix.map((row, dayIndex) => (
+                    <View key={dayIndex} style={styles.heatmapRow}>
+                      <Text style={styles.heatmapDayLabel}>{formatWeekdayLabel(dayIndex, locale)}</Text>
+                      <View style={styles.heatmapCells}>
+                        {row.map((count, hour) => {
+                          const intensity = count / analytics.maxActivity;
+                          return (
+                            <View
+                              key={`${dayIndex}-${hour}`}
+                              style={[
+                                styles.heatmapCell,
+                                {
+                                  backgroundColor: count > 0 ? ORANGE : '#E2E8F0',
+                                  opacity: count > 0 ? 0.24 + intensity * 0.68 : 0.45,
+                                },
+                              ]}
+                            />
+                          );
+                        })}
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </>
+          )}
         </View>
-      )}
+      </ScrollView>
 
       {/* Point Detail Modal */}
       {selectedPoint && (
@@ -247,7 +499,9 @@ const styles = StyleSheet.create({
   toggleText: { fontSize: 13, fontWeight: '600', color: '#64748B' },
   toggleTextActive: { color: '#111827' },
   refreshBtn: { width: 42, height: 42, flexShrink: 0, borderRadius: 21, backgroundColor: 'rgba(255, 255, 255, 0.92)', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.06)', alignItems: 'center', justifyContent: 'center', shadowColor: '#0F172A', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 18, elevation: 2 },
-  mapContainer: { flex: 1, position: 'relative', overflow: 'hidden', backgroundColor: '#F8FAFC', borderRadius: 28, borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.06)', shadowColor: '#0F172A', shadowOffset: { width: 0, height: 18 }, shadowOpacity: 0.08, shadowRadius: 26, elevation: 6 },
+  contentScroll: { flex: 1 },
+  content: { gap: 18 },
+  mapContainer: { position: 'relative', overflow: 'hidden', backgroundColor: '#F8FAFC', borderRadius: 28, borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.06)', shadowColor: '#0F172A', shadowOffset: { width: 0, height: 18 }, shadowOpacity: 0.08, shadowRadius: 26, elevation: 6 },
   listModeSurface: { backgroundColor: '#FFF' },
   mapLoading: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.9)', justifyContent: 'center', alignItems: 'center' },
   mapLoadingText: { marginTop: 8, fontSize: 14, color: '#8E8E93' },
@@ -256,9 +510,9 @@ const styles = StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6, marginRight: 4 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
   legendText: { fontSize: 11, color: '#334155', fontWeight: '600' },
-  listSurface: { flex: 1, backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: 28, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.06)', shadowColor: '#0F172A', shadowOffset: { width: 0, height: 18 }, shadowOpacity: 0.08, shadowRadius: 26, elevation: 6 },
+  listSurface: { backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: 28, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.06)', shadowColor: '#0F172A', shadowOffset: { width: 0, height: 18 }, shadowOpacity: 0.08, shadowRadius: 26, elevation: 6 },
   list: { flex: 1, width: '100%', backgroundColor: 'transparent' },
-  listContent: { paddingHorizontal: 16, paddingTop: 16 },
+  listContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16 },
   pointCard: { backgroundColor: '#FFF', borderRadius: 16, marginBottom: 10, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.05)' },
   statusIndicator: { width: 4 },
   pointContent: { flex: 1, minWidth: 0, padding: 14 },
@@ -272,6 +526,51 @@ const styles = StyleSheet.create({
   pointDate: { fontSize: 12, color: '#94A3B8' },
   emptyContainer: { alignItems: 'center', justifyContent: 'center', padding: 60 },
   emptyText: { fontSize: 16, color: '#475569', marginTop: 12, fontWeight: '500' },
+  analyticsSection: { gap: 14 },
+  analyticsHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  analyticsHeaderIcon: { width: 44, height: 44, borderRadius: 16, backgroundColor: '#FFF4EC', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255, 107, 0, 0.18)' },
+  analyticsHeaderText: { flex: 1, minWidth: 0 },
+  analyticsTitle: { fontSize: 21, fontWeight: '800', color: '#111827' },
+  analyticsSubtitle: { marginTop: 2, fontSize: 13, color: '#64748B', fontWeight: '600' },
+  analyticsCard: { backgroundColor: 'rgba(255, 255, 255, 0.94)', borderRadius: 22, padding: 16, borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.06)', shadowColor: '#0F172A', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.06, shadowRadius: 18, elevation: 3 },
+  analyticsEmptyCard: { minHeight: 130, backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: 22, borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.06)', alignItems: 'center', justifyContent: 'center', padding: 20 },
+  analyticsEmptyText: { marginTop: 10, fontSize: 14, fontWeight: '600', color: '#64748B', textAlign: 'center' },
+  analyticsCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
+  analyticsCardTitle: { flex: 1, minWidth: 0, fontSize: 15, fontWeight: '800', color: '#111827' },
+  analyticsRows: { gap: 14 },
+  analyticsRow: { gap: 8 },
+  analyticsRowTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  analyticsRowLabel: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  analyticsDot: { width: 10, height: 10, borderRadius: 5 },
+  analyticsRowName: { flex: 1, minWidth: 0, fontSize: 13, fontWeight: '700', color: '#1E293B' },
+  analyticsRowValue: { flexShrink: 0, fontSize: 12, fontWeight: '700', color: '#64748B' },
+  analyticsBarTrack: { height: 7, borderRadius: 999, backgroundColor: '#E2E8F0', overflow: 'hidden' },
+  analyticsBarFill: { height: '100%', borderRadius: 999 },
+  timelineChart: { minHeight: 116, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 5 },
+  timelineColumn: { flex: 1, minWidth: 0, alignItems: 'center', gap: 7 },
+  timelineBars: { height: 86, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 2 },
+  timelineBar: { width: 4, borderRadius: 999 },
+  timelineLabel: { width: '100%', fontSize: 9, color: '#64748B', textAlign: 'center', fontWeight: '700' },
+  analyticsLegendRow: { marginTop: 14, flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  analyticsLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  analyticsLegendDot: { width: 8, height: 8, borderRadius: 4 },
+  analyticsLegendText: { fontSize: 11, fontWeight: '700', color: '#64748B' },
+  hotspotList: { gap: 12 },
+  hotspotRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  hotspotRank: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#FFF4EC', alignItems: 'center', justifyContent: 'center' },
+  hotspotRankText: { fontSize: 12, fontWeight: '800', color: ORANGE },
+  hotspotInfo: { flex: 1, minWidth: 0, gap: 8 },
+  hotspotTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  hotspotAddress: { flex: 1, minWidth: 0, fontSize: 13, fontWeight: '700', color: '#1E293B' },
+  hotspotCount: { flexShrink: 0, fontSize: 12, fontWeight: '700', color: '#64748B' },
+  heatmapHourRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  heatmapDayLabelSpacer: { width: 34 },
+  heatmapHour: { flex: 1, fontSize: 10, color: '#94A3B8', fontWeight: '800', textAlign: 'center' },
+  heatmapGrid: { gap: 7 },
+  heatmapRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  heatmapDayLabel: { width: 26, fontSize: 10, color: '#64748B', fontWeight: '800', textTransform: 'uppercase' },
+  heatmapCells: { flex: 1, flexDirection: 'row', gap: 2 },
+  heatmapCell: { flex: 1, height: 8, borderRadius: 2 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
   modalHandle: { width: 36, height: 4, backgroundColor: '#E5E5EA', borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
