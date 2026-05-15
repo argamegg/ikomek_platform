@@ -39,6 +39,10 @@ async def shutdown_db_client():
 
 @app.on_event("startup")
 async def ensure_indexes():
+    await db.requests.create_index(
+        [("created_at", -1)],
+        name="requests_created_at_desc_index",
+    )
     await db.news.create_index(
         [
             ("title_ru", "text"),

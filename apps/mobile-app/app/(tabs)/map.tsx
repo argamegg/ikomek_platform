@@ -36,11 +36,14 @@ const ANALYTICS_MONTHS = 12;
 const HOUR_MARKS = ['00', '06', '12', '18'];
 const WEEKDAY_DATES = Array.from({ length: 7 }, (_, index) => new Date(Date.UTC(2024, 0, index + 1, 12)));
 const LOCALE_TAGS = { ru: 'ru-RU', en: 'en-US', kz: 'kk-KZ' } as const;
+const MAX_DATE_RANGE_DAYS = 7;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 type LocaleKey = keyof typeof LOCALE_TAGS;
 type Hotspot = { address: string; count: number; points: MapPoint[] };
 type CategoryOption = { id: string; label: string; color: string };
 type StatusOption = { key: string; label: string; count: number; color: string };
+type DateRange = { from: string; to: string };
 
 const normalizeLocale = (language?: string): LocaleKey => {
   if (language?.startsWith('en')) return 'en';
@@ -52,6 +55,127 @@ const parsePointDate = (value?: string | null) => {
   if (!value) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const startOfLocalDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+const endOfLocalDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+
+const addDays = (date: Date, days: number) => {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+};
+
+const diffCalendarDays = (from: Date, to: Date) => (
+  Math.round((startOfLocalDay(to).getTime() - startOfLocalDay(from).getTime()) / DAY_MS)
+);
+
+const toDateKey = (date: Date) => {
+  const day = startOfLocalDay(date);
+  return `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+};
+
+const parseDateKey = (value?: string | null) => {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+  return startOfLocalDay(date);
+};
+
+const getDefaultDateRange = (): DateRange => {
+  const today = startOfLocalDay(new Date());
+  return {
+    from: toDateKey(addDays(today, -(MAX_DATE_RANGE_DAYS - 1))),
+    to: toDateKey(today),
+  };
+};
+
+const normalizeDateRange = (range: DateRange): DateRange => {
+  const fallback = getDefaultDateRange();
+  const fromDate = parseDateKey(range.from);
+  const toDate = parseDateKey(range.to);
+  if (!fromDate && !toDate) return fallback;
+
+  const today = startOfLocalDay(new Date());
+  let start = startOfLocalDay(fromDate ?? toDate ?? today);
+  let end = startOfLocalDay(toDate ?? fromDate ?? today);
+
+  if (start > end) [start, end] = [end, start];
+  if (end > today) end = today;
+  if (start > today) start = today;
+  if (diffCalendarDays(start, end) >= MAX_DATE_RANGE_DAYS) {
+    end = addDays(start, MAX_DATE_RANGE_DAYS - 1);
+  }
+  if (end > today) {
+    end = today;
+    start = addDays(end, -(MAX_DATE_RANGE_DAYS - 1));
+  }
+
+  return { from: toDateKey(start), to: toDateKey(end) };
+};
+
+const isDefaultDateRange = (range: DateRange) => {
+  const fallback = getDefaultDateRange();
+  return range.from === fallback.from && range.to === fallback.to;
+};
+
+const getDateRangeBounds = (range: DateRange) => {
+  const normalized = normalizeDateRange(range);
+  const from = parseDateKey(normalized.from)!;
+  const to = parseDateKey(normalized.to)!;
+  return {
+    dateFrom: startOfLocalDay(from).toISOString(),
+    dateTo: endOfLocalDay(to).toISOString(),
+  };
+};
+
+const isPointInDateRange = (point: MapPoint, range: DateRange) => {
+  const createdAt = parsePointDate(point.created_at);
+  const from = parseDateKey(range.from);
+  const to = parseDateKey(range.to);
+  return Boolean(createdAt && from && to && createdAt.getTime() >= startOfLocalDay(from).getTime() && createdAt.getTime() <= endOfLocalDay(to).getTime());
+};
+
+const getCalendarCells = (monthDate: Date) => {
+  const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+  const startOffset = (monthStart.getDay() + 6) % 7;
+  const gridStart = addDays(monthStart, -startOffset);
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = addDays(gridStart, index);
+    return {
+      date,
+      key: toDateKey(date),
+      inMonth: date.getMonth() === monthStart.getMonth(),
+    };
+  });
+};
+
+const formatCalendarMonth = (date: Date, locale: LocaleKey) => {
+  try {
+    return new Intl.DateTimeFormat(LOCALE_TAGS[locale], { month: 'long', year: 'numeric' }).format(date);
+  } catch {
+    return `${date.getMonth() + 1}.${date.getFullYear()}`;
+  }
+};
+
+const formatDateRangeLabel = (range: DateRange, locale: LocaleKey) => {
+  const from = parseDateKey(range.from);
+  const to = parseDateKey(range.to);
+  if (!from || !to) return '';
+  try {
+    if (range.from === range.to) {
+      return new Intl.DateTimeFormat(LOCALE_TAGS[locale], { day: 'numeric', month: 'long', year: 'numeric' }).format(from);
+    }
+    if (from.getFullYear() === to.getFullYear() && from.getMonth() === to.getMonth()) {
+      const month = new Intl.DateTimeFormat(LOCALE_TAGS[locale], { month: 'long', year: 'numeric' }).format(to);
+      return `${from.getDate()}-${to.getDate()} ${month}`;
+    }
+    return `${new Intl.DateTimeFormat(LOCALE_TAGS[locale], { day: 'numeric', month: 'short' }).format(from)} - ${new Intl.DateTimeFormat(LOCALE_TAGS[locale], { day: 'numeric', month: 'short', year: 'numeric' }).format(to)}`;
+  } catch {
+    return range.from === range.to ? range.from : `${range.from} - ${range.to}`;
+  }
 };
 
 const getMonthKey = (date: Date) => (
@@ -84,17 +208,140 @@ const formatWeekdayLabel = (dayIndex: number, locale: LocaleKey) => {
   }
 };
 
+function DateRangeCalendar({
+  range,
+  locale,
+  onChange,
+}: {
+  range: DateRange;
+  locale: LocaleKey;
+  onChange: (range: DateRange) => void;
+}) {
+  const { t } = useTranslation();
+  const selectedEnd = parseDateKey(range.to) ?? new Date();
+  const [visibleMonth, setVisibleMonth] = useState(() => new Date(selectedEnd.getFullYear(), selectedEnd.getMonth(), 1));
+  const [anchorKey, setAnchorKey] = useState<string | null>(null);
+  const today = startOfLocalDay(new Date());
+  const rangeStart = parseDateKey(range.from);
+  const rangeEnd = parseDateKey(range.to);
+
+  useEffect(() => {
+    const end = parseDateKey(range.to);
+    if (end) setVisibleMonth(new Date(end.getFullYear(), end.getMonth(), 1));
+    if (anchorKey && range.from !== anchorKey && range.to !== anchorKey) {
+      setAnchorKey(null);
+    }
+  }, [anchorKey, range.from, range.to]);
+
+  const cells = useMemo(() => getCalendarCells(visibleMonth), [visibleMonth]);
+  const canGoNext = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1) <= new Date(today.getFullYear(), today.getMonth(), 1);
+  const weekdays = useMemo(() => Array.from({ length: 7 }, (_, index) => formatWeekdayLabel(index, locale)), [locale]);
+
+  const moveMonth = useCallback((delta: number) => {
+    setVisibleMonth((current) => new Date(current.getFullYear(), current.getMonth() + delta, 1));
+    setAnchorKey(null);
+  }, []);
+
+  const selectDate = useCallback((date: Date) => {
+    const selectedKey = toDateKey(date);
+    const anchor = anchorKey ? parseDateKey(anchorKey) : null;
+
+    if (!anchor) {
+      setAnchorKey(selectedKey);
+      onChange({ from: selectedKey, to: selectedKey });
+      return;
+    }
+
+    let start = anchor < date ? anchor : date;
+    let end = anchor < date ? date : anchor;
+    if (diffCalendarDays(start, end) >= MAX_DATE_RANGE_DAYS) {
+      if (date >= anchor) {
+        end = addDays(start, MAX_DATE_RANGE_DAYS - 1);
+      } else {
+        start = addDays(end, -(MAX_DATE_RANGE_DAYS - 1));
+      }
+    }
+
+    setAnchorKey(null);
+    onChange({ from: toDateKey(start), to: toDateKey(end) });
+  }, [anchorKey, onChange]);
+
+  return (
+    <View style={styles.calendarBox}>
+      <View style={styles.calendarHeader}>
+        <TouchableOpacity style={styles.calendarNav} onPress={() => moveMonth(-1)} activeOpacity={0.72}>
+          <Ionicons name="chevron-back" size={19} color="#334155" />
+        </TouchableOpacity>
+        <View style={styles.calendarHeaderText}>
+          <Text style={styles.calendarRangeLabel} numberOfLines={1}>{formatDateRangeLabel(range, locale)}</Text>
+          <Text style={styles.calendarMonthLabel}>{formatCalendarMonth(visibleMonth, locale)}</Text>
+        </View>
+        <TouchableOpacity
+          style={[styles.calendarNav, !canGoNext && styles.calendarNavDisabled]}
+          onPress={() => moveMonth(1)}
+          disabled={!canGoNext}
+          activeOpacity={0.72}
+        >
+          <Ionicons name="chevron-forward" size={19} color="#334155" />
+        </TouchableOpacity>
+      </View>
+      <Text style={styles.calendarHelp}>{t('map.filters.dateRangeHelp')}</Text>
+      <View style={styles.calendarWeekdays}>
+        {weekdays.map((label) => <Text key={label} style={styles.calendarWeekday}>{label}</Text>)}
+      </View>
+      <View style={styles.calendarGrid}>
+        {cells.map((cell) => {
+          const cellDate = startOfLocalDay(cell.date);
+          const isFuture = cellDate > today;
+          const isStart = rangeStart ? cell.key === toDateKey(rangeStart) : false;
+          const isEnd = rangeEnd ? cell.key === toDateKey(rangeEnd) : false;
+          const isSelected = isStart || isEnd;
+          const isInRange = Boolean(rangeStart && rangeEnd && cellDate > rangeStart && cellDate < rangeEnd);
+          const isAnchor = anchorKey === cell.key;
+
+          return (
+            <TouchableOpacity
+              key={cell.key}
+              style={[
+                styles.calendarDay,
+                !cell.inMonth && styles.calendarDayMuted,
+                isInRange && styles.calendarDayInRange,
+                isSelected && styles.calendarDaySelected,
+                isAnchor && styles.calendarDayAnchor,
+                isFuture && styles.calendarDayDisabled,
+              ]}
+              onPress={() => selectDate(cellDate)}
+              disabled={isFuture}
+              activeOpacity={0.72}
+            >
+              <Text style={[
+                styles.calendarDayText,
+                !cell.inMonth && styles.calendarDayTextMuted,
+                isInRange && styles.calendarDayTextInRange,
+                isSelected && styles.calendarDayTextSelected,
+              ]}>
+                {cellDate.getDate()}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 type MapFilterSheetProps = {
   visible: boolean;
   categoryOptions: CategoryOption[];
   statusOptions: StatusOption[];
   selectedCategory: string;
   selectedStatus: string | null;
+  selectedDateRange: DateRange;
   resultCount: number;
   hasActiveFilters: boolean;
   bottomInset: number;
   onClose: () => void;
-  onApply: (value: { category: string; status: string | null }) => void;
+  onApply: (value: { category: string; status: string | null; dateRange: DateRange }) => void;
   onReset: () => void;
 };
 
@@ -104,6 +351,7 @@ function MapFilterSheet({
   statusOptions,
   selectedCategory,
   selectedStatus,
+  selectedDateRange,
   resultCount,
   hasActiveFilters,
   bottomInset,
@@ -111,20 +359,23 @@ function MapFilterSheet({
   onApply,
   onReset,
 }: MapFilterSheetProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = normalizeLocale(i18n.language);
   const [draftCategory, setDraftCategory] = useState(selectedCategory);
   const [draftStatus, setDraftStatus] = useState<string | null>(selectedStatus);
+  const [draftDateRange, setDraftDateRange] = useState<DateRange>(selectedDateRange);
   const translateY = useRef(new Animated.Value(0)).current;
   const statusTotal = statusOptions.reduce((sum, item) => sum + item.count, 0);
-  const canResetFilters = hasActiveFilters || draftCategory !== 'all' || draftStatus !== null;
+  const canResetFilters = hasActiveFilters || draftCategory !== 'all' || draftStatus !== null || !isDefaultDateRange(draftDateRange);
 
   useEffect(() => {
     if (visible) {
       setDraftCategory(selectedCategory);
       setDraftStatus(selectedStatus);
+      setDraftDateRange(selectedDateRange);
       translateY.setValue(0);
     }
-  }, [selectedCategory, selectedStatus, translateY, visible]);
+  }, [selectedCategory, selectedDateRange, selectedStatus, translateY, visible]);
 
   const closeAnimated = useCallback(() => {
     Animated.timing(translateY, {
@@ -180,6 +431,7 @@ function MapFilterSheet({
               onPress={() => {
                 setDraftCategory('all');
                 setDraftStatus(null);
+                setDraftDateRange(getDefaultDateRange());
                 onReset();
               }}
               disabled={!canResetFilters}
@@ -192,6 +444,17 @@ function MapFilterSheet({
           </View>
 
           <ScrollView style={styles.mapFilterScroll} contentContainerStyle={styles.mapFilterScrollContent} showsVerticalScrollIndicator={false}>
+            <View style={styles.mapFilterSection}>
+              <Text style={styles.mapFilterSectionTitle}>{t('map.filters.dateRange')}</Text>
+              <DateRangeCalendar
+                range={draftDateRange}
+                locale={locale}
+                onChange={(nextRange) => setDraftDateRange(normalizeDateRange(nextRange))}
+              />
+            </View>
+
+            <View style={styles.mapFilterSeparator} />
+
             <View style={styles.mapFilterSection}>
               <Text style={styles.mapFilterSectionTitle}>{t('map.filters.categories')}</Text>
               <View style={styles.mapCategoryGrid}>
@@ -278,7 +541,7 @@ function MapFilterSheet({
           <TouchableOpacity
             style={styles.mapFilterApply}
             onPress={() => {
-              onApply({ category: draftCategory, status: draftStatus });
+              onApply({ category: draftCategory, status: draftStatus, dateRange: normalizeDateRange(draftDateRange) });
               closeAnimated();
             }}
             activeOpacity={0.82}
@@ -314,33 +577,41 @@ export default function MapScreen() {
   const [selectedTimelineMonth, setSelectedTimelineMonth] = useState<string | null>(null);
   const [activeHotspotAddress, setActiveHotspotAddress] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [dateRange, setDateRange] = useState<DateRange>(() => getDefaultDateRange());
   const [isMapFiltersOpen, setIsMapFiltersOpen] = useState(false);
 
   const loadPoints = useCallback(async () => {
     try {
-      const response = await apiService.getMapPoints();
+      setIsLoading(true);
+      const response = await apiService.getMapPoints(getDateRangeBounds(dateRange));
       setPoints(response.data);
     } catch (error) {
       console.error('Error loading points:', error);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [dateRange]);
 
   useEffect(() => { loadPoints(); }, [loadPoints]);
 
   useEffect(() => {
-    let filtered = [...points];
+    let filtered = points.filter((point) => isPointInDateRange(point, dateRange));
     if (filter === 'my') filtered = filtered.filter(p => p.is_mine);
     if (statusFilter) filtered = filtered.filter(p => p.status === statusFilter);
     if (categoryFilter !== 'all') filtered = filtered.filter(p => p.category === categoryFilter);
+    filtered = filtered.slice().sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     setFilteredPoints(filtered);
-  }, [categoryFilter, filter, points, statusFilter]);
+  }, [categoryFilter, dateRange, filter, points, statusFilter]);
+
+  const timeScopedPoints = useMemo(
+    () => points.filter((point) => isPointInDateRange(point, dateRange)),
+    [dateRange, points],
+  );
 
   const ownershipPoints = useMemo(
-    () => (filter === 'my' ? points.filter((point) => point.is_mine) : points),
-    [filter, points],
+    () => (filter === 'my' ? timeScopedPoints.filter((point) => point.is_mine) : timeScopedPoints),
+    [filter, timeScopedPoints],
   );
 
   const counts = {
@@ -359,7 +630,7 @@ export default function MapScreen() {
   );
 
   const mapFilterStatusOptions = useMemo(() => {
-    const scopedPoints = points.filter((point) => {
+    const scopedPoints = timeScopedPoints.filter((point) => {
       const matchesOwnership = filter !== 'my' || point.is_mine;
       const matchesCategory = categoryFilter === 'all' || point.category === categoryFilter;
       return matchesOwnership && matchesCategory;
@@ -370,9 +641,9 @@ export default function MapScreen() {
       { key: 'in_progress', label: t('status.inProgress'), count: scopedPoints.filter((point) => point.status === 'in_progress').length, color: STATUS_COLORS.in_progress },
       { key: 'closed', label: t('status.closed'), count: scopedPoints.filter((point) => point.status === 'closed').length, color: STATUS_COLORS.closed },
     ];
-  }, [categoryFilter, filter, points, t]);
+  }, [categoryFilter, filter, t, timeScopedPoints]);
 
-  const hasMapFilters = Boolean(statusFilter) || categoryFilter !== 'all';
+  const hasMapFilters = Boolean(statusFilter) || categoryFilter !== 'all' || !isDefaultDateRange(dateRange);
 
   const clearMapFocus = useCallback(() => {
     setActiveHotspotAddress(null);
@@ -393,12 +664,14 @@ export default function MapScreen() {
     clearMapFocus();
     setStatusFilter(null);
     setCategoryFilter('all');
+    setDateRange(getDefaultDateRange());
   }, [clearMapFocus]);
 
-  const applyMapFilters = useCallback((value: { category: string; status: string | null }) => {
+  const applyMapFilters = useCallback((value: { category: string; status: string | null; dateRange: DateRange }) => {
     clearMapFocus();
     setCategoryFilter(value.category);
     setStatusFilter(value.status);
+    setDateRange(normalizeDateRange(value.dateRange));
   }, [clearMapFocus]);
 
   const analytics = useMemo(() => {
@@ -857,6 +1130,7 @@ export default function MapScreen() {
         statusOptions={mapFilterStatusOptions}
         selectedCategory={categoryFilter}
         selectedStatus={statusFilter}
+        selectedDateRange={dateRange}
         resultCount={filteredPoints.length}
         hasActiveFilters={hasMapFilters}
         bottomInset={insets.bottom}
@@ -974,6 +1248,27 @@ const styles = StyleSheet.create({
   mapStatusOptionCountActive: { color: '#111827' },
   mapFilterApply: { minHeight: 54, alignItems: 'center', justifyContent: 'center', borderRadius: 18, backgroundColor: ORANGE, shadowColor: ORANGE, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 18, elevation: 4 },
   mapFilterApplyText: { fontSize: 16, fontWeight: '900', color: '#FFF' },
+  calendarBox: { gap: 10, padding: 12, borderRadius: 20, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' },
+  calendarHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  calendarNav: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#FFF', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.08)', alignItems: 'center', justifyContent: 'center' },
+  calendarNavDisabled: { opacity: 0.32 },
+  calendarHeaderText: { flex: 1, minWidth: 0, alignItems: 'center' },
+  calendarRangeLabel: { maxWidth: '100%', fontSize: 15, lineHeight: 19, fontWeight: '900', color: '#0F172A', textAlign: 'center' },
+  calendarMonthLabel: { marginTop: 2, fontSize: 11, lineHeight: 14, fontWeight: '800', color: '#64748B', textTransform: 'capitalize' },
+  calendarHelp: { fontSize: 11, lineHeight: 15, fontWeight: '800', color: '#94A3B8', textAlign: 'center' },
+  calendarWeekdays: { flexDirection: 'row', overflow: 'hidden', borderRadius: 12, backgroundColor: '#F1F5F9' },
+  calendarWeekday: { flex: 1, paddingVertical: 8, fontSize: 10, lineHeight: 12, fontWeight: '900', color: '#64748B', textAlign: 'center', textTransform: 'uppercase' },
+  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  calendarDay: { width: '14.2857%', minWidth: 0, height: 34, alignItems: 'center', justifyContent: 'center', borderRadius: 10 },
+  calendarDayMuted: { opacity: 0.48 },
+  calendarDayInRange: { borderRadius: 5, backgroundColor: 'rgba(14, 165, 233, 0.12)' },
+  calendarDaySelected: { backgroundColor: ORANGE, shadowColor: ORANGE, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.18, shadowRadius: 14, elevation: 3 },
+  calendarDayAnchor: { borderWidth: 2, borderColor: 'rgba(255, 107, 0, 0.28)' },
+  calendarDayDisabled: { opacity: 0.22 },
+  calendarDayText: { fontSize: 13, fontWeight: '900', color: '#475569' },
+  calendarDayTextMuted: { color: '#94A3B8' },
+  calendarDayTextInRange: { color: '#334155' },
+  calendarDayTextSelected: { color: '#FFF' },
   hotspotMapCallout: { position: 'absolute', top: 12, left: 12, right: 12, padding: 14, borderRadius: 24, backgroundColor: 'rgba(255, 255, 255, 0.96)', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.08)', shadowColor: '#0F172A', shadowOffset: { width: 0, height: 16 }, shadowOpacity: 0.14, shadowRadius: 26, elevation: 8 },
   hotspotMapHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   hotspotMapPin: { width: 38, height: 38, borderRadius: 14, backgroundColor: '#FFF4EC', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255, 107, 0, 0.16)' },

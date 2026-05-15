@@ -211,6 +211,7 @@ export interface MapPoint {
   lng: number;
   category: string;
   status: string;
+  priority?: RequestPriority;
   is_mine: boolean;
   title: string;
   address: string;
@@ -381,8 +382,13 @@ export const apiService = {
   getAdminPlatformStats: () => api.get<AdminPlatformStatsResponse>('/admin/platform-stats'),
 
   // Map
-  getMapPoints: (params?: { category?: string; status?: string; my_only?: boolean }) =>
-    api.get<MapPoint[]>('/map/points', { params }),
+  getMapPoints: (params?: { dateFrom?: string; dateTo?: string }) =>
+    api.get<MapPoint[]>('/requests/map', {
+      params: {
+        date_from: params?.dateFrom,
+        date_to: params?.dateTo,
+      },
+    }),
 
   // Seed
   seedData: () => api.post('/seed')

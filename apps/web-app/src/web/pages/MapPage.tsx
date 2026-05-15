@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Activity, BarChart3, MapPin, RotateCcw } from "lucide-react";
@@ -39,11 +39,14 @@ const TIMELINE_COLORS = {
 
 const PRIORITY_OPTIONS = ["all", "low", "medium", "high"] as const;
 const WEEKDAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+const MAX_DATE_RANGE_DAYS = 7;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 type PriorityFilter = (typeof PRIORITY_OPTIONS)[number];
 type StatusFilter = "all" | RequestStatus;
 type Hotspot = { address: string; count: number; requests: CivicRequest[] };
 type TranslationFn = (key: string, options?: Record<string, unknown>) => string;
+type DateRange = { from: string; to: string };
 
 function normalizeLocale(language: string) {
   if (language.startsWith("kk") || language.startsWith("kz")) return "kk";
@@ -84,6 +87,131 @@ function formatRequestDate(value: string, language: string) {
 function formatWeekday(dayIndex: number, language: string) {
   const monday = new Date(2026, 0, 5 + dayIndex);
   return new Intl.DateTimeFormat(normalizeLocale(language), { weekday: "short" }).format(monday);
+}
+
+function startOfLocalDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function endOfLocalDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function diffCalendarDays(from: Date, to: Date) {
+  return Math.round((startOfLocalDay(to).getTime() - startOfLocalDay(from).getTime()) / DAY_MS);
+}
+
+function toDateKey(date: Date) {
+  const day = startOfLocalDay(date);
+  return `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+}
+
+function parseDateKey(value?: string | null) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+    return null;
+  }
+  return startOfLocalDay(date);
+}
+
+function getDefaultDateRange(): DateRange {
+  const today = startOfLocalDay(new Date());
+  return {
+    from: toDateKey(addDays(today, -(MAX_DATE_RANGE_DAYS - 1))),
+    to: toDateKey(today),
+  };
+}
+
+function normalizeDateRange(rawFrom?: string | null, rawTo?: string | null): DateRange {
+  const fallback = getDefaultDateRange();
+  const fromDate = parseDateKey(rawFrom);
+  const toDate = parseDateKey(rawTo);
+  if (!fromDate && !toDate) return fallback;
+
+  const today = startOfLocalDay(new Date());
+  let start = startOfLocalDay(fromDate ?? toDate ?? today);
+  let end = startOfLocalDay(toDate ?? fromDate ?? today);
+
+  if (start > end) {
+    [start, end] = [end, start];
+  }
+  if (end > today) end = today;
+  if (start > today) start = today;
+  if (diffCalendarDays(start, end) >= MAX_DATE_RANGE_DAYS) {
+    end = addDays(start, MAX_DATE_RANGE_DAYS - 1);
+  }
+  if (end > today) {
+    end = today;
+    start = addDays(end, -(MAX_DATE_RANGE_DAYS - 1));
+  }
+
+  return { from: toDateKey(start), to: toDateKey(end) };
+}
+
+function isDefaultDateRange(range: DateRange) {
+  const fallback = getDefaultDateRange();
+  return range.from === fallback.from && range.to === fallback.to;
+}
+
+function getDateRangeBounds(range: DateRange) {
+  const from = parseDateKey(range.from) ?? parseDateKey(getDefaultDateRange().from)!;
+  const to = parseDateKey(range.to) ?? parseDateKey(getDefaultDateRange().to)!;
+  return {
+    dateFrom: startOfLocalDay(from).toISOString(),
+    dateTo: endOfLocalDay(to).toISOString(),
+  };
+}
+
+function getDateRangeMatch(request: CivicRequest, range: DateRange) {
+  const createdAt = new Date(request.createdAt).getTime();
+  const from = parseDateKey(range.from);
+  const to = parseDateKey(range.to);
+  if (Number.isNaN(createdAt) || !from || !to) return false;
+  return createdAt >= startOfLocalDay(from).getTime() && createdAt <= endOfLocalDay(to).getTime();
+}
+
+function getCalendarCells(monthDate: Date) {
+  const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+  const startOffset = (monthStart.getDay() + 6) % 7;
+  const gridStart = addDays(monthStart, -startOffset);
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = addDays(gridStart, index);
+    return {
+      date,
+      key: toDateKey(date),
+      inMonth: date.getMonth() === monthStart.getMonth(),
+    };
+  });
+}
+
+function formatCalendarMonth(date: Date, language: string) {
+  return new Intl.DateTimeFormat(normalizeLocale(language), {
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatDateRangeLabel(range: DateRange, language: string) {
+  const from = parseDateKey(range.from);
+  const to = parseDateKey(range.to);
+  if (!from || !to) return "";
+  const locale = normalizeLocale(language);
+  if (range.from === range.to) {
+    return new Intl.DateTimeFormat(locale, { day: "numeric", month: "long", year: "numeric" }).format(from);
+  }
+  if (from.getFullYear() === to.getFullYear() && from.getMonth() === to.getMonth()) {
+    const month = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(to);
+    return `${from.getDate()}-${to.getDate()} ${month}`;
+  }
+  return `${new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(from)} - ${new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric" }).format(to)}`;
 }
 
 function formatRequestCount(count: number, language: string) {
@@ -134,6 +262,11 @@ export function MapPage() {
   const category = searchParams.get("category") ?? "all";
   const status = (searchParams.get("status") as StatusFilter | null) ?? "all";
   const priority = (searchParams.get("priority") as PriorityFilter | null) ?? "all";
+  const dateRange = useMemo(
+    () => normalizeDateRange(searchParams.get("from"), searchParams.get("to")),
+    [searchParams],
+  );
+  const dateBounds = useMemo(() => getDateRangeBounds(dateRange), [dateRange.from, dateRange.to]);
 
   const currentUserQuery = useQuery({
     queryKey: queryKeys.currentUser,
@@ -155,22 +288,14 @@ export function MapPage() {
     queryFn: platformApi.getCategories,
   });
   const publicRequestsQuery = useQuery({
-    queryKey: [...queryKeys.publicRequests, i18n.language],
-    queryFn: platformApi.getPublicRequests,
-  });
-  const myRequestsQuery = useQuery({
-    queryKey: [...queryKeys.myRequests, i18n.language],
-    queryFn: platformApi.getMyRequests,
+    queryKey: [...queryKeys.publicRequests, "map", i18n.language, dateBounds.dateFrom, dateBounds.dateTo],
+    queryFn: () => platformApi.getMapRequests(dateBounds),
   });
 
-  const allRequests = useMemo(() => {
-    const requestMap = new Map<string, CivicRequest>();
-
-    for (const request of publicRequestsQuery.data ?? []) requestMap.set(request.id, request);
-    for (const request of myRequestsQuery.data ?? []) requestMap.set(request.id, request);
-
-    return Array.from(requestMap.values());
-  }, [myRequestsQuery.data, publicRequestsQuery.data]);
+  const allRequests = useMemo(
+    () => (publicRequestsQuery.data ?? []).filter((request) => getDateRangeMatch(request, dateRange)),
+    [dateRange.from, dateRange.to, publicRequestsQuery.data],
+  );
 
   const filteredRequests = useMemo(() => {
     return allRequests.filter((request) => {
@@ -189,9 +314,9 @@ export function MapPage() {
     [allRequests, currentUser, mapMode],
   );
 
-  const isLoading = publicRequestsQuery.isLoading || myRequestsQuery.isLoading;
+  const isLoading = publicRequestsQuery.isLoading;
   const [filtersVisible, setFiltersVisible] = useState(true);
-  const hasActiveFilters = mapMode !== "all" || category !== "all" || status !== "all" || priority !== "all";
+  const hasActiveFilters = mapMode !== "all" || category !== "all" || status !== "all" || priority !== "all" || !isDefaultDateRange(dateRange);
 
   const statusCounts = useMemo(
     () => ({
@@ -287,6 +412,20 @@ export function MapPage() {
     setSearchParams(next, { replace: true });
   }
 
+  function updateDateRange(nextRange: DateRange) {
+    setSelectedHotspotAddress(null);
+    const normalizedRange = normalizeDateRange(nextRange.from, nextRange.to);
+    const next = new URLSearchParams(searchParams);
+    if (isDefaultDateRange(normalizedRange)) {
+      next.delete("from");
+      next.delete("to");
+    } else {
+      next.set("from", normalizedRange.from);
+      next.set("to", normalizedRange.to);
+    }
+    setSearchParams(next, { replace: true });
+  }
+
   function resetFilters() {
     setSelectedHotspotAddress(null);
     setSearchParams(new URLSearchParams(), { replace: true });
@@ -350,6 +489,12 @@ export function MapPage() {
               <option key={item.id} value={item.id}>{item.name}</option>
             ))}
           </select>
+          <MapDateRangePicker
+            range={dateRange}
+            language={i18n.language}
+            t={t}
+            onChange={updateDateRange}
+          />
           <div className="map-page__tag-row">
             {STATUS_OPTIONS.map((item) => (
               <button
@@ -556,6 +701,121 @@ function EmptyAnalytics({ label }: { label: string }) {
     <div className="map-analytics__empty">
       <MapPin size={24} />
       <span>{label}</span>
+    </div>
+  );
+}
+
+function MapDateRangePicker({
+  range,
+  language,
+  t,
+  onChange,
+}: {
+  range: DateRange;
+  language: string;
+  t: TranslationFn;
+  onChange: (range: DateRange) => void;
+}) {
+  const selectedEnd = parseDateKey(range.to) ?? new Date();
+  const [visibleMonth, setVisibleMonth] = useState(() => new Date(selectedEnd.getFullYear(), selectedEnd.getMonth(), 1));
+  const [anchorKey, setAnchorKey] = useState<string | null>(null);
+  const today = startOfLocalDay(new Date());
+  const rangeStart = parseDateKey(range.from);
+  const rangeEnd = parseDateKey(range.to);
+
+  useEffect(() => {
+    const end = parseDateKey(range.to);
+    if (end) {
+      setVisibleMonth(new Date(end.getFullYear(), end.getMonth(), 1));
+    }
+    if (anchorKey && range.from !== anchorKey && range.to !== anchorKey) {
+      setAnchorKey(null);
+    }
+  }, [anchorKey, range.from, range.to]);
+
+  const cells = useMemo(() => getCalendarCells(visibleMonth), [visibleMonth]);
+  const canGoNext = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1) <= new Date(today.getFullYear(), today.getMonth(), 1);
+  const weekdayLabels = useMemo(
+    () => Array.from({ length: 7 }, (_, index) => formatWeekday(index, language)),
+    [language],
+  );
+
+  function moveMonth(delta: number) {
+    setVisibleMonth((current) => new Date(current.getFullYear(), current.getMonth() + delta, 1));
+    setAnchorKey(null);
+  }
+
+  function selectDate(date: Date) {
+    const selectedKey = toDateKey(date);
+    const anchor = anchorKey ? parseDateKey(anchorKey) : null;
+
+    if (!anchor) {
+      setAnchorKey(selectedKey);
+      onChange({ from: selectedKey, to: selectedKey });
+      return;
+    }
+
+    let start = anchor < date ? anchor : date;
+    let end = anchor < date ? date : anchor;
+    if (diffCalendarDays(start, end) >= MAX_DATE_RANGE_DAYS) {
+      if (date >= anchor) {
+        end = addDays(start, MAX_DATE_RANGE_DAYS - 1);
+      } else {
+        start = addDays(end, -(MAX_DATE_RANGE_DAYS - 1));
+      }
+    }
+
+    setAnchorKey(null);
+    onChange({ from: toDateKey(start), to: toDateKey(end) });
+  }
+
+  return (
+    <div className="map-page__calendar">
+      <div className="map-page__calendar-header">
+        <button type="button" onClick={() => moveMonth(-1)} aria-label={t("map.filters.previousMonth")}>
+          ‹
+        </button>
+        <div>
+          <strong>{formatDateRangeLabel(range, language)}</strong>
+          <span>{formatCalendarMonth(visibleMonth, language)}</span>
+        </div>
+        <button type="button" onClick={() => moveMonth(1)} disabled={!canGoNext} aria-label={t("map.filters.nextMonth")}>
+          ›
+        </button>
+      </div>
+      <div className="map-page__calendar-help">{t("map.filters.dateRangeHelp")}</div>
+      <div className="map-page__calendar-weekdays">
+        {weekdayLabels.map((label) => <span key={label}>{label}</span>)}
+      </div>
+      <div className="map-page__calendar-grid">
+        {cells.map((cell) => {
+          const cellDate = startOfLocalDay(cell.date);
+          const isFuture = cellDate > today;
+          const isStart = rangeStart ? cell.key === toDateKey(rangeStart) : false;
+          const isEnd = rangeEnd ? cell.key === toDateKey(rangeEnd) : false;
+          const isSelected = isStart || isEnd;
+          const isInRange = Boolean(rangeStart && rangeEnd && cellDate > rangeStart && cellDate < rangeEnd);
+
+          return (
+            <button
+              key={cell.key}
+              type="button"
+              className={[
+                !cell.inMonth ? "is-muted" : "",
+                isSelected ? "is-selected" : "",
+                isStart ? "is-range-start" : "",
+                isEnd ? "is-range-end" : "",
+                isInRange ? "is-in-range" : "",
+                anchorKey === cell.key ? "is-anchor" : "",
+              ].filter(Boolean).join(" ")}
+              onClick={() => selectDate(cellDate)}
+              disabled={isFuture}
+            >
+              {cellDate.getDate()}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

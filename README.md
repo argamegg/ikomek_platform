@@ -118,6 +118,20 @@ After seeding demo data, these accounts are available:
 | Operator | `operator@ikomek.kz` | `operator123` |
 | Admin | `admin@ikomek.kz` | `admin123` |
 
+## Демо аккаунты граждан
+
+Для реалистичного наполнения базы доступен отдельный seed endpoint:
+
+```bash
+curl -X POST http://localhost:8001/api/seed-demo
+```
+
+Он создает 50 демо аккаунтов граждан.
+
+- Email формат: `demo@ikomek.kz`, `demo1@ikomek.kz` ... `demo49@ikomek.kz`
+- Пароль для всех аккаунтов: `demo123`
+- Endpoint запуска: `POST /api/seed-demo`
+
 ## Environment Overview
 
 ### Backend
@@ -183,6 +197,12 @@ When the backend is running:
 curl -X POST http://localhost:8001/api/seed
 ```
 
+For the larger realistic dataset with 50 citizen demo accounts and clustered city requests:
+
+```bash
+curl -X POST http://localhost:8001/api/seed-demo
+```
+
 ## Notes
 
 - MongoDB must be running before the backend starts.
@@ -197,4 +217,3 @@ curl -X POST http://localhost:8001/api/seed
 - [web app](/Users/argame/Documents/ikomek-project/apps/web-app/package.json)
 - [startup guide](/Users/argame/Documents/ikomek-project/docs/RUNNING.md)
 - [launcher script](/Users/argame/Documents/ikomek-project/scripts/start_system.py)
-

@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends
@@ -7,6 +8,14 @@ from helpers import get_optional_current_user
 
 router = APIRouter()
 
+def parse_datetime(value: Optional[str]):
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00")).replace(tzinfo=None)
+    except ValueError:
+        return None
+
 # ================================
 # MAP DATA ENDPOINTS
 # ================================
@@ -15,6 +24,9 @@ router = APIRouter()
 async def get_map_points(
     category: Optional[str] = None,
     status: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    limit: int = 1000,
     my_only: bool = False,
     current_user: Optional[dict] = Depends(get_optional_current_user),
 ):
@@ -27,8 +39,12 @@ async def get_map_points(
         query["user_id"] = current_user["id"]
     elif my_only:
         return []
+    end = parse_datetime(date_to) or datetime.utcnow()
+    start = parse_datetime(date_from) or end - timedelta(days=7)
+    query["created_at"] = {"$gte": start, "$lte": end}
     
-    requests = await db.requests.find(query).to_list(500)
+    safe_limit = 1000 if limit <= 0 else min(limit, 1000)
+    requests = await db.requests.find(query).sort("created_at", -1).limit(safe_limit).to_list(safe_limit)
     
     points = []
     for req in requests:

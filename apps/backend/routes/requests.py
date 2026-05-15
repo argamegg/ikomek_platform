@@ -1,7 +1,9 @@
-from datetime import datetime
+from collections import defaultdict, deque
+from datetime import datetime, timedelta
+import time
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from core.config import db
 from data import CATEGORIES
@@ -17,6 +19,10 @@ from schemas import ROLE_ADMIN, ROLE_OPERATOR, Priority, RequestCreate, RequestM
 from services.translation import translate_to_all_languages
 
 router = APIRouter()
+MAP_REQUEST_LIMIT = 1000
+MAP_RATE_LIMIT = 30
+MAP_RATE_WINDOW_SECONDS = 60
+_map_rate_hits: defaultdict[str, deque[float]] = defaultdict(deque)
 
 def _parse_datetime(value):
     if isinstance(value, datetime):
@@ -31,6 +37,86 @@ def _parse_datetime(value):
 def _serialize_datetime(value):
     parsed = _parse_datetime(value)
     return parsed.isoformat() if parsed else None
+
+def _client_ip(request: Request) -> str:
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        return forwarded_for.split(",", 1)[0].strip()
+    return request.client.host if request.client else "unknown"
+
+def rate_limit_map_requests(request: Request):
+    ip = _client_ip(request)
+    now = time.monotonic()
+    hits = _map_rate_hits[ip]
+
+    while hits and now - hits[0] > MAP_RATE_WINDOW_SECONDS:
+        hits.popleft()
+
+    if len(hits) >= MAP_RATE_LIMIT:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many map requests. Please try again later.",
+        )
+
+    hits.append(now)
+
+def _date_range_query(date_from: Optional[str], date_to: Optional[str], default_last_days: Optional[int] = None) -> dict:
+    end = _parse_datetime(date_to) if date_to else None
+    start = _parse_datetime(date_from) if date_from else None
+
+    if default_last_days is not None:
+        end = end or datetime.utcnow()
+        start = start or end - timedelta(days=default_last_days)
+
+    created_at = {}
+    if start:
+        created_at["$gte"] = start
+    if end:
+        created_at["$lte"] = end
+
+    return {"created_at": created_at} if created_at else {}
+
+def _map_request_document(request: dict, current_user: Optional[dict] = None) -> dict:
+    role = current_user.get("role") if current_user else None
+    is_staff = role in {ROLE_OPERATOR, ROLE_ADMIN}
+    is_mine = bool(current_user and request.get("user_id") == current_user.get("id"))
+    created_at = _serialize_datetime(request.get("created_at"))
+
+    return {
+        "id": request.get("id", ""),
+        "lat": request.get("latitude"),
+        "lng": request.get("longitude"),
+        "latitude": request.get("latitude"),
+        "longitude": request.get("longitude"),
+        "status": request.get("status", "pending"),
+        "priority": request.get("priority", "medium"),
+        "category": request.get("category_id", ""),
+        "category_id": request.get("category_id", ""),
+        "category_name": request.get("category_name", ""),
+        "address": request.get("address", ""),
+        "created_at": created_at,
+        "createdAt": created_at,
+        "title": request.get("problem_type", ""),
+        "problem_type": request.get("problem_type", ""),
+        "user_id": request.get("user_id", "") if (is_staff or is_mine) else "",
+        "is_mine": is_mine,
+    }
+
+def _map_projection() -> dict:
+    return {
+        "_id": 0,
+        "id": 1,
+        "user_id": 1,
+        "latitude": 1,
+        "longitude": 1,
+        "status": 1,
+        "priority": 1,
+        "category_id": 1,
+        "category_name": 1,
+        "address": 1,
+        "created_at": 1,
+        "problem_type": 1,
+    }
 
 def _last_six_month_keys():
     now = datetime.utcnow()
@@ -106,10 +192,14 @@ async def get_user_requests(lang: str = "ru", current_user: dict = Depends(get_c
     requests = await db.requests.find({"user_id": current_user["id"]}).sort("created_at", -1).to_list(100)
     return [RequestModel(**visible_request_document(req, lang, current_user)) for req in requests]
 
-@router.get("/requests/all", response_model=List[RequestModel])
+@router.get("/requests/all")
 async def get_all_requests(
     category: Optional[str] = None,
     status: Optional[str] = None,
+    limit: int = 0,
+    map: bool = False,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
     lang: str = "ru",
     current_user: Optional[dict] = Depends(get_optional_current_user),
 ):
@@ -118,9 +208,42 @@ async def get_all_requests(
         query["category_id"] = category
     if status:
         query["status"] = status
+
+    query.update(_date_range_query(date_from, date_to))
+
+    projection = _map_projection() if map else None
+    cursor = db.requests.find(query, projection).sort("created_at", -1)
+    if limit > 0:
+        cursor = cursor.limit(limit)
     
-    requests = await db.requests.find(query).sort("created_at", -1).to_list(500)
+    requests = await cursor.to_list(limit if limit > 0 else None)
+    if map:
+        return [_map_request_document(req, current_user) for req in requests]
+
     return [RequestModel(**visible_request_document(req, lang, current_user)) for req in requests]
+
+@router.get("/requests/map", dependencies=[Depends(rate_limit_map_requests)])
+async def get_map_requests(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    category: Optional[str] = None,
+    status: Optional[str] = None,
+    limit: int = MAP_REQUEST_LIMIT,
+    current_user: Optional[dict] = Depends(get_optional_current_user),
+):
+    query = _date_range_query(date_from, date_to, default_last_days=7)
+    if category:
+        query["category_id"] = category
+    if status:
+        query["status"] = status
+
+    safe_limit = MAP_REQUEST_LIMIT if limit <= 0 else min(limit, MAP_REQUEST_LIMIT)
+    cursor = db.requests.find(query, _map_projection()).sort("created_at", -1)
+    if safe_limit > 0:
+        cursor = cursor.limit(safe_limit)
+
+    requests = await cursor.to_list(safe_limit if safe_limit > 0 else None)
+    return [_map_request_document(req, current_user) for req in requests]
 
 @router.get("/requests/{request_id}", response_model=RequestModel)
 async def get_request(

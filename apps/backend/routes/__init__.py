@@ -9,6 +9,7 @@ from . import news
 from . import requests
 from . import root
 from . import seed
+from . import seed_demo
 from . import users
 
 ROUTERS = [
@@ -23,5 +24,6 @@ ROUTERS = [
     map_points.router,
     analytics.router,
     seed.router,
+    seed_demo.router,
     root.router,
 ]

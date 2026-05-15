@@ -470,6 +470,17 @@ export const platformApi = {
     return normalizeList(response.data, normalizeRequest);
   },
 
+  async getMapRequests(params?: { dateFrom?: string; dateTo?: string }): Promise<CivicRequest[]> {
+    const response = await platformClient.get("/requests/map", {
+      params: {
+        date_from: params?.dateFrom,
+        date_to: params?.dateTo,
+        lang: getCurrentLang(),
+      },
+    });
+    return normalizeList(response.data, normalizeRequest);
+  },
+
   async getMyRequests(): Promise<CivicRequest[]> {
     const token = session.getToken();
 
