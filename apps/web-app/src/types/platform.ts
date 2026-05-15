@@ -307,6 +307,11 @@ export type PasswordRecoveryInput = {
   email: string;
 };
 
+export type PasswordChangeInput = {
+  currentPassword: string;
+  newPassword: string;
+};
+
 export type EmailVerificationInput = {
   registrationId: string;
   code: string;

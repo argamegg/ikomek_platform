@@ -16,7 +16,9 @@ import type {
   NewsTranslationPreview,
   NotificationItem,
   OperatorStats,
+  Locale,
   PasswordRecoveryInput,
+  PasswordChangeInput,
   PlatformMetrics,
   RequestCategory,
   RequestCreateInput,
@@ -772,6 +774,18 @@ export const platformApi = {
     });
     await platformClient.put("/auth/language", { language: payload.language });
     return (await platformApi.getCurrentUser()) as User;
+  },
+
+  async updateLanguage(language: Locale) {
+    await platformClient.put("/auth/language", { language });
+    return (await platformApi.getCurrentUser()) as User;
+  },
+
+  async changePassword(payload: PasswordChangeInput) {
+    await platformClient.put("/auth/password", {
+      current_password: payload.currentPassword,
+      new_password: payload.newPassword,
+    });
   },
 
   async getNotifications() {

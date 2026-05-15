@@ -28,6 +28,7 @@ from helpers import (
 )
 from schemas import (
     LanguageUpdate,
+    PasswordChange,
     ROLE_CITIZEN,
     RegistrationStartResponse,
     TokenResponse,
@@ -306,6 +307,17 @@ async def update_language(data: LanguageUpdate, current_user: dict = Depends(get
     
     await db.users.update_one({"id": current_user["id"]}, {"$set": {"language": data.language}})
     return {"message": "Language updated", "language": data.language}
+
+@router.put("/auth/password")
+async def update_password(data: PasswordChange, current_user: dict = Depends(get_current_user)):
+    if not verify_password(data.current_password, current_user["password"]):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+    await db.users.update_one(
+        {"id": current_user["id"]},
+        {"$set": {"password": get_password_hash(data.new_password)}},
+    )
+    return {"message": "Password updated"}
 
 @router.put("/auth/onboarding")
 async def complete_onboarding(current_user: dict = Depends(get_current_user)):
