@@ -8,7 +8,11 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-  ScrollView
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -233,6 +237,7 @@ export default function LocationScreen() {
       </View>
 
       {/* Bottom Panel */}
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={[styles.bottomPanel, { paddingBottom: insets.bottom + 16 }]}>
         {savedLocations.length > 0 ? (
           <View style={styles.savedBlock}>
@@ -273,6 +278,9 @@ export default function LocationScreen() {
               placeholder={t('request.addressPlaceholder')}
               placeholderTextColor="#C7C7CC"
               multiline
+              scrollEnabled
+              returnKeyType="done"
+              blurOnSubmit
             />
           </View>
         </View>
@@ -311,47 +319,69 @@ export default function LocationScreen() {
           <Ionicons name="arrow-forward" size={20} color="#FFF" />
         </TouchableOpacity>
       </View>
+      </KeyboardAvoidingView>
 
       <Modal visible={isSaveModalOpen} transparent animationType="slide" onRequestClose={() => setIsSaveModalOpen(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { paddingBottom: insets.bottom + 16 }]}>
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>{t('locations.addLocation')}</Text>
-            <Text style={styles.modalLabel}>{t('locations.locationType')}</Text>
-            <View style={styles.typeGrid}>
-              {LOCATION_TYPES.map((type) => {
-                const active = saveForm.type === type;
-                return (
-                  <TouchableOpacity
-                    key={type}
-                    style={[styles.typeChip, active && styles.typeChipActive]}
-                    onPress={() => setSaveForm((current) => ({ ...current, type }))}
-                  >
-                    <Ionicons name={LOCATION_ICONS[type]} size={16} color={active ? ORANGE : '#64748B'} />
-                    <Text style={[styles.typeChipText, active && styles.typeChipTextActive]}>{t(`locations.${type}`)}</Text>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardAvoidingOverlay}
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+            <View style={styles.modalOverlay}>
+              <View style={[styles.modalContent, { paddingBottom: insets.bottom + 16 }]}>
+                <View style={styles.modalHandle} />
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  keyboardDismissMode="interactive"
+                  contentContainerStyle={styles.modalScrollContent}
+                >
+                  <Text style={styles.modalTitle}>{t('locations.addLocation')}</Text>
+                  <Text style={styles.modalLabel}>{t('locations.locationType')}</Text>
+                  <View style={styles.typeGrid}>
+                    {LOCATION_TYPES.map((type) => {
+                      const active = saveForm.type === type;
+                      return (
+                        <TouchableOpacity
+                          key={type}
+                          style={[styles.typeChip, active && styles.typeChipActive]}
+                          onPress={() => setSaveForm((current) => ({ ...current, type }))}
+                        >
+                          <Ionicons name={LOCATION_ICONS[type]} size={16} color={active ? ORANGE : '#64748B'} />
+                          <Text style={[styles.typeChipText, active && styles.typeChipTextActive]}>{t(`locations.${type}`)}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                  <TextInput
+                    style={styles.modalInput}
+                    value={saveForm.label}
+                    onChangeText={(label) => setSaveForm((current) => ({ ...current, label }))}
+                    placeholder={t('locations.labelPlaceholder')}
+                    placeholderTextColor="#C7C7CC"
+                    returnKeyType="done"
+                  />
+                  <View style={styles.modalAddressPreview}>
+                    <Ionicons name="location" size={18} color={ORANGE} />
+                    <Text style={styles.modalAddressText}>{address}</Text>
+                  </View>
+                  <TouchableOpacity style={[styles.modalSaveButton, isSavingLocation && styles.buttonDisabled]} onPress={saveCurrentLocation} disabled={isSavingLocation}>
+                    {isSavingLocation ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalSaveText}>{t('locations.saveAddress')}</Text>}
                   </TouchableOpacity>
-                );
-              })}
+                  <TouchableOpacity
+                    style={styles.modalCancelButton}
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      setIsSaveModalOpen(false);
+                    }}
+                  >
+                    <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              </View>
             </View>
-            <TextInput
-              style={styles.modalInput}
-              value={saveForm.label}
-              onChangeText={(label) => setSaveForm((current) => ({ ...current, label }))}
-              placeholder={t('locations.labelPlaceholder')}
-              placeholderTextColor="#C7C7CC"
-            />
-            <View style={styles.modalAddressPreview}>
-              <Ionicons name="location" size={18} color={ORANGE} />
-              <Text style={styles.modalAddressText}>{address}</Text>
-            </View>
-            <TouchableOpacity style={[styles.modalSaveButton, isSavingLocation && styles.buttonDisabled]} onPress={saveCurrentLocation} disabled={isSavingLocation}>
-              {isSavingLocation ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalSaveText}>{t('locations.saveAddress')}</Text>}
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.modalCancelButton} onPress={() => setIsSaveModalOpen(false)}>
-              <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -512,8 +542,10 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600'
   },
+  keyboardAvoidingOverlay: { flex: 1 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(15,23,42,0.42)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
+  modalContent: { maxHeight: '88%', backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
+  modalScrollContent: { paddingBottom: 4 },
   modalHandle: { width: 38, height: 4, borderRadius: 2, backgroundColor: '#E5E7EB', alignSelf: 'center', marginBottom: 18 },
   modalTitle: { color: '#1C1C1E', fontSize: 22, fontWeight: '900', marginBottom: 16 },
   modalLabel: { fontSize: 12, fontWeight: '900', color: '#64748B', textTransform: 'uppercase', marginBottom: 10 },

@@ -7,14 +7,27 @@ import i18n from '../i18n';
 const API_URL = Constants.expoConfig?.extra?.backendUrl || process.env.EXPO_PUBLIC_BACKEND_URL || '';
 const PENDING_VERIFICATION_KEY = 'pendingVerification';
 
-interface User {
+export interface User {
   id: string;
   email: string;
   full_name: string;
   phone?: string;
+  display_name?: string;
+  gender?: string;
+  birth_date?: string;
+  avatar_url?: string;
   role: 'citizen' | 'operator' | 'admin';
   language: string;
   created_at: string;
+}
+
+export interface ProfileUpdateInput {
+  fullName: string;
+  phone?: string;
+  displayName?: string;
+  gender?: string;
+  birthDate?: string;
+  avatarUrl?: string;
 }
 
 export interface PendingVerification {
@@ -40,7 +53,7 @@ interface AuthContextType {
   resendVerificationCode: () => Promise<PendingVerification>;
   clearPendingVerification: () => Promise<void>;
   logout: () => Promise<void>;
-  updateProfile: (fullName?: string, phone?: string) => Promise<void>;
+  updateProfile: (payload: ProfileUpdateInput) => Promise<void>;
   updateLanguage: (language: string) => Promise<void>;
   isCitizen: boolean;
   isOperator: boolean;
@@ -224,24 +237,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setPendingVerification(null);
   };
 
-  const updateProfile = async (fullName?: string, phone?: string) => {
+  const updateProfile = async (payload: ProfileUpdateInput) => {
     if (!token) return;
+
+    const profilePayload = {
+      full_name: payload.fullName,
+      phone: payload.phone,
+      display_name: payload.displayName,
+      gender: payload.gender,
+      birth_date: payload.birthDate,
+      avatar_url: payload.avatarUrl,
+    };
     
     await axios.put(
       `${API_URL}/api/auth/profile`,
-      { full_name: fullName, phone },
+      profilePayload,
       { headers: { Authorization: `Bearer ${token}` } }
     );
+
+    const response = await axios.get(`${API_URL}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
     
-    if (user) {
-      const updatedUser = {
-        ...user,
-        full_name: fullName || user.full_name,
-        phone: phone || user.phone
-      };
-      setUser(updatedUser);
-      await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
-    }
+    setUser(response.data);
+    await AsyncStorage.setItem('user', JSON.stringify(response.data));
   };
 
   const updateLanguage = async (language: string) => {

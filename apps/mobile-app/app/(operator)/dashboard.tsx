@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Animated,
   View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity,
-  ActivityIndicator, Modal, PanResponder, Pressable, ScrollView, TextInput, Alert, useWindowDimensions
+  ActivityIndicator, Modal, PanResponder, Pressable, ScrollView, TextInput, Alert, useWindowDimensions,
+  KeyboardAvoidingView, Platform
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -506,13 +507,21 @@ export default function OperatorDashboard() {
       {/* Detail Modal */}
       {selected && (
         <Modal visible animationType="slide" presentationStyle="pageSheet">
-          <View style={[styles.modalContainer, { paddingTop: insets.top || 16 }]}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={[styles.modalContainer, { paddingTop: insets.top || 16 }]}
+          >
             <View style={styles.modalHeader}>
               <TouchableOpacity onPress={closeDetail} style={styles.closeBtn}><Ionicons name="close" size={24} color="#1C1C1E" /></TouchableOpacity>
               <Text style={styles.modalTitle}>{t('myRequests.details')}</Text>
               <View style={{ width: 44 }} />
             </View>
-            <ScrollView style={styles.modalBody} contentContainerStyle={styles.modalBodyContent}>
+            <ScrollView
+              style={styles.modalBody}
+              contentContainerStyle={styles.modalBodyContent}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+            >
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>{t('request.problem')}</Text>
                 <Text style={styles.detailValue}>{localizeProblemType(selected.category_id, selected.problem_type, t)}</Text>
@@ -624,7 +633,7 @@ export default function OperatorDashboard() {
                 <Ionicons name="send" size={20} color="#FFF" />
               </TouchableOpacity>
             </View>
-          </View>
+          </KeyboardAvoidingView>
         </Modal>
       )}
     </View>
