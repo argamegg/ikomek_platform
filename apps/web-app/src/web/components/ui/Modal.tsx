@@ -21,16 +21,25 @@ export function Modal({
   children,
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  const titleId = useId();
   const descriptionId = useId();
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) {
       return;
     }
 
+    const previousActiveElement =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        onClose();
+        onCloseRef.current();
       }
     };
 
@@ -38,8 +47,14 @@ export function Modal({
     const closeButton = modalRef.current?.querySelector<HTMLButtonElement>("[data-modal-close]");
     closeButton?.focus();
 
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose, open]);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+
+      if (previousActiveElement && document.contains(previousActiveElement)) {
+        previousActiveElement.focus();
+      }
+    };
+  }, [open]);
 
   return (
     <AnimatePresence>
@@ -61,12 +76,12 @@ export function Modal({
             onClick={(event) => event.stopPropagation()}
             role="dialog"
             aria-modal="true"
-            aria-labelledby={description ? undefined : descriptionId}
+            aria-labelledby={titleId}
             aria-describedby={description ? descriptionId : undefined}
           >
             <div className="modal__header">
               <div>
-                <h3 id={!description ? descriptionId : undefined}>{title}</h3>
+                <h3 id={titleId}>{title}</h3>
                 {description ? <p id={descriptionId}>{description}</p> : null}
               </div>
               <Button
