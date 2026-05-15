@@ -22,7 +22,10 @@ router = APIRouter()
 MAP_REQUEST_LIMIT = 1000
 MAP_RATE_LIMIT = 30
 MAP_RATE_WINDOW_SECONDS = 60
+REQUEST_LIST_RATE_LIMIT = 45
+REQUEST_LIST_RATE_WINDOW_SECONDS = 60
 _map_rate_hits: defaultdict[str, deque[float]] = defaultdict(deque)
+_request_list_rate_hits: defaultdict[str, deque[float]] = defaultdict(deque)
 
 def _parse_datetime(value):
     if isinstance(value, datetime):
@@ -44,21 +47,69 @@ def _client_ip(request: Request) -> str:
         return forwarded_for.split(",", 1)[0].strip()
     return request.client.host if request.client else "unknown"
 
-def rate_limit_map_requests(request: Request):
+def _rate_limit_by_ip(
+    request: Request,
+    hits_by_ip: defaultdict[str, deque[float]],
+    limit: int,
+    window_seconds: int,
+    detail: str,
+):
     ip = _client_ip(request)
     now = time.monotonic()
-    hits = _map_rate_hits[ip]
+    hits = hits_by_ip[ip]
 
-    while hits and now - hits[0] > MAP_RATE_WINDOW_SECONDS:
+    while hits and now - hits[0] > window_seconds:
         hits.popleft()
 
-    if len(hits) >= MAP_RATE_LIMIT:
+    if len(hits) >= limit:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many map requests. Please try again later.",
+            detail=detail,
         )
 
     hits.append(now)
+
+def rate_limit_map_requests(request: Request):
+    _rate_limit_by_ip(
+        request,
+        _map_rate_hits,
+        MAP_RATE_LIMIT,
+        MAP_RATE_WINDOW_SECONDS,
+        "Too many map requests. Please try again later.",
+    )
+
+def rate_limit_request_list(request: Request):
+    _rate_limit_by_ip(
+        request,
+        _request_list_rate_hits,
+        REQUEST_LIST_RATE_LIMIT,
+        REQUEST_LIST_RATE_WINDOW_SECONDS,
+        "Too many request list refreshes. Please try again later.",
+    )
+
+async def attach_citizen_names(requests: List[dict]) -> List[dict]:
+    user_ids = sorted({
+        request.get("user_id")
+        for request in requests
+        if request.get("user_id")
+    })
+    if not user_ids:
+        return requests
+
+    users = await db.users.find(
+        {"id": {"$in": user_ids}},
+        {"_id": 0, "id": 1, "full_name": 1, "name": 1, "email": 1},
+    ).to_list(None)
+    names_by_id = {
+        user.get("id"): user.get("full_name") or user.get("name") or user.get("email") or ""
+        for user in users
+        if user.get("id")
+    }
+
+    for request in requests:
+        request["citizen_name"] = names_by_id.get(request.get("user_id"), "")
+
+    return requests
 
 def _date_range_query(date_from: Optional[str], date_to: Optional[str], default_last_days: Optional[int] = None) -> dict:
     end = _parse_datetime(date_to) if date_to else None
@@ -190,9 +241,11 @@ async def create_request(request_data: RequestCreate, current_user: dict = Depen
 @router.get("/requests", response_model=List[RequestModel])
 async def get_user_requests(lang: str = "ru", current_user: dict = Depends(get_current_user)):
     requests = await db.requests.find({"user_id": current_user["id"]}).sort("created_at", -1).to_list(100)
+    for request in requests:
+        request["citizen_name"] = current_user.get("full_name") or current_user.get("name") or current_user.get("email") or ""
     return [RequestModel(**visible_request_document(req, lang, current_user)) for req in requests]
 
-@router.get("/requests/all")
+@router.get("/requests/all", dependencies=[Depends(rate_limit_request_list)])
 async def get_all_requests(
     category: Optional[str] = None,
     status: Optional[str] = None,
@@ -220,6 +273,7 @@ async def get_all_requests(
     if map:
         return [_map_request_document(req, current_user) for req in requests]
 
+    requests = await attach_citizen_names(requests)
     return [RequestModel(**visible_request_document(req, lang, current_user)) for req in requests]
 
 @router.get("/requests/map", dependencies=[Depends(rate_limit_map_requests)])
@@ -254,6 +308,7 @@ async def get_request(
     request = await db.requests.find_one({"id": request_id})
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
+    await attach_citizen_names([request])
     return RequestModel(**visible_request_document(request, lang, current_user))
 
 # ================================
