@@ -1569,7 +1569,7 @@ button {
 .settings-page {
   display: grid;
   gap: 24px;
-  width: min(1120px, 100%);
+  width: min(760px, 100%);
   margin: 0 auto;
   padding-bottom: 32px;
 }
@@ -1623,7 +1623,7 @@ button {
 
 .settings-grid {
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  grid-template-columns: 1fr;
   gap: 20px;
   align-items: start;
 }
@@ -1640,8 +1640,7 @@ button {
 }
 
 .settings-card--profile {
-  position: sticky;
-  top: 24px;
+  position: static;
 }
 
 .settings-card__header {
