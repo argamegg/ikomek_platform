@@ -204,6 +204,16 @@ export default function MapScreen() {
     [activeHotspotAddress, analytics.hotspots],
   );
 
+  const activeHotspotStatusSummary = useMemo(() => {
+    if (!activeHotspot) return [];
+
+    return ([
+      { key: 'pending', label: t('status.pending'), count: activeHotspot.points.filter((point) => point.status === 'pending').length, color: STATUS_COLORS.pending },
+      { key: 'in_progress', label: t('status.inProgress'), count: activeHotspot.points.filter((point) => point.status === 'in_progress').length, color: STATUS_COLORS.in_progress },
+      { key: 'closed', label: t('status.closed'), count: activeHotspot.points.filter((point) => point.status === 'closed').length, color: STATUS_COLORS.closed },
+    ]).filter((item) => item.count > 0);
+  }, [activeHotspot, t]);
+
   const mapPoints = activeHotspot ? activeHotspot.points : filteredPoints;
 
   const focusHotspot = useCallback((hotspot: Hotspot) => {
@@ -326,6 +336,9 @@ export default function MapScreen() {
             {activeHotspot ? (
               <View style={styles.hotspotMapCallout}>
                 <View style={styles.hotspotMapHeader}>
+                  <View style={styles.hotspotMapPin}>
+                    <Ionicons name="location-outline" size={18} color={ORANGE} />
+                  </View>
                   <View style={styles.hotspotMapTitleWrap}>
                     <Text style={styles.hotspotMapTitle} numberOfLines={1}>{activeHotspot.address}</Text>
                     <Text style={styles.hotspotMapSubtitle}>{t('map.analytics.requestsCount', { count: activeHotspot.count })}</Text>
@@ -334,11 +347,27 @@ export default function MapScreen() {
                     <Ionicons name="close" size={18} color="#64748B" />
                   </TouchableOpacity>
                 </View>
+                <View style={styles.hotspotStatusRow}>
+                  {activeHotspotStatusSummary.map((item) => (
+                    <View key={item.key} style={styles.hotspotStatusPill}>
+                      <View style={[styles.hotspotStatusDot, { backgroundColor: item.color }]} />
+                      <Text style={styles.hotspotStatusLabel} numberOfLines={1}>{item.label}</Text>
+                      <Text style={styles.hotspotStatusCount}>{item.count}</Text>
+                    </View>
+                  ))}
+                </View>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hotspotMapRequests}>
                   {activeHotspot.points.map((point) => (
                     <TouchableOpacity key={point.id} style={styles.hotspotMapRequest} onPress={() => setSelectedPoint(point)} activeOpacity={0.76}>
-                      <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[point.status] || '#FF9500' }]} />
-                      <Text style={styles.hotspotMapRequestTitle} numberOfLines={1}>{localizeProblemType(point.category, point.title, t)}</Text>
+                      <View style={styles.hotspotMapRequestTop}>
+                        <View style={[styles.hotspotMapCategoryMark, { backgroundColor: CATEGORY_COLORS[point.category] || '#9E9E9E' }]} />
+                        <StatusBadge status={point.status as any} size="small" />
+                      </View>
+                      <Text style={styles.hotspotMapRequestTitle} numberOfLines={2}>{localizeProblemType(point.category, point.title, t)}</Text>
+                      <View style={styles.hotspotMapRequestMeta}>
+                        <Ionicons name="time-outline" size={13} color="#94A3B8" />
+                        <Text style={styles.hotspotMapRequestDate}>{format(new Date(point.created_at), 'dd.MM HH:mm')}</Text>
+                      </View>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
@@ -603,15 +632,25 @@ const styles = StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6, marginRight: 4 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
   legendText: { fontSize: 11, color: '#334155', fontWeight: '600' },
-  hotspotMapCallout: { position: 'absolute', top: 12, left: 12, right: 12, padding: 12, borderRadius: 18, backgroundColor: 'rgba(255, 255, 255, 0.94)', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.08)', shadowColor: '#0F172A', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.12, shadowRadius: 22, elevation: 6 },
+  hotspotMapCallout: { position: 'absolute', top: 12, left: 12, right: 12, padding: 14, borderRadius: 24, backgroundColor: 'rgba(255, 255, 255, 0.96)', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.08)', shadowColor: '#0F172A', shadowOffset: { width: 0, height: 16 }, shadowOpacity: 0.14, shadowRadius: 26, elevation: 8 },
   hotspotMapHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  hotspotMapPin: { width: 38, height: 38, borderRadius: 14, backgroundColor: '#FFF4EC', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255, 107, 0, 0.16)' },
   hotspotMapTitleWrap: { flex: 1, minWidth: 0 },
-  hotspotMapTitle: { fontSize: 15, fontWeight: '900', color: '#111827' },
-  hotspotMapSubtitle: { marginTop: 2, fontSize: 12, fontWeight: '700', color: '#64748B' },
-  hotspotMapClose: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
-  hotspotMapRequests: { gap: 8, paddingTop: 10, paddingRight: 2 },
-  hotspotMapRequest: { maxWidth: 190, minHeight: 36, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 10, borderRadius: 12, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.05)' },
-  hotspotMapRequestTitle: { flex: 1, minWidth: 0, fontSize: 12, fontWeight: '800', color: '#334155' },
+  hotspotMapTitle: { fontSize: 17, lineHeight: 21, fontWeight: '900', color: '#111827' },
+  hotspotMapSubtitle: { marginTop: 2, fontSize: 12, fontWeight: '800', color: '#64748B' },
+  hotspotMapClose: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
+  hotspotStatusRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 12 },
+  hotspotStatusPill: { minHeight: 30, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 9, borderRadius: 999, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.05)' },
+  hotspotStatusDot: { width: 8, height: 8, borderRadius: 4 },
+  hotspotStatusLabel: { maxWidth: 92, fontSize: 11, fontWeight: '800', color: '#64748B' },
+  hotspotStatusCount: { fontSize: 12, fontWeight: '900', color: '#111827' },
+  hotspotMapRequests: { gap: 10, paddingTop: 12, paddingRight: 2 },
+  hotspotMapRequest: { width: 214, minHeight: 96, alignItems: 'stretch', justifyContent: 'space-between', gap: 8, padding: 12, borderRadius: 16, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.06)' },
+  hotspotMapRequestTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  hotspotMapCategoryMark: { width: 10, height: 10, borderRadius: 5 },
+  hotspotMapRequestTitle: { minHeight: 34, fontSize: 13, lineHeight: 17, fontWeight: '900', color: '#1E293B' },
+  hotspotMapRequestMeta: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  hotspotMapRequestDate: { fontSize: 11, fontWeight: '700', color: '#94A3B8' },
   listSurface: { backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: 28, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.06)', shadowColor: '#0F172A', shadowOffset: { width: 0, height: 18 }, shadowOpacity: 0.08, shadowRadius: 26, elevation: 6 },
   list: { flex: 1, width: '100%', backgroundColor: 'transparent' },
   listContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16 },
