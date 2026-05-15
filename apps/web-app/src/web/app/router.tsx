@@ -74,9 +74,9 @@ export function AppRouter() {
           <Route index element={<HomePage />} />
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-          <Route path="/requests" element={<ProtectedRoute><RequestsPage /></ProtectedRoute>} />
+          <Route path="/requests" element={<RequestsPage />} />
           <Route path="/requests/new" element={<ProtectedRoute><NewRequestPage /></ProtectedRoute>} />
-          <Route path="/requests/:requestId" element={<ProtectedRoute><RequestDetailsPage /></ProtectedRoute>} />
+          <Route path="/requests/:requestId" element={<RequestDetailsPage />} />
           <Route path="/requests/:requestId/chat" element={<ProtectedRoute><RequestChatPage /></ProtectedRoute>} />
           <Route path="/news" element={<NewsPage />} />
           <Route path="/map" element={<MapPage />} />

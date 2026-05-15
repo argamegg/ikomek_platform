@@ -6,5 +6,6 @@ CATEGORIES = [
     {"id": "sewage", "name": "Sewage", "name_ru": "Канализация", "name_kz": "Кәріз", "icon": "water-outline", "color": "#607D8B"},
     {"id": "waste", "name": "Waste", "name_ru": "Мусор", "name_kz": "Қоқыс", "icon": "trash", "color": "#795548"},
     {"id": "roads", "name": "Roads", "name_ru": "Дороги", "name_kz": "Жолдар", "icon": "car", "color": "#9E9E9E"},
+    {"id": "street_lighting", "name": "Street Lighting", "name_ru": "Уличное освещение", "name_kz": "Көше жарығы", "icon": "bulb", "color": "#FFC107"},
     {"id": "other", "name": "Other", "name_ru": "Другое", "name_kz": "Басқа", "icon": "ellipsis-horizontal", "color": "#9E9E9E"},
 ]

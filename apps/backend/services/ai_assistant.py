@@ -277,9 +277,9 @@ def extract_request_references(message: str) -> list[str]:
     return references[:5]
 
 
-def request_access_filter(current_user: Optional[dict]) -> Optional[dict]:
+def request_access_filter(current_user: Optional[dict], allow_public: bool = False) -> Optional[dict]:
     if not current_user:
-        return None
+        return {} if allow_public else None
 
     role = current_user.get("role")
     if role in {ROLE_OPERATOR, ROLE_ADMIN}:
@@ -293,7 +293,7 @@ def with_access_filter(access_filter: dict, query: dict) -> dict:
 
 
 async def find_requests_by_references(references: list[str], current_user: Optional[dict]) -> list[dict]:
-    access_filter = request_access_filter(current_user)
+    access_filter = request_access_filter(current_user, allow_public=True)
     if access_filter is None:
         return []
 
@@ -478,7 +478,10 @@ async def build_site_context(
             f"id={current_user.get('id', 'unknown')}"
         )
     else:
-        notes.append("Current user is not authenticated. Personal request lookup requires sign-in.")
+        notes.append(
+            "Current user is not authenticated. Public request details and map points are visible, "
+            "but chat, request creation, and status changes require sign-in."
+        )
 
     if has_create_request_intent(message):
         notes.append(
@@ -496,26 +499,23 @@ async def build_site_context(
         )
 
     if has_request_lookup_intent(message):
-        if not current_user:
-            add_action(actions, build_action(localize_action_label("login", locale), "/auth", "/(auth)/login"))
-            notes.append("Request status lookup was requested, but the user is not signed in.")
-        else:
-            references = extract_request_references(message)
-            matched_requests = await find_requests_by_references(references, current_user) if references else []
-            if references and matched_requests:
-                notes.append("Matched accessible request(s):")
-                for request in matched_requests:
-                    notes.append(f"- {summarize_request(request, locale, include_internal)}")
-                    request_id = request["id"]
-                    add_action(
-                        actions,
-                        build_action(
-                            localize_action_label("open_request", locale),
-                            f"/requests/{request_id}",
-                            "/(tabs)/requests",
-                            request_id,
-                        ),
-                    )
+        references = extract_request_references(message)
+        matched_requests = await find_requests_by_references(references, current_user) if references else []
+        if references and matched_requests:
+            notes.append("Matched public/accessible request(s):")
+            for request in matched_requests:
+                notes.append(f"- {summarize_request(request, locale, include_internal)}")
+                request_id = request["id"]
+                add_action(
+                    actions,
+                    build_action(
+                        localize_action_label("open_request", locale),
+                        f"/requests/{request_id}",
+                        "/(tabs)/requests",
+                        request_id,
+                    ),
+                )
+                if current_user and (include_internal or request.get("user_id") == current_user.get("id")):
                     add_action(
                         actions,
                         build_action(
@@ -525,12 +525,13 @@ async def build_site_context(
                             request_id,
                         ),
                     )
-            elif references:
-                notes.append(
-                    "The user gave request reference(s), but no accessible request matched: "
-                    + ", ".join(references)
-                )
+        elif references:
+            notes.append(
+                "The user gave request reference(s), but no public/accessible request matched: "
+                + ", ".join(references)
+            )
 
+        if current_user:
             recent_requests = await get_recent_requests(current_user)
             if recent_requests:
                 notes.append("Recent accessible requests:")
@@ -543,6 +544,9 @@ async def build_site_context(
                 actions,
                 build_action(localize_action_label("my_requests", locale), "/requests", "/(tabs)/requests"),
             )
+        elif not references:
+            add_action(actions, build_action(localize_action_label("login", locale), "/auth", "/(auth)/login"))
+            notes.append("Personal request history requires sign-in.")
 
     if has_map_intent(message):
         notes.append("Map screen shows request points and can be used for location context.")

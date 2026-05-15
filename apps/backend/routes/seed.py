@@ -46,7 +46,7 @@ async def seed_demo_data():
         {"name": "Старый центр", "lat": 51.1700, "lng": 71.4300, "address": "Старый центр", "district": "Сарыарка"},
     ]
     
-    categories = ["electricity", "water", "heating", "public_order", "sewage", "waste", "roads"]
+    categories = ["electricity", "water", "heating", "public_order", "sewage", "waste", "roads", "street_lighting"]
     statuses = ["pending", "in_progress", "closed"]
     priorities = ["normal", "urgent"]
     
@@ -58,6 +58,7 @@ async def seed_demo_data():
         "sewage": ["Засор канализации", "Утечка", "Неприятный запах", "Переполнение"],
         "waste": ["Переполненный бак", "Незаконная свалка", "Пропущен вывоз", "Опасные отходы"],
         "roads": ["Яма на дороге", "Поврежденное покрытие", "Нет знака", "Не работает светофор"],
+        "street_lighting": ["Не работает фонарь", "Мигающий свет", "Повреждена опора", "Темный участок"],
     }
     
     reasons_ru = {
@@ -68,6 +69,7 @@ async def seed_demo_data():
         "sewage": ["Засор", "Износ труб", "Неправильная эксплуатация"],
         "waste": ["Нарушение графика", "Переполнение", "Незаконный сброс"],
         "roads": ["Погодные условия", "Износ покрытия", "Повреждение"],
+        "street_lighting": ["Перегорела лампа", "Проблема электросети", "Вандализм", "Износ оборудования"],
     }
     
     # Create demo users

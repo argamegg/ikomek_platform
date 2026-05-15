@@ -121,12 +121,22 @@ export function MapPage() {
   const category = searchParams.get("category") ?? "all";
   const status = (searchParams.get("status") as StatusFilter | null) ?? "all";
   const priority = (searchParams.get("priority") as PriorityFilter | null) ?? "all";
-  const mapMode: MapMode = mode === "my" || mode === "heatmap" ? mode : "all";
 
   const currentUserQuery = useQuery({
     queryKey: queryKeys.currentUser,
     queryFn: platformApi.getCurrentUser,
   });
+  const currentUser = currentUserQuery.data ?? null;
+  const mapMode: MapMode = mode === "my" && currentUser
+    ? "my"
+    : mode === "heatmap"
+      ? "heatmap"
+      : "all";
+  const mapModeOptions = [
+    { key: "all", label: t("map.filters.allRequests") },
+    ...(currentUser ? [{ key: "my", label: t("map.filters.myRequests") }] : []),
+    { key: "heatmap", label: t("map.filters.heatmap") },
+  ];
   const categoriesQuery = useQuery({
     queryKey: [...queryKeys.categories, i18n.language],
     queryFn: platformApi.getCategories,
@@ -151,13 +161,13 @@ export function MapPage() {
 
   const filteredRequests = useMemo(() => {
     return allRequests.filter((request) => {
-      const matchesMode = mapMode !== "my" || request.citizenId === currentUserQuery.data?.id;
+      const matchesMode = mapMode !== "my" || request.citizenId === currentUser?.id;
       const matchesCategory = category === "all" || request.categoryId === category;
       const matchesStatus = status === "all" || request.status === status;
       const matchesPriority = getPriorityMatch(request, priority);
       return matchesMode && matchesCategory && matchesStatus && matchesPriority;
     });
-  }, [allRequests, category, currentUserQuery.data?.id, mapMode, priority, status]);
+  }, [allRequests, category, currentUser?.id, mapMode, priority, status]);
 
   const selectedRequest = filteredRequests.find((request) => request.id === selectedId) ?? null;
   const isLoading = publicRequestsQuery.isLoading || myRequestsQuery.isLoading;
@@ -274,7 +284,7 @@ export function MapPage() {
         {isLoading ? <div className="map-page__skeleton" /> : null}
         <IssueMap
           requests={filteredRequests}
-          currentUserId={currentUserQuery.data?.id}
+          currentUserId={currentUser?.id}
           mode={mapMode}
           onSelectRequest={(request) => setSelectedId(request.id)}
           focusRequestId={selectedId}
@@ -284,11 +294,7 @@ export function MapPage() {
           <Tabs
             value={mapMode}
             onChange={(value) => updateFilter("mode", value)}
-            options={[
-              { key: "all", label: t("map.filters.allRequests") },
-              { key: "my", label: t("map.filters.myRequests") },
-              { key: "heatmap", label: t("map.filters.heatmap") },
-            ]}
+            options={mapModeOptions}
           />
           <select value={category} onChange={(event) => updateFilter("category", event.target.value)}>
             <option value="all">{t("map.filters.allCategories")}</option>

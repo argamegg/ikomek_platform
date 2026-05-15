@@ -271,6 +271,18 @@ function mergeRequestMessages(request: CivicRequest, messages: RequestMessage[])
   };
 }
 
+function canUseRequestInteraction(user: User | null, request: CivicRequest) {
+  if (!user) {
+    return false;
+  }
+
+  if (user.roles.some((role) => role === "operator" || role === "admin")) {
+    return true;
+  }
+
+  return request.citizenId === user.id;
+}
+
 function normalizeRegistrationChallenge(payload: unknown): AuthRegistrationChallenge {
   const record =
     typeof payload === "object" && payload !== null && !Array.isArray(payload)
@@ -452,12 +464,6 @@ export const platformApi = {
   },
 
   async getPublicRequests(): Promise<CivicRequest[]> {
-    const token = session.getToken();
-
-    if (!token) {
-      return [];
-    }
-
     const response = await platformClient.get("/requests/all", {
       params: { lang: getCurrentLang() },
     });
@@ -498,17 +504,28 @@ export const platformApi = {
   },
 
   async getRequestById(requestId: string): Promise<CivicRequest> {
-    const [requestResponse, messagesResponse] = await Promise.all([
-      platformClient.get(`${apiConfig.endpoints.requests}/${requestId}`, {
-        params: { lang: getCurrentLang() },
-      }),
-      platformClient.get(resolvePath(apiConfig.endpoints.requestMessages, { requestId })),
-    ]);
+    const requestResponse = await platformClient.get(`${apiConfig.endpoints.requests}/${requestId}`, {
+      params: { lang: getCurrentLang() },
+    });
+    const request = normalizeRequest(requestResponse.data);
+    const user = await this.getCurrentUser();
 
-    return mergeRequestMessages(
-      normalizeRequest(requestResponse.data),
-      normalizeList(messagesResponse.data, normalizeMessage),
-    );
+    if (!canUseRequestInteraction(user, request)) {
+      return mergeRequestMessages(request, []);
+    }
+
+    try {
+      const messagesResponse = await platformClient.get(
+        resolvePath(apiConfig.endpoints.requestMessages, { requestId }),
+      );
+      return mergeRequestMessages(request, normalizeList(messagesResponse.data, normalizeMessage));
+    } catch (error) {
+      if (isUnauthorized(error) || isForbidden(error)) {
+        return mergeRequestMessages(request, []);
+      }
+
+      throw error;
+    }
   },
 
   async createRequest(payload: RequestCreateInput): Promise<CivicRequest> {

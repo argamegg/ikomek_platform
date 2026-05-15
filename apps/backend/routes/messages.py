@@ -12,8 +12,19 @@ router = APIRouter()
 # MESSAGES ENDPOINTS
 # ================================
 
+def can_access_request_chat(request: dict, current_user: dict) -> bool:
+    if current_user.get("role") in [ROLE_OPERATOR, ROLE_ADMIN]:
+        return True
+    return request.get("user_id") == current_user.get("id")
+
 @router.get("/requests/{request_id}/messages", response_model=List[Message])
 async def get_messages(request_id: str, current_user: dict = Depends(get_current_user)):
+    request = await db.requests.find_one({"id": request_id})
+    if not request:
+        raise HTTPException(status_code=404, detail="Request not found")
+    if not can_access_request_chat(request, current_user):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+
     messages = await db.messages.find({"request_id": request_id}).sort("created_at", 1).to_list(100)
     return [Message(**msg) for msg in messages]
 
@@ -22,6 +33,8 @@ async def send_message(request_id: str, message_data: MessageCreate, current_use
     request = await db.requests.find_one({"id": request_id})
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
+    if not can_access_request_chat(request, current_user):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
     
     sender_type = "operator" if current_user.get("role") in [ROLE_OPERATOR, ROLE_ADMIN] else "user"
     

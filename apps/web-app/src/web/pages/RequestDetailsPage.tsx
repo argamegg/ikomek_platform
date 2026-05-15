@@ -27,8 +27,21 @@ export function RequestDetailsPage() {
     queryFn: () => platformApi.getRequestById(requestId),
     enabled: Boolean(requestId),
   });
+  const currentUserQuery = useQuery({
+    queryKey: queryKeys.currentUser,
+    queryFn: platformApi.getCurrentUser,
+  });
 
   const request = requestQuery.data;
+  const currentUser = currentUserQuery.data ?? null;
+  const canUseChat = Boolean(
+    request &&
+      currentUser &&
+      (
+        currentUser.roles.some((role) => role === "operator" || role === "admin") ||
+        currentUser.id === request.citizenId
+      ),
+  );
 
   return (
     <div className="page-stack">
@@ -36,10 +49,12 @@ export function RequestDetailsPage() {
         title={request ? localizeRequestProblemType(request.categoryId || request.categoryName, request.title, t) : t("requestDetails.overview")}
         description={request ? localizeRequestDescription(request.description, request.categoryId, request.title, request.reasonId || request.reasonName, t) : undefined}
         action={
-          request ? (
+          request && canUseChat ? (
             <Link to={`/requests/${request.id}/chat`} className="page-actions">
               <Badge tone={getStatusTone(request.status)}>{localizeRequestStatus(request.statusLabel || request.status, t)}</Badge>
             </Link>
+          ) : request ? (
+            <Badge tone={getStatusTone(request.status)}>{localizeRequestStatus(request.statusLabel || request.status, t)}</Badge>
           ) : null
         }
       />
@@ -122,18 +137,22 @@ export function RequestDetailsPage() {
                   </a>
                 ))}
               </div>
-              <div className="message-preview">
-                {(request.messages ?? []).slice(-3).map((message) => (
-                  <div key={message.id} className="message-preview__item">
-                    <strong>{message.senderName}</strong>
-                    <p>{message.message}</p>
+              {canUseChat ? (
+                <>
+                  <div className="message-preview">
+                    {(request.messages ?? []).slice(-3).map((message) => (
+                      <div key={message.id} className="message-preview__item">
+                        <strong>{message.senderName}</strong>
+                        <p>{message.message}</p>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              <Link to={`/requests/${request.id}/chat`} className="inline-link">
-                <MessagesSquare size={16} />
-                Open full chat
-              </Link>
+                  <Link to={`/requests/${request.id}/chat`} className="inline-link">
+                    <MessagesSquare size={16} />
+                    Open full chat
+                  </Link>
+                </>
+              ) : null}
             </Card>
           </div>
         </>

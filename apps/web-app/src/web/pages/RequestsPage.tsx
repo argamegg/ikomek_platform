@@ -25,9 +25,14 @@ export function RequestsPage() {
   const [status, setStatus] = useState<FilterMode>("all");
   const deferredSearch = useDeferredValue(search);
   const requestsQuery = useQuery({
-    queryKey: [...queryKeys.myRequests, i18n.language],
-    queryFn: platformApi.getMyRequests,
+    queryKey: [...queryKeys.publicRequests, i18n.language],
+    queryFn: platformApi.getPublicRequests,
   });
+  const currentUserQuery = useQuery({
+    queryKey: queryKeys.currentUser,
+    queryFn: platformApi.getCurrentUser,
+  });
+  const currentUser = currentUserQuery.data ?? null;
 
   const requests = useMemo(() => {
     return (requestsQuery.data ?? []).filter((request) => {
@@ -37,6 +42,14 @@ export function RequestsPage() {
       return matchesStatus && matchesSearch;
     });
   }, [deferredSearch, requestsQuery.data, status]);
+  const canUseRequestChat = (citizenId: string) => {
+    if (!currentUser) {
+      return false;
+    }
+
+    return currentUser.roles.some((role) => role === "operator" || role === "admin")
+      || currentUser.id === citizenId;
+  };
 
   return (
     <div className="page-stack">
@@ -76,7 +89,9 @@ export function RequestsPage() {
             </div>
             <div className="request-card__actions">
               <Link to={`/requests/${request.id}`}>Details</Link>
-              <Link to={`/requests/${request.id}/chat`}>Chat</Link>
+              {canUseRequestChat(request.citizenId) ? (
+                <Link to={`/requests/${request.id}/chat`}>Chat</Link>
+              ) : null}
             </div>
           </Card>
         ))}

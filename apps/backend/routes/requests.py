@@ -7,6 +7,7 @@ from core.config import db
 from data import CATEGORIES
 from geo import REQUEST_OUT_OF_ZONE_ERROR, is_within_astana_request_zone
 from helpers import (
+    get_optional_current_user,
     get_current_user,
     localize_request_document,
     normalize_translation_language,
@@ -42,6 +43,19 @@ def _last_six_month_keys():
             year -= 1
         months.append(f"{year}-{month:02d}")
     return months
+
+def visible_request_document(request: dict, lang: str, current_user: Optional[dict] = None) -> dict:
+    document = localize_request_document(request, lang)
+    role = current_user.get("role") if current_user else None
+    is_staff = role in {ROLE_OPERATOR, ROLE_ADMIN}
+    is_owner = bool(current_user and document.get("user_id") == current_user.get("id"))
+
+    if not is_staff:
+        document["operator_notes"] = None
+    if not is_staff and not is_owner:
+        document["user_id"] = ""
+
+    return document
 
 # ================================
 # REQUESTS ENDPOINTS - CITIZEN
@@ -90,14 +104,14 @@ async def create_request(request_data: RequestCreate, current_user: dict = Depen
 @router.get("/requests", response_model=List[RequestModel])
 async def get_user_requests(lang: str = "ru", current_user: dict = Depends(get_current_user)):
     requests = await db.requests.find({"user_id": current_user["id"]}).sort("created_at", -1).to_list(100)
-    return [RequestModel(**localize_request_document(req, lang)) for req in requests]
+    return [RequestModel(**visible_request_document(req, lang, current_user)) for req in requests]
 
 @router.get("/requests/all", response_model=List[RequestModel])
 async def get_all_requests(
     category: Optional[str] = None,
     status: Optional[str] = None,
     lang: str = "ru",
-    current_user: dict = Depends(get_current_user)
+    current_user: Optional[dict] = Depends(get_optional_current_user),
 ):
     query = {}
     if category:
@@ -106,14 +120,18 @@ async def get_all_requests(
         query["status"] = status
     
     requests = await db.requests.find(query).sort("created_at", -1).to_list(500)
-    return [RequestModel(**localize_request_document(req, lang)) for req in requests]
+    return [RequestModel(**visible_request_document(req, lang, current_user)) for req in requests]
 
 @router.get("/requests/{request_id}", response_model=RequestModel)
-async def get_request(request_id: str, lang: str = "ru", current_user: dict = Depends(get_current_user)):
+async def get_request(
+    request_id: str,
+    lang: str = "ru",
+    current_user: Optional[dict] = Depends(get_optional_current_user),
+):
     request = await db.requests.find_one({"id": request_id})
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
-    return RequestModel(**localize_request_document(request, lang))
+    return RequestModel(**visible_request_document(request, lang, current_user))
 
 # ================================
 # REQUESTS ENDPOINTS - OPERATOR
