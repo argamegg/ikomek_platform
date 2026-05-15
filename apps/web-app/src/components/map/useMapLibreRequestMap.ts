@@ -234,6 +234,12 @@ function fitMapToRequests(
   });
 }
 
+function getFitSignature(requests: CivicRequest[]) {
+  return requests
+    .map((request) => `${request.id}:${request.point.lng || ASTANA_CENTER[0]}:${request.point.lat || ASTANA_CENTER[1]}`)
+    .join("|");
+}
+
 export function useMapLibreRequestMap({
   requests,
   currentUserId,
@@ -248,6 +254,7 @@ export function useMapLibreRequestMap({
 }: UseMapLibreRequestMapOptions) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const fitSignatureRef = useRef<string | null>(null);
   const filteredRequests = useMemo(
     () => getFilteredRequests(requests, currentUserId, mode),
     [requests, currentUserId, mode],
@@ -369,6 +376,7 @@ export function useMapLibreRequestMap({
       setLayerVisibility(map, CLUSTER_LAYER_ID, mode !== "heatmap");
       setLayerVisibility(map, CLUSTER_COUNT_LAYER_ID, mode !== "heatmap");
       setLayerVisibility(map, UNCLUSTERED_LAYER_ID, mode !== "heatmap");
+      fitSignatureRef.current = getFitSignature(filteredRequestsRef.current);
       fitMapToRequests(map, filteredRequestsRef.current, fitToData);
     });
 
@@ -410,7 +418,11 @@ export function useMapLibreRequestMap({
     setLayerVisibility(map, CLUSTER_LAYER_ID, mode !== "heatmap");
     setLayerVisibility(map, CLUSTER_COUNT_LAYER_ID, mode !== "heatmap");
     setLayerVisibility(map, UNCLUSTERED_LAYER_ID, mode !== "heatmap");
-    fitMapToRequests(map, filteredRequests, fitToData);
+    const nextFitSignature = getFitSignature(filteredRequests);
+    if (fitSignatureRef.current !== nextFitSignature) {
+      fitSignatureRef.current = nextFitSignature;
+      fitMapToRequests(map, filteredRequests, fitToData);
+    }
   }, [clustered, featureCollection, filteredRequests, fitToData, mode]);
 
   useEffect(() => {

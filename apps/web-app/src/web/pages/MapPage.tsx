@@ -527,8 +527,8 @@ export function MapPage() {
     [hotspots, selectedHotspotAddress],
   );
   const selectedRequest = selectedHotspot ? null : filteredRequests.find((request) => request.id === selectedId) ?? null;
-  const mapRequests = selectedHotspot ? selectedHotspot.requests : filteredRequests;
-  const activeMapMode: MapMode = selectedHotspot ? "all" : mapMode;
+  const mapRequests = filteredRequests;
+  const activeMapMode: MapMode = mapMode;
 
   const activityData = useMemo(() => {
     const matrix = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0));
@@ -607,7 +607,7 @@ export function MapPage() {
             setSelectedHotspotAddress(null);
             setSelectedId(request.id);
           }}
-          focusRequestId={selectedHotspot ? null : selectedId}
+          focusRequestId={null}
         />
 
         {filtersVisible ? (
@@ -695,7 +695,7 @@ export function MapPage() {
                 onClick={() => setSelectedHotspotAddress(null)}
                 aria-label={t("common.close")}
               >
-                ×
+                <X size={18} strokeWidth={2.4} />
               </button>
             </div>
             <div className="map-page__hotspot-requests">
@@ -715,8 +715,20 @@ export function MapPage() {
           </article>
         ) : selectedRequest ? (
           <article className="map-page__popup">
-            <strong>{localizeRequestProblemType(selectedRequest.categoryId, selectedRequest.title, t)}</strong>
-            <span>{selectedRequest.address}</span>
+            <div className="map-page__popup-header">
+              <div>
+                <strong>{localizeRequestProblemType(selectedRequest.categoryId, selectedRequest.title, t)}</strong>
+                <span>{selectedRequest.address}</span>
+              </div>
+              <button
+                type="button"
+                className="map-page__popup-close"
+                onClick={() => setSelectedId(null)}
+                aria-label={t("common.close")}
+              >
+                <X size={18} strokeWidth={2.4} />
+              </button>
+            </div>
             <small>{localizeRequestCategory(selectedRequest.categoryId || selectedRequest.categoryName, t)}</small>
             <div className="map-page__popup-meta">
               <b>{localizeRequestStatus(selectedRequest.statusLabel || selectedRequest.status, t)}</b>

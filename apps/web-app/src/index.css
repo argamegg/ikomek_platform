@@ -4489,16 +4489,24 @@ button {
 }
 
 .map-page__popup-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 34px;
   height: 34px;
   flex: 0 0 auto;
+  border: 0;
   border-radius: 999px;
   background: #f1f5f9;
   color: #64748b;
-  font-size: 1.35rem;
-  line-height: 1;
-  font-weight: 800;
   cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.map-page__popup-close:hover {
+  transform: translateY(-1px);
+  background: #e2e8f0;
+  color: #0f172a;
 }
 
 .map-page__hotspot-requests {
