@@ -81,13 +81,16 @@ export function RequestDetailsPage() {
   const category = localizeRequestCategory(request.categoryId || request.categoryName, t) || "—";
   const reason = localizeRequestReason(request.categoryId || request.categoryName, request.reasonId || request.reasonName, t) || "—";
   const author = request.citizenName || t("requests.unknownAuthor");
+  const isStaffUser = currentUser?.roles.some((role) => role === "operator" || role === "admin") ?? false;
+  const backPath = isStaffUser ? "/operator" : "/requests";
+  const backLabel = isStaffUser ? t("nav.operator") : t("requests.title");
 
   return (
     <div className="request-detail-page">
       <section className="request-detail-hero">
-        <Link to="/requests" className="request-detail-back">
+        <Link to={backPath} className="request-detail-back">
           <ArrowLeft size={18} />
-          {t("requests.title")}
+          {backLabel}
         </Link>
         <div className="request-detail-hero__content">
           <div>

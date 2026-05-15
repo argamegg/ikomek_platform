@@ -66,6 +66,23 @@ function RoleRoute({ roles, children }: { roles: string[]; children: ReactElemen
   return children;
 }
 
+function CitizenRequestsRoute({ children }: { children: ReactElement }) {
+  const currentUserQuery = useQuery({
+    queryKey: queryKeys.currentUser,
+    queryFn: platformApi.getCurrentUser,
+  });
+
+  if (currentUserQuery.isLoading) {
+    return <GuardFallback />;
+  }
+
+  if (currentUserQuery.data?.roles.some((role) => role === "operator" || role === "admin")) {
+    return <Navigate to="/operator" replace />;
+  }
+
+  return children;
+}
+
 export function AppRouter() {
   return (
     <BrowserRouter>
@@ -74,7 +91,7 @@ export function AppRouter() {
           <Route index element={<HomePage />} />
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-          <Route path="/requests" element={<RequestsPage />} />
+          <Route path="/requests" element={<CitizenRequestsRoute><RequestsPage /></CitizenRequestsRoute>} />
           <Route path="/requests/new" element={<ProtectedRoute><NewRequestPage /></ProtectedRoute>} />
           <Route path="/requests/:requestId" element={<RequestDetailsPage />} />
           <Route path="/requests/:requestId/chat" element={<ProtectedRoute><RequestChatPage /></ProtectedRoute>} />
