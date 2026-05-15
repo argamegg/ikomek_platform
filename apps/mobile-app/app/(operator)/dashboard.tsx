@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
+  Animated,
   View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity,
-  ActivityIndicator, Modal, ScrollView, TextInput, Alert, useWindowDimensions
+  ActivityIndicator, Modal, PanResponder, Pressable, ScrollView, TextInput, Alert, useWindowDimensions
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
-import { apiService, type Request, type Message, type RequestPriority } from '../../src/utils/api';
+import { apiService, type Category, type Request, type Message, type RequestPriority } from '../../src/utils/api';
 import { StatusBadge } from '../../src/components/StatusBadge';
 import {
   getStatusTranslationKey,
@@ -18,14 +19,19 @@ import {
 import { localizeRequestPriority } from '../../src/utils/requestMeta';
 
 const ORANGE = '#FF6B00';
-const STATUSES = ['pending', 'in_progress', 'closed'];
+const STATUSES: Request['status'][] = ['pending', 'in_progress', 'closed'];
+const PRIORITIES: RequestPriority[] = ['low', 'medium', 'high'];
 const PRIORITY_META: Record<RequestPriority, { background: string; text: string; border: string; strip: string }> = {
   low: { background: '#F3F4F6', text: '#6B7280', border: '#D1D5DB', strip: '#6B7280' },
   medium: { background: '#FEF9C3', text: '#CA8A04', border: '#FDE047', strip: '#CA8A04' },
   high: { background: '#FEE2E2', text: '#DC2626', border: '#FCA5A5', strip: '#DC2626' },
 };
+const PRIORITY_WEIGHT: Record<RequestPriority, number> = { high: 3, medium: 2, low: 1 };
 const STATS_HORIZONTAL_PADDING = 16;
 const STATS_GAP = 8;
+
+type PriorityFilter = RequestPriority | null;
+type SortMode = 'newest' | 'oldest' | 'priority';
 
 function getRequestActivityTime(request: Request) {
   const updated = new Date(request.updated_at || '').getTime();
@@ -35,19 +41,241 @@ function getRequestActivityTime(request: Request) {
   return Number.isFinite(created) ? created : 0;
 }
 
+function getSearchText(request: Request) {
+  return [
+    request.problem_type,
+    request.address,
+    request.category_id,
+    request.category_name,
+    request.reason,
+    request.description,
+  ].filter(Boolean).join(' ').toLowerCase();
+}
+
+function getPriorityValue(priority?: Request['priority']): RequestPriority {
+  return priority ?? 'medium';
+}
+
+type OperatorFilterSheetProps = {
+  visible: boolean;
+  categories: Category[];
+  selectedCategory: string | null;
+  selectedPriority: PriorityFilter;
+  selectedSort: SortMode;
+  onClose: () => void;
+  onReset: () => void;
+  onApply: (value: { category: string | null; priority: PriorityFilter; sort: SortMode }) => void;
+};
+
+function OperatorFilterSheet({
+  visible,
+  categories,
+  selectedCategory,
+  selectedPriority,
+  selectedSort,
+  onClose,
+  onReset,
+  onApply,
+}: OperatorFilterSheetProps) {
+  const { t } = useTranslation();
+  const [draftCategory, setDraftCategory] = useState<string | null>(selectedCategory);
+  const [draftPriority, setDraftPriority] = useState<PriorityFilter>(selectedPriority);
+  const [draftSort, setDraftSort] = useState<SortMode>(selectedSort);
+  const translateY = React.useRef(new Animated.Value(420)).current;
+
+  useEffect(() => {
+    if (!visible) return;
+
+    setDraftCategory(selectedCategory);
+    setDraftPriority(selectedPriority);
+    setDraftSort(selectedSort);
+    translateY.setValue(420);
+    Animated.spring(translateY, {
+      toValue: 0,
+      useNativeDriver: true,
+      tension: 90,
+      friction: 13,
+    }).start();
+  }, [selectedCategory, selectedPriority, selectedSort, translateY, visible]);
+
+  const closeAnimated = useCallback(() => {
+    Animated.timing(translateY, {
+      toValue: 420,
+      duration: 180,
+      useNativeDriver: true,
+    }).start(() => {
+      translateY.setValue(420);
+      onClose();
+    });
+  }, [onClose, translateY]);
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gesture) => gesture.dy > 6 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
+        onPanResponderMove: (_, gesture) => {
+          translateY.setValue(Math.max(0, gesture.dy));
+        },
+        onPanResponderRelease: (_, gesture) => {
+          if (gesture.dy > 120 || gesture.vy > 1.1) {
+            closeAnimated();
+            return;
+          }
+
+          Animated.spring(translateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 80,
+            friction: 12,
+          }).start();
+        },
+      }),
+    [closeAnimated, translateY],
+  );
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={closeAnimated}>
+      <View style={styles.sheetOverlay}>
+        <Pressable style={styles.sheetBackdrop} onPress={closeAnimated} />
+        <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]} {...panResponder.panHandlers}>
+          <View style={styles.sheetHandle} />
+          <View style={styles.sheetHeader}>
+            <Text style={styles.sheetTitle}>{t('operator.filtersTitle')}</Text>
+            <TouchableOpacity
+              onPress={() => {
+                setDraftCategory(null);
+                setDraftPriority(null);
+                setDraftSort('newest');
+                onReset();
+              }}
+            >
+              <Text style={styles.sheetReset}>{t('operator.resetFilters')}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.sheetScroll} contentContainerStyle={styles.sheetScrollContent} showsVerticalScrollIndicator={false}>
+            <View style={styles.sheetSection}>
+              <Text style={styles.sheetSectionTitle}>{t('operator.filterByCategory')}</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sheetPillRow}>
+                <TouchableOpacity
+                  style={[styles.sheetPill, !draftCategory && styles.sheetPillActive]}
+                  onPress={() => setDraftCategory(null)}
+                >
+                  <Text style={[styles.sheetPillText, !draftCategory && styles.sheetPillTextActive]}>{t('operator.allCategories')}</Text>
+                </TouchableOpacity>
+                {categories.map((category) => {
+                  const active = draftCategory === category.id;
+                  return (
+                    <TouchableOpacity
+                      key={category.id}
+                      style={[styles.sheetPill, active && styles.sheetPillActive]}
+                      onPress={() => setDraftCategory(category.id)}
+                    >
+                      <Text style={[styles.sheetPillText, active && styles.sheetPillTextActive]}>
+                        {localizeCategory(category.id, t)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
+            <View style={styles.sheetSeparator} />
+
+            <View style={styles.sheetSection}>
+              <Text style={styles.sheetSectionTitle}>{t('operator.filterByPriority')}</Text>
+              <View style={styles.sheetGrid}>
+                <TouchableOpacity
+                  style={[styles.sheetGridButton, !draftPriority && styles.sheetGridButtonActive]}
+                  onPress={() => setDraftPriority(null)}
+                >
+                  <Text style={[styles.sheetGridText, !draftPriority && styles.sheetGridTextActive]}>{t('operator.allPriorities')}</Text>
+                </TouchableOpacity>
+                {PRIORITIES.map((priority) => {
+                  const active = draftPriority === priority;
+                  return (
+                    <TouchableOpacity
+                      key={priority}
+                      style={[
+                        styles.sheetGridButton,
+                        active && styles.sheetGridButtonActive,
+                        active && { backgroundColor: PRIORITY_META[priority].background, borderColor: PRIORITY_META[priority].border },
+                      ]}
+                      onPress={() => setDraftPriority(priority)}
+                    >
+                      <Text style={[styles.sheetGridText, active && { color: PRIORITY_META[priority].text }]}>
+                        {localizeRequestPriority(priority, t)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.sheetSeparator} />
+
+            <View style={styles.sheetSection}>
+              <Text style={styles.sheetSectionTitle}>{t('operator.sortLabel')}</Text>
+              <View style={styles.sheetSortRow}>
+                {([
+                  { key: 'newest', label: t('operator.sortNewest'), icon: 'arrow-down-outline' },
+                  { key: 'oldest', label: t('operator.sortOldest'), icon: 'arrow-up-outline' },
+                  { key: 'priority', label: t('operator.sortPriority'), icon: 'flag-outline' },
+                ] as { key: SortMode; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[]).map((item) => {
+                  const active = draftSort === item.key;
+                  return (
+                    <TouchableOpacity
+                      key={item.key}
+                      style={[styles.sheetSortButton, active && styles.sheetSortButtonActive]}
+                      onPress={() => setDraftSort(item.key)}
+                    >
+                      <Ionicons name={item.icon} size={17} color={active ? '#FFF' : '#475569'} />
+                      <Text style={[styles.sheetSortText, active && styles.sheetSortTextActive]}>{item.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </ScrollView>
+
+          <TouchableOpacity
+            style={styles.sheetApplyButton}
+            onPress={() => {
+              onApply({ category: draftCategory, priority: draftPriority, sort: draftSort });
+              closeAnimated();
+            }}
+          >
+            <Text style={styles.sheetApplyText}>{t('operator.applyFilters')}</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function OperatorDashboard() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { width: viewportWidth } = useWindowDimensions();
   const [allRequests, setAllRequests] = useState<Request[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<Request['status'] | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>(null);
+  const [sortMode, setSortMode] = useState<SortMode>('newest');
+  const [filterSheetVisible, setFilterSheetVisible] = useState(false);
   const [selected, setSelected] = useState<Request | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [statusDraft, setStatusDraft] = useState<Request['status']>('in_progress');
+  const [priorityDraft, setPriorityDraft] = useState<RequestPriority>('medium');
+  const [assignedDepartment, setAssignedDepartment] = useState('');
   const [operatorNotes, setOperatorNotes] = useState('');
+  const [resolutionNotes, setResolutionNotes] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
 
   const fetchRequests = useCallback(async () => {
@@ -62,29 +290,81 @@ export default function OperatorDashboard() {
     finally { setIsLoading(false); setIsRefreshing(false); }
   }, []);
 
-  useEffect(() => { fetchRequests(); }, [fetchRequests]);
+  const fetchCategories = useCallback(async () => {
+    try {
+      const res = await apiService.getCategories();
+      setCategories(res.data);
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
 
-  const filteredRequests = useMemo(
-    () => allRequests.filter((request) => !statusFilter || request.status === statusFilter),
-    [allRequests, statusFilter],
-  );
+  useEffect(() => {
+    fetchRequests();
+    fetchCategories();
+  }, [fetchCategories, fetchRequests]);
+
+  const filteredRequests = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    return allRequests
+      .filter((request) => {
+        const matchesStatus = !statusFilter || request.status === statusFilter;
+        const matchesCategory = !categoryFilter || request.category_id === categoryFilter;
+        const matchesPriority = !priorityFilter || getPriorityValue(request.priority) === priorityFilter;
+        const matchesSearch = !query || getSearchText(request).includes(query);
+        return matchesStatus && matchesCategory && matchesPriority && matchesSearch;
+      })
+      .sort((first, second) => {
+        if (sortMode === 'priority') {
+          const priorityDiff = PRIORITY_WEIGHT[getPriorityValue(second.priority)] - PRIORITY_WEIGHT[getPriorityValue(first.priority)];
+          if (priorityDiff !== 0) return priorityDiff;
+        }
+
+        const firstTime = getRequestActivityTime(first);
+        const secondTime = getRequestActivityTime(second);
+        return sortMode === 'oldest' ? firstTime - secondTime : secondTime - firstTime;
+      });
+  }, [allRequests, categoryFilter, priorityFilter, search, sortMode, statusFilter]);
 
   const openDetail = async (req: Request) => {
     setSelected(req);
+    setStatusDraft(req.status);
+    setPriorityDraft(getPriorityValue(req.priority));
+    setAssignedDepartment(req.assigned_department || '');
     setOperatorNotes(req.operator_notes || '');
+    setResolutionNotes(req.resolution_notes || '');
     try { const res = await apiService.getMessages(req.id); setMessages(res.data); } catch {}
   };
 
-  const updateStatus = async (newStatus: string) => {
+  const closeDetail = () => {
+    setSelected(null);
+    setMessages([]);
+    setNewMessage('');
+    setAssignedDepartment('');
+    setOperatorNotes('');
+    setResolutionNotes('');
+  };
+
+  const saveRequestUpdate = async () => {
     if (!selected) return;
+    const trimmedResolution = resolutionNotes.trim();
+    if (statusDraft === 'closed' && !trimmedResolution) {
+      Alert.alert(t('common.error'), t('operator.closeCommentRequired'));
+      return;
+    }
+
     setIsUpdating(true);
     try {
       await apiService.updateRequestOperator(selected.id, {
-        status: newStatus,
-        operator_notes: operatorNotes || undefined
+        status: statusDraft,
+        priority: priorityDraft,
+        assigned_department: assignedDepartment.trim() || undefined,
+        operator_notes: operatorNotes.trim() || undefined,
+        resolution_notes: statusDraft === 'closed' ? trimmedResolution : undefined,
       });
-      Alert.alert(t('common.success'), t('operator.statusUpdated', { status: t(getStatusTranslationKey(newStatus)) }));
-      setSelected(null);
+      Alert.alert(t('common.success'), t('operator.updateSuccess'));
+      closeDetail();
       fetchRequests();
     } catch { Alert.alert(t('common.error'), t('operator.updateFailed')); }
     finally { setIsUpdating(false); }
@@ -106,10 +386,16 @@ export default function OperatorDashboard() {
     in_progress: allRequests.filter(r => r.status === 'in_progress').length,
     closed: allRequests.filter(r => r.status === 'closed').length
   };
+  const statusStats: { key: Request['status'] | null; label: string; count: number; color: string }[] = [
+    { key: null, label: t('common.all'), count: counts.total, color: ORANGE },
+    { key: 'pending', label: t('status.pending'), count: counts.pending, color: '#FF9500' },
+    { key: 'in_progress', label: t('status.inProgress'), count: counts.in_progress, color: '#007AFF' },
+    { key: 'closed', label: t('status.closed'), count: counts.closed, color: '#34C759' },
+  ];
   const statsColumns = viewportWidth >= 340 ? 4 : 2;
   const availableStatsWidth = Math.max(viewportWidth - (STATS_HORIZONTAL_PADDING * 2), 0);
   const statCardWidth = (availableStatsWidth - STATS_GAP * (statsColumns - 1)) / statsColumns;
-  const getPriorityValue = (priority?: Request['priority']) => priority ?? 'medium';
+  const activeFilterCount = (categoryFilter ? 1 : 0) + (priorityFilter ? 1 : 0) + (sortMode !== 'newest' ? 1 : 0);
   const renderPriorityBadge = (priorityValue?: Request['priority']) => {
     const priority = getPriorityValue(priorityValue);
     const meta = PRIORITY_META[priority];
@@ -155,11 +441,7 @@ export default function OperatorDashboard() {
 
       {/* Stats */}
       <View style={styles.statsRow}>
-        {[{ key: null, label: t('common.all'), count: counts.total, color: ORANGE },
-          { key: 'pending', label: t('status.pending'), count: counts.pending, color: '#FF9500' },
-          { key: 'in_progress', label: t('status.inProgress'), count: counts.in_progress, color: '#007AFF' },
-          { key: 'closed', label: t('status.closed'), count: counts.closed, color: '#34C759' }
-        ].map(s => (
+        {statusStats.map(s => (
           <TouchableOpacity
             key={s.key || 'all'}
             style={[
@@ -175,10 +457,50 @@ export default function OperatorDashboard() {
         ))}
       </View>
 
+      <View style={styles.filterPanel}>
+        <View style={styles.filterTopRow}>
+          <View style={styles.searchBox}>
+            <Ionicons name="search" size={17} color="#8E8E93" />
+            <TextInput
+              style={styles.searchInput}
+              value={search}
+              onChangeText={setSearch}
+              placeholder={t('operator.searchPlaceholder')}
+              placeholderTextColor="#B8B8BE"
+            />
+          </View>
+          <TouchableOpacity style={styles.filterButton} onPress={() => setFilterSheetVisible(true)}>
+            <Ionicons name="options-outline" size={18} color={ORANGE} />
+            <Text style={styles.filterButtonText}>
+              {activeFilterCount ? `${t('common.filter')} · ${activeFilterCount}` : t('common.filter')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       <FlatList data={filteredRequests} keyExtractor={i => i.id} renderItem={renderCard}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => { setIsRefreshing(true); fetchRequests(); }} tintColor={ORANGE} />}
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
         ListEmptyComponent={<View style={styles.emptyBox}><Ionicons name="checkbox-outline" size={48} color="#C7C7CC" /><Text style={styles.emptyText}>{t('operator.noRequests')}</Text></View>}
+      />
+
+      <OperatorFilterSheet
+        visible={filterSheetVisible}
+        categories={categories}
+        selectedCategory={categoryFilter}
+        selectedPriority={priorityFilter}
+        selectedSort={sortMode}
+        onClose={() => setFilterSheetVisible(false)}
+        onReset={() => {
+          setCategoryFilter(null);
+          setPriorityFilter(null);
+          setSortMode('newest');
+        }}
+        onApply={({ category, priority, sort }) => {
+          setCategoryFilter(category);
+          setPriorityFilter(priority);
+          setSortMode(sort);
+        }}
       />
 
       {/* Detail Modal */}
@@ -186,11 +508,11 @@ export default function OperatorDashboard() {
         <Modal visible animationType="slide" presentationStyle="pageSheet">
           <View style={[styles.modalContainer, { paddingTop: insets.top || 16 }]}>
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setSelected(null)} style={styles.closeBtn}><Ionicons name="close" size={24} color="#1C1C1E" /></TouchableOpacity>
+              <TouchableOpacity onPress={closeDetail} style={styles.closeBtn}><Ionicons name="close" size={24} color="#1C1C1E" /></TouchableOpacity>
               <Text style={styles.modalTitle}>{t('myRequests.details')}</Text>
               <View style={{ width: 44 }} />
             </View>
-            <ScrollView style={styles.modalBody}>
+            <ScrollView style={styles.modalBody} contentContainerStyle={styles.modalBodyContent}>
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>{t('request.problem')}</Text>
                 <Text style={styles.detailValue}>{localizeProblemType(selected.category_id, selected.problem_type, t)}</Text>
@@ -205,11 +527,11 @@ export default function OperatorDashboard() {
               </View>
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>{t('operator.filterByStatus')}</Text>
-                <StatusBadge status={selected.status} />
+                <StatusBadge status={statusDraft} />
               </View>
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>{t('operator.filterByPriority')}</Text>
-                {renderPriorityBadge(selected.priority)}
+                {renderPriorityBadge(priorityDraft)}
               </View>
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>{t('myRequests.created')}</Text>
@@ -221,16 +543,70 @@ export default function OperatorDashboard() {
               <Text style={styles.sectionTitle}>{t('operator.updateStatus')}</Text>
               <View style={styles.statusBtns}>
                 {STATUSES.map(s => (
-                  <TouchableOpacity key={s} style={[styles.statusBtn, selected.status === s && styles.statusBtnActive, { borderColor: ({ pending: '#FF9500', in_progress: '#007AFF', closed: '#34C759' } as any)[s] }]}
-                    onPress={() => updateStatus(s)} disabled={isUpdating || selected.status === s}>
-                    <Text style={[styles.statusBtnText, selected.status === s && styles.statusBtnTextActive]}>{t(getStatusTranslationKey(s))}</Text>
+                  <TouchableOpacity key={s} style={[styles.statusBtn, statusDraft === s && styles.statusBtnActive, { borderColor: ({ pending: '#FF9500', in_progress: '#007AFF', closed: '#34C759' } as Record<Request['status'], string>)[s] }]}
+                    onPress={() => setStatusDraft(s)} disabled={isUpdating}>
+                    <Text style={[styles.statusBtnText, statusDraft === s && styles.statusBtnTextActive]}>{t(getStatusTranslationKey(s))}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
 
+              <Text style={styles.sectionTitle}>{t('operator.priority')}</Text>
+              <View style={styles.statusBtns}>
+                {PRIORITIES.map((priority) => (
+                  <TouchableOpacity
+                    key={priority}
+                    style={[
+                      styles.statusBtn,
+                      priorityDraft === priority && styles.statusBtnActive,
+                      {
+                        borderColor: PRIORITY_META[priority].border,
+                        backgroundColor: priorityDraft === priority ? PRIORITY_META[priority].background : '#FFF',
+                      },
+                    ]}
+                    onPress={() => setPriorityDraft(priority)}
+                    disabled={isUpdating}
+                  >
+                    <Text style={[styles.statusBtnText, priorityDraft === priority && { color: PRIORITY_META[priority].text }]}>
+                      {localizeRequestPriority(priority, t)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.sectionTitle}>{t('operator.assignDepartment')}</Text>
+              <TextInput
+                style={styles.singleInput}
+                value={assignedDepartment}
+                onChangeText={setAssignedDepartment}
+                placeholder={t('operator.departmentPlaceholder')}
+                placeholderTextColor="#C7C7CC"
+              />
+
               {/* Operator Notes */}
               <Text style={styles.sectionTitle}>{t('operator.internalNotes')}</Text>
               <TextInput style={styles.notesInput} multiline numberOfLines={3} value={operatorNotes} onChangeText={setOperatorNotes} placeholder={t('operator.internalNotesPlaceholder')} placeholderTextColor="#C7C7CC" />
+
+              <Text style={styles.sectionTitle}>{t('operator.closeComment')}</Text>
+              <TextInput
+                style={styles.notesInput}
+                multiline
+                numberOfLines={4}
+                value={resolutionNotes}
+                onChangeText={setResolutionNotes}
+                placeholder={t('operator.closeCommentPlaceholder')}
+                placeholderTextColor="#C7C7CC"
+              />
+              <Text style={styles.helperText}>
+                {statusDraft === 'closed' ? t('operator.closeCommentHelper') : t('operator.closeCommentOptional')}
+              </Text>
+
+              <TouchableOpacity
+                style={[styles.saveButton, isUpdating && styles.saveButtonDisabled]}
+                onPress={saveRequestUpdate}
+                disabled={isUpdating}
+              >
+                <Text style={styles.saveButtonText}>{isUpdating ? t('common.loading') : t('operator.saveChanges')}</Text>
+              </TouchableOpacity>
 
               {/* Chat */}
               <Text style={styles.sectionTitle}>{t('myRequests.chat')}</Text>
@@ -283,6 +659,32 @@ const styles = StyleSheet.create({
   statCardActive: { backgroundColor: `${ORANGE}10`, borderColor: ORANGE },
   statNum: { fontSize: 18, lineHeight: 20, fontWeight: '700' },
   statLabel: { marginTop: 4, fontSize: 10, lineHeight: 12, color: '#8E8E93', textAlign: 'center' },
+  filterPanel: { paddingHorizontal: 16, gap: 10, marginBottom: 12 },
+  filterTopRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  searchBox: {
+    flex: 1,
+    minHeight: 46,
+    borderRadius: 14,
+    backgroundColor: '#FFF',
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  searchInput: { flex: 1, fontSize: 14, color: '#1C1C1E', fontWeight: '600' },
+  filterButton: {
+    minHeight: 46,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: `${ORANGE}55`,
+    backgroundColor: '#FFF7F0',
+    paddingHorizontal: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  filterButtonText: { color: ORANGE, fontSize: 13, fontWeight: '800' },
   list: { paddingHorizontal: 16 },
   card: { backgroundColor: '#FFF', borderRadius: 14, marginBottom: 10, flexDirection: 'row', overflow: 'hidden' },
   cardStrip: { width: 4 },
@@ -297,11 +699,158 @@ const styles = StyleSheet.create({
   priorityText: { fontSize: 10, fontWeight: '700' },
   emptyBox: { alignItems: 'center', padding: 60 },
   emptyText: { fontSize: 16, color: '#8E8E93', marginTop: 12 },
+  sheetOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  sheetBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15, 23, 42, 0.42)',
+  },
+  sheet: {
+    maxHeight: '88%',
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingTop: 10,
+    paddingHorizontal: 18,
+    paddingBottom: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.14,
+    shadowRadius: 22,
+    elevation: 18,
+  },
+  sheetHandle: {
+    alignSelf: 'center',
+    width: 46,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: '#E5E7EB',
+    marginBottom: 14,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  sheetTitle: {
+    color: '#111827',
+    fontSize: 24,
+    lineHeight: 29,
+    fontWeight: '900',
+  },
+  sheetReset: {
+    color: ORANGE,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  sheetScroll: { maxHeight: 430 },
+  sheetScrollContent: { paddingBottom: 10 },
+  sheetSection: { gap: 12 },
+  sheetSectionTitle: {
+    color: '#94A3B8',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  sheetSeparator: {
+    height: 1,
+    backgroundColor: '#F1F5F9',
+    marginVertical: 16,
+  },
+  sheetPillRow: { gap: 10, paddingRight: 18 },
+  sheetPill: {
+    minHeight: 42,
+    borderRadius: 21,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFF',
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetPillActive: {
+    borderColor: ORANGE,
+    backgroundColor: `${ORANGE}12`,
+  },
+  sheetPillText: {
+    color: '#64748B',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  sheetPillTextActive: { color: '#111827' },
+  sheetGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  sheetGridButton: {
+    minHeight: 44,
+    minWidth: '47%',
+    flexGrow: 1,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFF',
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetGridButtonActive: {
+    borderColor: ORANGE,
+    backgroundColor: `${ORANGE}12`,
+  },
+  sheetGridText: {
+    color: '#64748B',
+    fontSize: 14,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  sheetGridTextActive: { color: '#111827' },
+  sheetSortRow: { gap: 10 },
+  sheetSortButton: {
+    minHeight: 48,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFF',
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  sheetSortButtonActive: {
+    borderColor: ORANGE,
+    backgroundColor: ORANGE,
+  },
+  sheetSortText: {
+    color: '#475569',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  sheetSortTextActive: { color: '#FFF' },
+  sheetApplyButton: {
+    minHeight: 52,
+    borderRadius: 18,
+    backgroundColor: ORANGE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 14,
+  },
+  sheetApplyText: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '900',
+  },
   modalContainer: { flex: 1, backgroundColor: '#FFF' },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#F2F2F7' },
   closeBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   modalTitle: { fontSize: 17, fontWeight: '600', color: '#1C1C1E' },
   modalBody: { flex: 1, padding: 16 },
+  modalBodyContent: { paddingBottom: 24 },
   detailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F2F2F7' },
   detailLabel: { fontSize: 14, color: '#8E8E93' },
   detailValue: { fontSize: 15, fontWeight: '500', color: '#1C1C1E', flex: 1, textAlign: 'right', marginLeft: 16 },
@@ -312,7 +861,12 @@ const styles = StyleSheet.create({
   statusBtnActive: { backgroundColor: '#F2F2F7' },
   statusBtnText: { fontSize: 13, fontWeight: '600', color: '#1C1C1E' },
   statusBtnTextActive: { color: '#8E8E93' },
+  singleInput: { backgroundColor: '#F2F2F7', borderRadius: 12, padding: 14, fontSize: 15, color: '#1C1C1E' },
   notesInput: { backgroundColor: '#F2F2F7', borderRadius: 12, padding: 14, fontSize: 15, color: '#1C1C1E', minHeight: 80, textAlignVertical: 'top' },
+  helperText: { marginTop: 8, color: '#8E8E93', fontSize: 12, fontWeight: '600' },
+  saveButton: { marginTop: 18, borderRadius: 14, backgroundColor: ORANGE, paddingVertical: 15, alignItems: 'center' },
+  saveButtonDisabled: { opacity: 0.55 },
+  saveButtonText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
   noMsg: { fontSize: 14, color: '#8E8E93', fontStyle: 'italic' },
   msgBubble: { maxWidth: '80%', padding: 12, borderRadius: 16, marginBottom: 8 },
   opMsg: { alignSelf: 'flex-end', backgroundColor: ORANGE },

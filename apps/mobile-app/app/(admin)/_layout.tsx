@@ -37,6 +37,10 @@ export default function AdminLayout() {
         title: t('admin.news.title'),
         tabBarIcon: ({ color, size }) => <Ionicons name="newspaper" size={size} color={color} />
       }} />
+      <Tabs.Screen name="operator" options={{
+        title: t('nav.requests'),
+        tabBarIcon: ({ color, size }) => <Ionicons name="clipboard" size={size} color={color} />
+      }} />
       <Tabs.Screen name="profile" options={{
         title: t('admin.profile.title'),
         tabBarIcon: ({ color, size }) => <Ionicons name="person" size={size} color={color} />
