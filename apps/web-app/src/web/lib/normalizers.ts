@@ -229,6 +229,9 @@ export function normalizeUser(payload: unknown): User {
     name: asString(pick(record, ["name", "full_name", "fullName"]), "iKOMEK user"),
     email: asString(pick(record, ["email"]), ""),
     phone: asString(pick(record, ["phone", "phone_number"])),
+    displayName: asString(pick(record, ["displayName", "display_name", "preferred_name"])),
+    gender: asString(pick(record, ["gender", "sex"])),
+    birthDate: asString(pick(record, ["birthDate", "birth_date", "date_of_birth"])),
     primaryRole: roles[0] ?? "citizen",
     roles,
     language,
@@ -236,7 +239,7 @@ export function normalizeUser(payload: unknown): User {
       pick(record, ["notificationsEnabled", "notifications_enabled"]),
       true,
     ),
-    avatarUrl: asString(pick(record, ["avatarUrl", "avatar", "photo", "image_url"])),
+    avatarUrl: asString(pick(record, ["avatarUrl", "avatar_url", "avatar", "photo", "image_url"])),
     createdAt: asString(pick(record, ["createdAt", "created_at", "registered_at"])),
     departmentName: asString(pick(record, ["departmentName", "department_name"])),
   };
