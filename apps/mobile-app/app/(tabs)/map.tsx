@@ -659,14 +659,16 @@ export default function MapScreen() {
                 </ScrollView>
               </View>
             ) : null}
-            <View style={[styles.legend, isCompact && styles.legendCompact]}>
-              {Object.entries(STATUS_COLORS).map(([key, color]) => (
-                <View key={key} style={styles.legendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: color }]} />
-                  <Text style={styles.legendText}>{t(`status.${key === 'in_progress' ? 'inProgress' : key}`)}</Text>
-                </View>
-              ))}
-            </View>
+            {!activeHotspot ? (
+              <View style={[styles.legend, isCompact && styles.legendCompact]}>
+                {Object.entries(STATUS_COLORS).map(([key, color]) => (
+                  <View key={key} style={styles.legendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: color }]} />
+                    <Text style={styles.legendText}>{t(`status.${key === 'in_progress' ? 'inProgress' : key}`)}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
           </View>
         ) : (
           <View style={[styles.listSurface, { minHeight: listMinHeight, marginHorizontal: horizontalPadding }]}>
