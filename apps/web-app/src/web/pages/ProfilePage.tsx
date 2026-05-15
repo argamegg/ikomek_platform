@@ -34,6 +34,7 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { formatDate, getStatusTone } from "../lib/format";
 import { localizeRequestProblemType, localizeRequestStatus } from "../lib/requestMeta";
 import { getErrorMessage, platformApi, queryKeys } from "../services/platformApi";
+import { applyLoggedOutQueryState } from "../lib/querySession";
 
 const ACCENT = "#ff6b35";
 const MONTH_WINDOW = 6;
@@ -251,7 +252,7 @@ export function ProfilePage() {
   async function handleLogout() {
     try {
       await platformApi.logout();
-      await queryClient.invalidateQueries();
+      await applyLoggedOutQueryState(queryClient);
       navigate("/auth");
       toast.success(t("cabinet.logout"));
     } catch (error) {

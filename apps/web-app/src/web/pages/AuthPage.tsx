@@ -10,6 +10,7 @@ import { Input, Select } from "../components/ui/Input";
 import { Tabs } from "../components/ui/Tabs";
 import { Button } from "../components/ui/Button";
 import { getErrorMessage, platformApi, queryKeys } from "../services/platformApi";
+import { applyLoggedInQueryState } from "../lib/querySession";
 import type { AuthRegistrationChallenge } from "../../types/platform";
 
 type AuthTab = "login" | "register" | "recover";
@@ -124,7 +125,7 @@ export function AuthPage() {
   const loginMutation = useMutation({
     mutationFn: platformApi.login,
     onSuccess: async (result) => {
-      await queryClient.invalidateQueries();
+      await applyLoggedInQueryState(queryClient, result.user);
       toast.success(t("auth.feedback.loginSuccess"));
       handleAuthSuccess(result);
     },
@@ -163,7 +164,7 @@ export function AuthPage() {
   const verifyMutation = useMutation({
     mutationFn: platformApi.verifyEmail,
     onSuccess: async (result) => {
-      await queryClient.invalidateQueries();
+      await applyLoggedInQueryState(queryClient, result.user);
       resetVerificationStep();
       toast.success(t("auth.verification.verified"));
       handleAuthSuccess(result);

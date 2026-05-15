@@ -401,6 +401,8 @@ export function MapPage() {
     queryFn: platformApi.getCurrentUser,
   });
   const currentUser = currentUserQuery.data ?? null;
+  const authQueryKey = currentUser?.id ?? "guest";
+  const isAuthReady = !currentUserQuery.isLoading;
   const mapMode: MapMode = mode === "my" && currentUser
     ? "my"
     : mode === "heatmap"
@@ -416,12 +418,14 @@ export function MapPage() {
     queryFn: platformApi.getCategories,
   });
   const publicRequestsQuery = useQuery({
-    queryKey: [...queryKeys.publicRequests, "map", i18n.language, dateBounds.dateFrom, dateBounds.dateTo],
+    queryKey: [...queryKeys.publicRequests, "map", i18n.language, authQueryKey, dateBounds.dateFrom, dateBounds.dateTo],
     queryFn: () => platformApi.getMapRequests(dateBounds),
+    enabled: isAuthReady,
   });
   const allMonthsRequestsQuery = useQuery({
-    queryKey: [...queryKeys.publicRequests, "map", "timeline-months", i18n.language, allMonthsBounds.dateFrom, allMonthsBounds.dateTo],
+    queryKey: [...queryKeys.publicRequests, "map", "timeline-months", i18n.language, authQueryKey, allMonthsBounds.dateFrom, allMonthsBounds.dateTo],
     queryFn: () => platformApi.getMapRequests(allMonthsBounds),
+    enabled: isAuthReady,
   });
 
   const allRequests = useMemo(

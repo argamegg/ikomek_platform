@@ -189,6 +189,8 @@ def visible_request_document(request: dict, lang: str, current_user: Optional[di
 
     if not is_staff:
         document["operator_notes"] = None
+    if current_user is None:
+        document["citizen_name"] = None
     if not is_staff and not is_owner:
         document["user_id"] = ""
 

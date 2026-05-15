@@ -2,10 +2,12 @@ import { AnimatePresence, motion } from "framer-motion";
 import type { PropsWithChildren } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { queryKeys, getErrorMessage, platformApi } from "../../services/platformApi";
+import { applyLoggedOutQueryState } from "../../lib/querySession";
+import { WEB_SESSION_TOKEN_CLEARED_EVENT, WEB_SESSION_TOKEN_KEY } from "../../lib/session";
 import { AIAssistantWidget } from "../AIAssistantWidget";
 import { Header } from "./Header";
 import { Sidebar } from "./Sidebar";
@@ -17,6 +19,7 @@ export function AppShell({ children }: PropsWithChildren) {
     typeof window !== "undefined" ? window.matchMedia("(max-width: 1199px)").matches : false,
   );
   const location = useLocation();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
   const currentUserQuery = useQuery({
@@ -34,12 +37,41 @@ export function AppShell({ children }: PropsWithChildren) {
   async function handleLogout() {
     try {
       await platformApi.logout();
-      await queryClient.invalidateQueries();
+      await applyLoggedOutQueryState(queryClient);
+      navigate("/auth", { replace: true });
       toast.success(t("common.logout"));
     } catch (error) {
       toast.error(getErrorMessage(error));
     }
   }
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    let isMounted = true;
+    const clearCachedSession = () => {
+      if (!isMounted) {
+        return;
+      }
+      void applyLoggedOutQueryState(queryClient);
+    };
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === WEB_SESSION_TOKEN_KEY && event.newValue === null) {
+        clearCachedSession();
+      }
+    };
+
+    window.addEventListener(WEB_SESSION_TOKEN_CLEARED_EVENT, clearCachedSession);
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener(WEB_SESSION_TOKEN_CLEARED_EVENT, clearCachedSession);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [queryClient]);
 
   useEffect(() => {
     if (typeof window === "undefined") {

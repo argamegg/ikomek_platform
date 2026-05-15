@@ -98,10 +98,10 @@ export default function App() {
 
       if (requestMatch) {
         addLoader(
-          queryClient.fetchQuery({
-            queryKey: queryKeys.request(requestMatch[1]),
+          loadCurrentUser.then((user) => queryClient.fetchQuery({
+            queryKey: [...queryKeys.request(requestMatch[1]), locale, user?.id ?? "guest"],
             queryFn: () => platformApi.getRequestById(requestMatch[1]),
-          }),
+          })),
         );
       }
     }

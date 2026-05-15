@@ -1,4 +1,5 @@
-const TOKEN_KEY = "ikomek.web.token";
+export const WEB_SESSION_TOKEN_KEY = "ikomek.web.token";
+export const WEB_SESSION_TOKEN_CLEARED_EVENT = "ikomek.web.token-cleared";
 const LOCALE_KEY = "ikomek.web.locale";
 
 function canUseStorage() {
@@ -11,21 +12,25 @@ export const session = {
       return null;
     }
 
-    return window.localStorage.getItem(TOKEN_KEY);
+    return window.localStorage.getItem(WEB_SESSION_TOKEN_KEY);
   },
   setToken(token: string) {
     if (!canUseStorage()) {
       return;
     }
 
-    window.localStorage.setItem(TOKEN_KEY, token);
+    window.localStorage.setItem(WEB_SESSION_TOKEN_KEY, token);
   },
   clearToken() {
     if (!canUseStorage()) {
       return;
     }
 
-    window.localStorage.removeItem(TOKEN_KEY);
+    const hadToken = window.localStorage.getItem(WEB_SESSION_TOKEN_KEY) !== null;
+    window.localStorage.removeItem(WEB_SESSION_TOKEN_KEY);
+    if (hadToken) {
+      window.dispatchEvent(new Event(WEB_SESSION_TOKEN_CLEARED_EVENT));
+    }
   },
   getLocale() {
     if (!canUseStorage()) {

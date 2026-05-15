@@ -81,14 +81,23 @@ export function RequestsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const deferredSearch = useDeferredValue(search);
 
+  const currentUserQuery = useQuery({
+    queryKey: queryKeys.currentUser,
+    queryFn: platformApi.getCurrentUser,
+  });
+  const currentUser = currentUserQuery.data ?? null;
+  const authQueryKey = currentUser?.id ?? "guest";
+  const isAuthReady = !currentUserQuery.isLoading;
   const publicRequestsQuery = useQuery({
-    queryKey: [...queryKeys.publicRequests, i18n.language],
+    queryKey: [...queryKeys.publicRequests, i18n.language, authQueryKey],
     queryFn: platformApi.getPublicRequests,
+    enabled: isAuthReady,
     staleTime: 30_000,
   });
   const myRequestsQuery = useQuery({
-    queryKey: [...queryKeys.myRequests, i18n.language],
+    queryKey: [...queryKeys.myRequests, i18n.language, authQueryKey],
     queryFn: platformApi.getMyRequests,
+    enabled: isAuthReady && Boolean(currentUser),
     staleTime: 30_000,
   });
   const categoriesQuery = useQuery({
@@ -96,11 +105,6 @@ export function RequestsPage() {
     queryFn: platformApi.getCategories,
     staleTime: 5 * 60_000,
   });
-  const currentUserQuery = useQuery({
-    queryKey: queryKeys.currentUser,
-    queryFn: platformApi.getCurrentUser,
-  });
-  const currentUser = currentUserQuery.data ?? null;
 
   const publicRequests = publicRequestsQuery.data ?? [];
   const myRequests = myRequestsQuery.data ?? [];

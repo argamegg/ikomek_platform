@@ -39,14 +39,14 @@ export function RequestDetailsPage() {
   const { requestId = "" } = useParams();
   const { t, i18n } = useTranslation();
   const locale = normalizeLocale(i18n.language);
-  const requestQuery = useQuery({
-    queryKey: [...queryKeys.request(requestId), i18n.language],
-    queryFn: () => platformApi.getRequestById(requestId),
-    enabled: Boolean(requestId),
-  });
   const currentUserQuery = useQuery({
     queryKey: queryKeys.currentUser,
     queryFn: platformApi.getCurrentUser,
+  });
+  const requestQuery = useQuery({
+    queryKey: [...queryKeys.request(requestId), i18n.language, currentUserQuery.data?.id ?? "guest"],
+    queryFn: () => platformApi.getRequestById(requestId),
+    enabled: Boolean(requestId) && !currentUserQuery.isLoading,
   });
 
   const request = requestQuery.data;
