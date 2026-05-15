@@ -2976,15 +2976,68 @@ button {
 .map-analytics__card-title {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 9px;
   margin-bottom: 16px;
   color: var(--primary-strong);
+}
+
+.map-analytics__card-heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
 }
 
 .map-analytics__card-title h3 {
   margin: 0;
   color: #0f172a;
   font-size: 1.05rem;
+}
+
+.timeline-mode-toggle {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: #f1f5f9;
+}
+
+.timeline-mode-toggle button {
+  min-height: 30px;
+  padding: 0 11px;
+  border-radius: 999px;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.timeline-mode-toggle button.is-active {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(255, 107, 0, 0.18);
+}
+
+.timeline-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 12px;
+}
+
+.timeline-summary span {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.timeline-summary b {
+  color: #0f172a;
 }
 
 .density-list,

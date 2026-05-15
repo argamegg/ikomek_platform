@@ -5,8 +5,8 @@ import { Activity, BarChart3, MapPin, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Area,
-  AreaChart,
+  Bar,
+  BarChart,
   CartesianGrid,
   ResponsiveContainer,
   Tooltip,
@@ -47,6 +47,9 @@ type StatusFilter = "all" | RequestStatus;
 type Hotspot = { address: string; count: number; requests: CivicRequest[] };
 type TranslationFn = (key: string, options?: Record<string, unknown>) => string;
 type DateRange = { from: string; to: string };
+type TimelineMode = "period" | "months";
+type TimelineGranularity = "hours" | "weekdays" | "months";
+type TimelinePoint = { key: string; label: string; all: number; pending: number; closed: number };
 
 function normalizeLocale(language: string) {
   if (language.startsWith("kk") || language.startsWith("kz")) return "kk";
@@ -214,6 +217,129 @@ function formatDateRangeLabel(range: DateRange, language: string) {
   return `${new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(from)} - ${new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric" }).format(to)}`;
 }
 
+function getAllMonthsBounds() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+  return {
+    dateFrom: startOfLocalDay(start).toISOString(),
+    dateTo: endOfLocalDay(now).toISOString(),
+  };
+}
+
+function getDateRangeDayCount(range: DateRange) {
+  const from = parseDateKey(range.from);
+  const to = parseDateKey(range.to);
+  if (!from || !to) return MAX_DATE_RANGE_DAYS;
+  return diffCalendarDays(from, to) + 1;
+}
+
+function createTimelinePoint(key: string, label: string): TimelinePoint {
+  return { key, label, all: 0, pending: 0, closed: 0 };
+}
+
+function addRequestToTimelinePoint(point: TimelinePoint, request: CivicRequest) {
+  point.all += 1;
+  if (request.status === "pending") point.pending += 1;
+  if (request.status === "closed") point.closed += 1;
+}
+
+function getWeekdayLabel(dayIndex: number, t: TranslationFn) {
+  const keys = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+  return t(`map.analytics.weekdays.${keys[dayIndex]}`);
+}
+
+function buildHourlyTimelineData(requests: CivicRequest[]): TimelinePoint[] {
+  const buckets = new Map(
+    Array.from({ length: 12 }, (_, index) => {
+      const hour = index * 2;
+      const key = String(hour).padStart(2, "0");
+      return [key, createTimelinePoint(key, `${key}:00`)] as const;
+    }),
+  );
+
+  for (const request of requests) {
+    const date = new Date(request.createdAt);
+    if (Number.isNaN(date.getTime())) continue;
+    const hour = Math.floor(date.getHours() / 2) * 2;
+    const bucket = buckets.get(String(hour).padStart(2, "0"));
+    if (bucket) addRequestToTimelinePoint(bucket, request);
+  }
+
+  return Array.from(buckets.values());
+}
+
+function buildWeekdayTimelineData(requests: CivicRequest[], t: TranslationFn): TimelinePoint[] {
+  const buckets = new Map(
+    Array.from({ length: 7 }, (_, index) => [
+      String(index),
+      createTimelinePoint(String(index), getWeekdayLabel(index, t)),
+    ] as const),
+  );
+
+  for (const request of requests) {
+    const date = new Date(request.createdAt);
+    if (Number.isNaN(date.getTime())) continue;
+    const dayIndex = (date.getDay() + 6) % 7;
+    const bucket = buckets.get(String(dayIndex));
+    if (bucket) addRequestToTimelinePoint(bucket, request);
+  }
+
+  return Array.from(buckets.values());
+}
+
+function buildMonthlyTimelineData(requests: CivicRequest[], language: string): TimelinePoint[] {
+  const buckets = new Map(
+    getLastMonthKeys(12).map((month) => [
+      month,
+      createTimelinePoint(month, formatMonth(month, language)),
+    ] as const),
+  );
+
+  for (const request of requests) {
+    const date = new Date(request.createdAt);
+    if (Number.isNaN(date.getTime())) continue;
+    const bucket = buckets.get(getMonthKey(date));
+    if (bucket) addRequestToTimelinePoint(bucket, request);
+  }
+
+  return Array.from(buckets.values());
+}
+
+function buildTimelineData(
+  requests: CivicRequest[],
+  mode: TimelineMode,
+  range: DateRange,
+  language: string,
+  t: TranslationFn,
+): { granularity: TimelineGranularity; data: TimelinePoint[] } {
+  if (mode === "months") {
+    return { granularity: "months", data: buildMonthlyTimelineData(requests, language) };
+  }
+
+  if (getDateRangeDayCount(range) <= 1) {
+    return { granularity: "hours", data: buildHourlyTimelineData(requests) };
+  }
+
+  return { granularity: "weekdays", data: buildWeekdayTimelineData(requests, t) };
+}
+
+function getTimelineTitle(granularity: TimelineGranularity, t: TranslationFn) {
+  if (granularity === "hours") return t("map.analytics.timelineHours");
+  if (granularity === "weekdays") return t("map.analytics.timelineWeekdays");
+  return t("map.analytics.timelineMonths");
+}
+
+function getTimelineTotals(data: TimelinePoint[]) {
+  return data.reduce(
+    (total, item) => ({
+      all: total.all + item.all,
+      pending: total.pending + item.pending,
+      closed: total.closed + item.closed,
+    }),
+    { all: 0, pending: 0, closed: 0 },
+  );
+}
+
 function formatRequestCount(count: number, language: string) {
   const locale = normalizeLocale(language);
 
@@ -256,6 +382,7 @@ export function MapPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedHotspotAddress, setSelectedHotspotAddress] = useState<string | null>(null);
+  const [timelineMode, setTimelineMode] = useState<TimelineMode>("period");
   const mapShellRef = useRef<HTMLElement | null>(null);
 
   const mode = (searchParams.get("mode") as MapMode | null) ?? "all";
@@ -267,6 +394,7 @@ export function MapPage() {
     [searchParams],
   );
   const dateBounds = useMemo(() => getDateRangeBounds(dateRange), [dateRange.from, dateRange.to]);
+  const allMonthsBounds = useMemo(() => getAllMonthsBounds(), []);
 
   const currentUserQuery = useQuery({
     queryKey: queryKeys.currentUser,
@@ -290,6 +418,10 @@ export function MapPage() {
   const publicRequestsQuery = useQuery({
     queryKey: [...queryKeys.publicRequests, "map", i18n.language, dateBounds.dateFrom, dateBounds.dateTo],
     queryFn: () => platformApi.getMapRequests(dateBounds),
+  });
+  const allMonthsRequestsQuery = useQuery({
+    queryKey: [...queryKeys.publicRequests, "map", "timeline-months", i18n.language, allMonthsBounds.dateFrom, allMonthsBounds.dateTo],
+    queryFn: () => platformApi.getMapRequests(allMonthsBounds),
   });
 
   const allRequests = useMemo(
@@ -350,19 +482,24 @@ export function MapPage() {
       .slice(0, 6);
   }, [analyticsRequests]);
 
-  const timelineData = useMemo(() => {
-    const months = getLastMonthKeys(12);
-    return months.map((month) => {
-      const monthRequests = analyticsRequests.filter((request) => getMonthKey(new Date(request.createdAt)) === month);
-      return {
-        month,
-        label: formatMonth(month, i18n.language),
-        all: monthRequests.length,
-        pending: monthRequests.filter((request) => request.status === "pending").length,
-        closed: monthRequests.filter((request) => request.status === "closed").length,
-      };
+  const timelineMonthRequests = useMemo(() => {
+    return (allMonthsRequestsQuery.data ?? []).filter((request) => {
+      const matchesMode = mapMode !== "my" || request.citizenId === currentUser?.id;
+      const matchesCategory = category === "all" || request.categoryId === category;
+      const matchesStatus = status === "all" || request.status === status;
+      const matchesPriority = getPriorityMatch(request, priority);
+      return matchesMode && matchesCategory && matchesStatus && matchesPriority;
     });
-  }, [analyticsRequests, i18n.language]);
+  }, [allMonthsRequestsQuery.data, category, currentUser?.id, mapMode, priority, status]);
+
+  const timelineSourceRequests = timelineMode === "months" ? timelineMonthRequests : filteredRequests;
+  const timeline = useMemo(
+    () => buildTimelineData(timelineSourceRequests, timelineMode, dateRange, i18n.language, t),
+    [dateRange.from, dateRange.to, i18n.language, t, timelineMode, timelineSourceRequests],
+  );
+  const timelineData = timeline.data;
+  const timelineTitle = getTimelineTitle(timeline.granularity, t);
+  const timelineTotals = useMemo(() => getTimelineTotals(timelineData), [timelineData]);
 
   const hotspots = useMemo<Hotspot[]>(() => {
     const groups = new Map<string, Hotspot>();
@@ -603,15 +740,25 @@ export function MapPage() {
             ) : <EmptyAnalytics label={t("map.analytics.insufficientData")} />}
           </AnalyticsCard>
 
-          <AnalyticsCard title={t("map.analytics.timeline")}>
+          <AnalyticsCard
+            title={timelineTitle}
+            actions={(
+              <div className="timeline-mode-toggle" role="group" aria-label={t("map.analytics.timelineView")}>
+                {(["period", "months"] as const).map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    className={timelineMode === item ? "is-active" : ""}
+                    onClick={() => setTimelineMode(item)}
+                  >
+                    {item === "period" ? t("map.analytics.timelineSelectedPeriod") : t("map.analytics.timelineAllMonths")}
+                  </button>
+                ))}
+              </div>
+            )}
+          >
             <ResponsiveContainer width="100%" height={230}>
-              <AreaChart data={timelineData}>
-                <defs>
-                  <linearGradient id="mapTimelineAll" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="5%" stopColor={TIMELINE_COLORS.all} stopOpacity={0.22} />
-                    <stop offset="95%" stopColor={TIMELINE_COLORS.all} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
+              <BarChart data={timelineData}>
                 <CartesianGrid stroke="#eef2f7" vertical={false} />
                 <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 11 }} />
                 <YAxis width={28} tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 11 }} />
@@ -621,11 +768,16 @@ export function MapPage() {
                     getTimelineSeriesLabel(String(name), t),
                   ]}
                 />
-                <Area name="all" type="monotone" dataKey="all" stroke={TIMELINE_COLORS.all} fill="url(#mapTimelineAll)" strokeWidth={3} />
-                <Area name="pending" type="monotone" dataKey="pending" stroke={TIMELINE_COLORS.pending} fill="transparent" strokeWidth={2} />
-                <Area name="closed" type="monotone" dataKey="closed" stroke={TIMELINE_COLORS.closed} fill="transparent" strokeWidth={2} />
-              </AreaChart>
+                <Bar name="all" dataKey="all" fill={TIMELINE_COLORS.all} radius={[8, 8, 0, 0]} />
+                <Bar name="pending" dataKey="pending" fill={TIMELINE_COLORS.pending} radius={[8, 8, 0, 0]} />
+                <Bar name="closed" dataKey="closed" fill={TIMELINE_COLORS.closed} radius={[8, 8, 0, 0]} />
+              </BarChart>
             </ResponsiveContainer>
+            <div className="timeline-summary">
+              <span>{t("map.analytics.chartTotal")}: <b>{formatRequestCount(timelineTotals.all, i18n.language)}</b></span>
+              <span>{localizeRequestStatus("pending", t)}: <b>{timelineTotals.pending}</b></span>
+              <span>{localizeRequestStatus("closed", t)}: <b>{timelineTotals.closed}</b></span>
+            </div>
             <div className="timeline-legend">
               <span><i style={{ background: TIMELINE_COLORS.all }} />{t("map.analytics.seriesAll")}</span>
               <span><i style={{ background: TIMELINE_COLORS.pending }} />{localizeRequestStatus("pending", t)}</span>
@@ -678,7 +830,7 @@ export function MapPage() {
   );
 }
 
-function AnalyticsCard({ title, children }: { title: string; children: React.ReactNode }) {
+function AnalyticsCard({ title, actions, children }: { title: string; actions?: React.ReactNode; children: React.ReactNode }) {
   return (
     <motion.article
       className="map-analytics__card"
@@ -688,8 +840,11 @@ function AnalyticsCard({ title, children }: { title: string; children: React.Rea
       }}
     >
       <div className="map-analytics__card-title">
-        <Activity size={18} />
-        <h3>{title}</h3>
+        <div className="map-analytics__card-heading">
+          <Activity size={18} />
+          <h3>{title}</h3>
+        </div>
+        {actions}
       </div>
       {children}
     </motion.article>

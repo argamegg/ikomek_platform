@@ -44,6 +44,9 @@ type Hotspot = { address: string; count: number; points: MapPoint[] };
 type CategoryOption = { id: string; label: string; color: string };
 type StatusOption = { key: string; label: string; count: number; color: string };
 type DateRange = { from: string; to: string };
+type TimelineMode = 'period' | 'months';
+type TimelineGranularity = 'hours' | 'weekdays' | 'months';
+type TimelinePoint = { key: string; label: string; all: number; pending: number; closed: number };
 
 const normalizeLocale = (language?: string): LocaleKey => {
   if (language?.startsWith('en')) return 'en';
@@ -207,6 +210,127 @@ const formatWeekdayLabel = (dayIndex: number, locale: LocaleKey) => {
     return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][dayIndex];
   }
 };
+
+const getAllMonthsBounds = () => {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+  return {
+    dateFrom: startOfLocalDay(start).toISOString(),
+    dateTo: endOfLocalDay(now).toISOString(),
+  };
+};
+
+const getDateRangeDayCount = (range: DateRange) => {
+  const from = parseDateKey(range.from);
+  const to = parseDateKey(range.to);
+  if (!from || !to) return MAX_DATE_RANGE_DAYS;
+  return diffCalendarDays(from, to) + 1;
+};
+
+const createTimelinePoint = (key: string, label: string): TimelinePoint => ({ key, label, all: 0, pending: 0, closed: 0 });
+
+const addPointToTimelinePoint = (bucket: TimelinePoint, point: MapPoint) => {
+  bucket.all += 1;
+  if (point.status === 'pending') bucket.pending += 1;
+  if (point.status === 'closed') bucket.closed += 1;
+};
+
+const getLocalizedWeekdayLabel = (dayIndex: number, t: (key: string) => string) => {
+  const keys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+  return t(`map.analytics.weekdays.${keys[dayIndex]}`);
+};
+
+const buildHourlyTimelineData = (points: MapPoint[]) => {
+  const buckets = new Map<string, TimelinePoint>(
+    Array.from({ length: 12 }, (_, index) => {
+      const hour = index * 2;
+      const key = String(hour).padStart(2, '0');
+      return [key, createTimelinePoint(key, `${key}:00`)];
+    }),
+  );
+
+  points.forEach((point) => {
+    const date = parsePointDate(point.created_at);
+    if (!date) return;
+    const hour = Math.floor(date.getHours() / 2) * 2;
+    const bucket = buckets.get(String(hour).padStart(2, '0'));
+    if (bucket) addPointToTimelinePoint(bucket, point);
+  });
+
+  return Array.from(buckets.values());
+};
+
+const buildWeekdayTimelineData = (points: MapPoint[], t: (key: string) => string) => {
+  const buckets = new Map<string, TimelinePoint>(
+    Array.from({ length: 7 }, (_, index) => [
+      String(index),
+      createTimelinePoint(String(index), getLocalizedWeekdayLabel(index, t)),
+    ]),
+  );
+
+  points.forEach((point) => {
+    const date = parsePointDate(point.created_at);
+    if (!date) return;
+    const dayIndex = (date.getDay() + 6) % 7;
+    const bucket = buckets.get(String(dayIndex));
+    if (bucket) addPointToTimelinePoint(bucket, point);
+  });
+
+  return Array.from(buckets.values());
+};
+
+const buildMonthlyTimelineData = (points: MapPoint[], locale: LocaleKey) => {
+  const buckets = new Map<string, TimelinePoint>(
+    getLastMonthKeys(ANALYTICS_MONTHS).map((key) => [
+      key,
+      createTimelinePoint(key, formatMonthLabel(key, locale)),
+    ]),
+  );
+
+  points.forEach((point) => {
+    const date = parsePointDate(point.created_at);
+    if (!date) return;
+    const bucket = buckets.get(getMonthKey(date));
+    if (bucket) addPointToTimelinePoint(bucket, point);
+  });
+
+  return Array.from(buckets.values());
+};
+
+const buildTimelineData = (
+  points: MapPoint[],
+  mode: TimelineMode,
+  range: DateRange,
+  locale: LocaleKey,
+  t: (key: string) => string,
+): { granularity: TimelineGranularity; data: TimelinePoint[] } => {
+  if (mode === 'months') {
+    return { granularity: 'months', data: buildMonthlyTimelineData(points, locale) };
+  }
+
+  if (getDateRangeDayCount(range) <= 1) {
+    return { granularity: 'hours', data: buildHourlyTimelineData(points) };
+  }
+
+  return { granularity: 'weekdays', data: buildWeekdayTimelineData(points, t) };
+};
+
+const getTimelineTitle = (granularity: TimelineGranularity, t: (key: string) => string) => {
+  if (granularity === 'hours') return t('map.analytics.timelineHours');
+  if (granularity === 'weekdays') return t('map.analytics.timelineWeekdays');
+  return t('map.analytics.timelineMonths');
+};
+
+const getTimelineTotals = (data: TimelinePoint[]) => (
+  data.reduce(
+    (total, item) => ({
+      all: total.all + item.all,
+      pending: total.pending + item.pending,
+      closed: total.closed + item.closed,
+    }),
+    { all: 0, pending: 0, closed: 0 },
+  )
+);
 
 function DateRangeCalendar({
   range,
@@ -574,11 +698,13 @@ export default function MapScreen() {
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [selectedPoint, setSelectedPoint] = useState<MapPoint | null>(null);
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
-  const [selectedTimelineMonth, setSelectedTimelineMonth] = useState<string | null>(null);
   const [activeHotspotAddress, setActiveHotspotAddress] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [dateRange, setDateRange] = useState<DateRange>(() => getDefaultDateRange());
+  const [timelineMode, setTimelineMode] = useState<TimelineMode>('period');
+  const [allTimelinePoints, setAllTimelinePoints] = useState<MapPoint[]>([]);
   const [isMapFiltersOpen, setIsMapFiltersOpen] = useState(false);
+  const allMonthsBounds = useMemo(() => getAllMonthsBounds(), []);
 
   const loadPoints = useCallback(async () => {
     try {
@@ -593,6 +719,17 @@ export default function MapScreen() {
   }, [dateRange]);
 
   useEffect(() => { loadPoints(); }, [loadPoints]);
+
+  const loadTimelinePoints = useCallback(async () => {
+    try {
+      const response = await apiService.getMapPoints(allMonthsBounds);
+      setAllTimelinePoints(response.data);
+    } catch (error) {
+      console.error('Error loading timeline points:', error);
+    }
+  }, [allMonthsBounds]);
+
+  useEffect(() => { loadTimelinePoints(); }, [loadTimelinePoints]);
 
   useEffect(() => {
     let filtered = points.filter((point) => isPointInDateRange(point, dateRange));
@@ -645,6 +782,25 @@ export default function MapScreen() {
 
   const hasMapFilters = Boolean(statusFilter) || categoryFilter !== 'all' || !isDefaultDateRange(dateRange);
 
+  const timelineMonthPoints = useMemo(
+    () => allTimelinePoints.filter((point) => {
+      const matchesOwnership = filter !== 'my' || point.is_mine;
+      const matchesStatus = !statusFilter || point.status === statusFilter;
+      const matchesCategory = categoryFilter === 'all' || point.category === categoryFilter;
+      return matchesOwnership && matchesStatus && matchesCategory;
+    }),
+    [allTimelinePoints, categoryFilter, filter, statusFilter],
+  );
+
+  const timelineSourcePoints = timelineMode === 'months' ? timelineMonthPoints : filteredPoints;
+  const timeline = useMemo(
+    () => buildTimelineData(timelineSourcePoints, timelineMode, dateRange, locale, t),
+    [dateRange, locale, t, timelineMode, timelineSourcePoints],
+  );
+  const timelineTitle = getTimelineTitle(timeline.granularity, t);
+  const timelineTotals = useMemo(() => getTimelineTotals(timeline.data), [timeline.data]);
+  const maxTimeline = useMemo(() => Math.max(...timeline.data.map((item) => item.all), 1), [timeline.data]);
+
   const clearMapFocus = useCallback(() => {
     setActiveHotspotAddress(null);
     setSelectedPoint(null);
@@ -676,14 +832,6 @@ export default function MapScreen() {
 
   const analytics = useMemo(() => {
     const categoryTotals: Record<string, number> = {};
-    const monthKeys = getLastMonthKeys(ANALYTICS_MONTHS);
-    const timelineBuckets = new Map(monthKeys.map((key) => [key, {
-      key,
-      label: formatMonthLabel(key, locale),
-      all: 0,
-      pending: 0,
-      closed: 0,
-    }]));
     const hotspotBuckets = new Map<string, Hotspot>();
     const activityMatrix = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0));
     const noAddress = t('map.analytics.noAddress');
@@ -693,13 +841,6 @@ export default function MapScreen() {
 
       const date = parsePointDate(point.created_at);
       if (date) {
-        const timelineBucket = timelineBuckets.get(getMonthKey(date));
-        if (timelineBucket) {
-          timelineBucket.all += 1;
-          if (point.status === 'pending') timelineBucket.pending += 1;
-          if (point.status === 'closed') timelineBucket.closed += 1;
-        }
-
         const dayIndex = (date.getDay() + 6) % 7;
         activityMatrix[dayIndex][date.getHours()] += 1;
       }
@@ -719,7 +860,6 @@ export default function MapScreen() {
       .sort((a, b) => b.count - a.count)
       .slice(0, 6);
 
-    const timeline = Array.from(timelineBuckets.values());
     const hotspots = Array.from(hotspotBuckets.values())
       .sort((a, b) => b.count - a.count)
       .slice(0, 7);
@@ -727,23 +867,15 @@ export default function MapScreen() {
     return {
       categories,
       maxCategory: Math.max(...categories.map((item) => item.count), 1),
-      timeline,
-      maxTimeline: Math.max(...timeline.map((item) => item.all), 1),
       hotspots,
       maxHotspot: Math.max(...hotspots.map((item) => item.count), 1),
       activityMatrix,
       maxActivity: Math.max(...activityMatrix.flat(), 1),
       total: ownershipPoints.length,
     };
-  }, [locale, ownershipPoints, t]);
+  }, [ownershipPoints, t]);
 
   const analyticsScopeLabel = filter === 'my' ? t('map.myRequests') : t('map.analytics.seriesAll');
-
-  const activeTimelineItem = useMemo(() => (
-    analytics.timeline.find((item) => item.key === selectedTimelineMonth)
-    || analytics.timeline.slice().reverse().find((item) => item.all > 0)
-    || analytics.timeline[analytics.timeline.length - 1]
-  ), [analytics.timeline, selectedTimelineMonth]);
 
   const activeHotspot = useMemo(
     () => analytics.hotspots.find((item) => item.address === activeHotspotAddress) ?? null,
@@ -858,7 +990,7 @@ export default function MapScreen() {
               <Text style={[styles.toggleText, filter === 'my' && styles.toggleTextActive]}>{t('map.myRequests')}</Text>
             </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.refreshBtn} onPress={loadPoints} data-testid="refresh-btn">
+          <TouchableOpacity style={styles.refreshBtn} onPress={() => { loadPoints(); loadTimelinePoints(); }} data-testid="refresh-btn">
             <Ionicons name="refresh" size={18} color="#475569" />
           </TouchableOpacity>
         </View>
@@ -1000,56 +1132,66 @@ export default function MapScreen() {
               <View style={styles.analyticsCard}>
                 <View style={styles.analyticsCardHeader}>
                   <Ionicons name="trending-up-outline" size={18} color="#0F172A" />
-                  <Text style={styles.analyticsCardTitle}>{t('map.analytics.timeline')}</Text>
+                  <Text style={styles.analyticsCardTitle}>{timelineTitle}</Text>
                 </View>
-                {activeTimelineItem ? (
-                  <View style={styles.timelineSummary}>
-                    <Text style={styles.timelineSummaryMonth}>{activeTimelineItem.label}</Text>
-                    <View style={styles.timelineSummaryStats}>
-                      <View style={styles.timelineSummaryItem}>
-                        <View style={styles.timelineSummaryItemHeader}>
-                          <View style={[styles.analyticsLegendDot, styles.timelineSummaryDot, { backgroundColor: TIMELINE_COLORS.all }]} />
-                          <Text style={styles.timelineSummaryLabel} numberOfLines={2}>{analyticsScopeLabel}</Text>
-                        </View>
-                        <Text style={styles.timelineSummaryValue}>{activeTimelineItem.all}</Text>
-                      </View>
-                      <View style={styles.timelineSummaryItem}>
-                        <View style={styles.timelineSummaryItemHeader}>
-                          <View style={[styles.analyticsLegendDot, styles.timelineSummaryDot, { backgroundColor: TIMELINE_COLORS.pending }]} />
-                          <Text style={styles.timelineSummaryLabel} numberOfLines={2}>{t('status.pending')}</Text>
-                        </View>
-                        <Text style={styles.timelineSummaryValue}>{activeTimelineItem.pending}</Text>
-                      </View>
-                      <View style={styles.timelineSummaryItem}>
-                        <View style={styles.timelineSummaryItemHeader}>
-                          <View style={[styles.analyticsLegendDot, styles.timelineSummaryDot, { backgroundColor: TIMELINE_COLORS.closed }]} />
-                          <Text style={styles.timelineSummaryLabel} numberOfLines={2}>{t('status.closed')}</Text>
-                        </View>
-                        <Text style={styles.timelineSummaryValue}>{activeTimelineItem.closed}</Text>
-                      </View>
-                    </View>
-                  </View>
-                ) : null}
-                <View style={styles.timelineChart}>
-                  {analytics.timeline.map((item) => {
-                    const isActive = activeTimelineItem?.key === item.key;
+                <View style={styles.timelineModeToggle}>
+                  {(['period', 'months'] as const).map((item) => {
+                    const active = timelineMode === item;
                     return (
                       <TouchableOpacity
-                        key={item.key}
-                        style={[styles.timelineColumn, isActive && styles.timelineColumnActive]}
-                        onPress={() => setSelectedTimelineMonth(item.key)}
-                        activeOpacity={0.72}
+                        key={item}
+                        style={[styles.timelineModeButton, active && styles.timelineModeButtonActive]}
+                        onPress={() => setTimelineMode(item)}
+                        activeOpacity={0.76}
                       >
-                        <Text style={[styles.timelineCount, isActive && styles.timelineCountActive]}>{item.all}</Text>
-                        <View style={styles.timelineBars}>
-                          <View style={[styles.timelineBar, { height: Math.max((item.all / analytics.maxTimeline) * 76, item.all ? 8 : 2), backgroundColor: TIMELINE_COLORS.all }]} />
-                          <View style={[styles.timelineBar, { height: Math.max((item.pending / analytics.maxTimeline) * 76, item.pending ? 8 : 2), backgroundColor: TIMELINE_COLORS.pending }]} />
-                          <View style={[styles.timelineBar, { height: Math.max((item.closed / analytics.maxTimeline) * 76, item.closed ? 8 : 2), backgroundColor: TIMELINE_COLORS.closed }]} />
-                        </View>
-                        <Text style={styles.timelineLabel} numberOfLines={1}>{item.label}</Text>
+                        <Text style={[styles.timelineModeButtonText, active && styles.timelineModeButtonTextActive]}>
+                          {item === 'period' ? t('map.analytics.timelineSelectedPeriod') : t('map.analytics.timelineAllMonths')}
+                        </Text>
                       </TouchableOpacity>
                     );
                   })}
+                </View>
+                <View style={styles.timelineSummary}>
+                  <Text style={styles.timelineSummaryMonth}>{timelineTitle}</Text>
+                  <View style={styles.timelineSummaryStats}>
+                    <View style={styles.timelineSummaryItem}>
+                      <View style={styles.timelineSummaryItemHeader}>
+                        <View style={[styles.analyticsLegendDot, styles.timelineSummaryDot, { backgroundColor: TIMELINE_COLORS.all }]} />
+                        <Text style={styles.timelineSummaryLabel} numberOfLines={2}>{analyticsScopeLabel}</Text>
+                      </View>
+                      <Text style={styles.timelineSummaryValue}>{timelineTotals.all}</Text>
+                    </View>
+                    <View style={styles.timelineSummaryItem}>
+                      <View style={styles.timelineSummaryItemHeader}>
+                        <View style={[styles.analyticsLegendDot, styles.timelineSummaryDot, { backgroundColor: TIMELINE_COLORS.pending }]} />
+                        <Text style={styles.timelineSummaryLabel} numberOfLines={2}>{t('status.pending')}</Text>
+                      </View>
+                      <Text style={styles.timelineSummaryValue}>{timelineTotals.pending}</Text>
+                    </View>
+                    <View style={styles.timelineSummaryItem}>
+                      <View style={styles.timelineSummaryItemHeader}>
+                        <View style={[styles.analyticsLegendDot, styles.timelineSummaryDot, { backgroundColor: TIMELINE_COLORS.closed }]} />
+                        <Text style={styles.timelineSummaryLabel} numberOfLines={2}>{t('status.closed')}</Text>
+                      </View>
+                      <Text style={styles.timelineSummaryValue}>{timelineTotals.closed}</Text>
+                    </View>
+                  </View>
+                </View>
+                <View style={styles.timelineChart}>
+                  {timeline.data.map((item) => (
+                    <View
+                      key={item.key}
+                      style={styles.timelineColumn}
+                    >
+                      <Text style={styles.timelineCount}>{item.all}</Text>
+                      <View style={styles.timelineBars}>
+                        <View style={[styles.timelineBar, { height: Math.max((item.all / maxTimeline) * 76, item.all ? 8 : 2), backgroundColor: TIMELINE_COLORS.all }]} />
+                        <View style={[styles.timelineBar, { height: Math.max((item.pending / maxTimeline) * 76, item.pending ? 8 : 2), backgroundColor: TIMELINE_COLORS.pending }]} />
+                        <View style={[styles.timelineBar, { height: Math.max((item.closed / maxTimeline) * 76, item.closed ? 8 : 2), backgroundColor: TIMELINE_COLORS.closed }]} />
+                      </View>
+                      <Text style={styles.timelineLabel} numberOfLines={1}>{item.label}</Text>
+                    </View>
+                  ))}
                 </View>
                 <View style={styles.analyticsLegendRow}>
                   <View style={styles.analyticsLegendItem}><View style={[styles.analyticsLegendDot, { backgroundColor: TIMELINE_COLORS.all }]} /><Text style={styles.analyticsLegendText}>{analyticsScopeLabel}</Text></View>
@@ -1324,6 +1466,11 @@ const styles = StyleSheet.create({
   analyticsRowValue: { flexShrink: 0, fontSize: 12, fontWeight: '700', color: '#64748B' },
   analyticsBarTrack: { height: 7, borderRadius: 999, backgroundColor: '#E2E8F0', overflow: 'hidden' },
   analyticsBarFill: { height: '100%', borderRadius: 999 },
+  timelineModeToggle: { flexDirection: 'row', gap: 6, padding: 4, borderRadius: 999, backgroundColor: '#F1F5F9', marginBottom: 12 },
+  timelineModeButton: { flex: 1, minHeight: 34, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10, borderRadius: 999 },
+  timelineModeButtonActive: { backgroundColor: ORANGE, shadowColor: ORANGE, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.14, shadowRadius: 14, elevation: 3 },
+  timelineModeButtonText: { fontSize: 12, lineHeight: 15, fontWeight: '900', color: '#64748B', textAlign: 'center' },
+  timelineModeButtonTextActive: { color: '#FFF' },
   timelineSummary: { marginBottom: 14, padding: 12, borderRadius: 16, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.06)', gap: 10 },
   timelineSummaryMonth: { fontSize: 13, fontWeight: '900', color: '#111827', textTransform: 'uppercase' },
   timelineSummaryStats: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -1334,9 +1481,7 @@ const styles = StyleSheet.create({
   timelineSummaryValue: { alignSelf: 'flex-end', minWidth: 44, fontSize: 20, lineHeight: 24, fontWeight: '900', color: '#111827', textAlign: 'right' },
   timelineChart: { minHeight: 124, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 4 },
   timelineColumn: { flex: 1, minWidth: 0, alignItems: 'center', gap: 6, paddingHorizontal: 2, paddingVertical: 6, borderRadius: 12 },
-  timelineColumnActive: { backgroundColor: '#F8FAFC' },
   timelineCount: { minHeight: 12, fontSize: 9, color: '#94A3B8', fontWeight: '800' },
-  timelineCountActive: { color: '#111827' },
   timelineBars: { height: 78, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 2 },
   timelineBar: { width: 4, borderRadius: 999 },
   timelineLabel: { width: '100%', fontSize: 9, color: '#64748B', textAlign: 'center', fontWeight: '700' },
