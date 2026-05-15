@@ -462,6 +462,7 @@ async def get_operator_requests(
     status: Optional[str] = None,
     priority: Optional[Priority] = None,
     district: Optional[str] = None,
+    limit: int = 0,
     lang: str = "ru",
     current_user: dict = Depends(require_role([ROLE_OPERATOR, ROLE_ADMIN]))
 ):
@@ -475,7 +476,12 @@ async def get_operator_requests(
     if district:
         query["district"] = district
     
-    requests = await db.requests.find(query).sort("created_at", -1).to_list(500)
+    cursor = db.requests.find(query).sort("created_at", -1)
+    if limit > 0:
+        cursor = cursor.limit(limit)
+
+    requests = await cursor.to_list(limit if limit > 0 else None)
+    requests = await attach_citizen_names(requests)
     return [RequestModel(**localize_request_document(req, lang)) for req in requests]
 
 @router.put("/operator/requests/{request_id}")

@@ -345,6 +345,7 @@ export type RequestStatusUpdateInput = {
   status: RequestStatus;
   departmentName?: string;
   internalNote?: string;
+  resolutionNote?: string;
   priority?: RequestPriority;
 };
 

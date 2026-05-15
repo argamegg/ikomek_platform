@@ -388,6 +388,7 @@ export function normalizeRequest(payload: unknown): CivicRequest {
   ).map(normalizeStatusHistory);
   const priority = normalizePriority(pick(record, ["priority", "severity"]));
   const status = normalizeStatus(pick(record, ["status", "state"]));
+  const assignedDepartment = asString(pick(record, ["assignedDepartment", "assigned_department"]));
 
   return {
     id: asString(pick(record, ["id", "requestId", "uuid"]), crypto.randomUUID()),
@@ -427,7 +428,9 @@ export function normalizeRequest(payload: unknown): CivicRequest {
     attachments,
     statusHistory: history.length > 0 ? history : [normalizeStatusHistory({ status, label: status })],
     messages,
-    assignment: undefined,
+    assignment: assignedDepartment
+      ? { id: assignedDepartment, departmentName: assignedDepartment }
+      : undefined,
     internalNote: asString(pick(record, ["internalNote", "internal_note", "operator_notes"])),
   };
 }

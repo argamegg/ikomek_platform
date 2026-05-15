@@ -2595,6 +2595,10 @@ button {
   backdrop-filter: blur(14px);
 }
 
+.operator-command {
+  grid-template-columns: minmax(280px, 1fr) minmax(360px, 1.2fr);
+}
+
 .requests-scope-tabs,
 .requests-status-tabs {
   display: flex;
@@ -2944,6 +2948,64 @@ button {
 .request-tile__actions a:last-child {
   background: #0f172a;
   color: #fff;
+}
+
+.operator-ticket__actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.operator-ticket__actions a,
+.operator-ticket__actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-weight: 900;
+}
+
+.operator-ticket__actions a {
+  background: #fff4ec;
+  color: var(--primary-strong);
+}
+
+.operator-ticket__actions button {
+  background: #0f172a;
+  color: #fff;
+  cursor: pointer;
+}
+
+.operator-modal-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.07);
+  border-radius: 16px;
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 850;
+}
+
+.operator-modal-summary span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.operator-modal-summary svg {
+  color: var(--primary-strong);
+}
+
+.operator-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 .request-detail-hero {
