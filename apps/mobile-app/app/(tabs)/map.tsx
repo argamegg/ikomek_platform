@@ -374,18 +374,24 @@ export default function MapScreen() {
                     <Text style={styles.timelineSummaryMonth}>{activeTimelineItem.label}</Text>
                     <View style={styles.timelineSummaryStats}>
                       <View style={styles.timelineSummaryItem}>
-                        <View style={[styles.analyticsLegendDot, { backgroundColor: TIMELINE_COLORS.all }]} />
-                        <Text style={styles.timelineSummaryLabel}>{t('map.analytics.seriesAll')}</Text>
+                        <View style={styles.timelineSummaryItemHeader}>
+                          <View style={[styles.analyticsLegendDot, styles.timelineSummaryDot, { backgroundColor: TIMELINE_COLORS.all }]} />
+                          <Text style={styles.timelineSummaryLabel} numberOfLines={2}>{t('map.analytics.seriesAll')}</Text>
+                        </View>
                         <Text style={styles.timelineSummaryValue}>{activeTimelineItem.all}</Text>
                       </View>
                       <View style={styles.timelineSummaryItem}>
-                        <View style={[styles.analyticsLegendDot, { backgroundColor: TIMELINE_COLORS.pending }]} />
-                        <Text style={styles.timelineSummaryLabel}>{t('status.pending')}</Text>
+                        <View style={styles.timelineSummaryItemHeader}>
+                          <View style={[styles.analyticsLegendDot, styles.timelineSummaryDot, { backgroundColor: TIMELINE_COLORS.pending }]} />
+                          <Text style={styles.timelineSummaryLabel} numberOfLines={2}>{t('status.pending')}</Text>
+                        </View>
                         <Text style={styles.timelineSummaryValue}>{activeTimelineItem.pending}</Text>
                       </View>
                       <View style={styles.timelineSummaryItem}>
-                        <View style={[styles.analyticsLegendDot, { backgroundColor: TIMELINE_COLORS.closed }]} />
-                        <Text style={styles.timelineSummaryLabel}>{t('status.closed')}</Text>
+                        <View style={styles.timelineSummaryItemHeader}>
+                          <View style={[styles.analyticsLegendDot, styles.timelineSummaryDot, { backgroundColor: TIMELINE_COLORS.closed }]} />
+                          <Text style={styles.timelineSummaryLabel} numberOfLines={2}>{t('status.closed')}</Text>
+                        </View>
                         <Text style={styles.timelineSummaryValue}>{activeTimelineItem.closed}</Text>
                       </View>
                     </View>
@@ -593,9 +599,11 @@ const styles = StyleSheet.create({
   timelineSummary: { marginBottom: 14, padding: 12, borderRadius: 16, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.06)', gap: 10 },
   timelineSummaryMonth: { fontSize: 13, fontWeight: '900', color: '#111827', textTransform: 'uppercase' },
   timelineSummaryStats: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  timelineSummaryItem: { flexGrow: 1, flexBasis: '30%', minWidth: 92, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 8, paddingVertical: 7, borderRadius: 12, backgroundColor: '#FFF' },
-  timelineSummaryLabel: { flex: 1, minWidth: 0, fontSize: 11, fontWeight: '700', color: '#64748B' },
-  timelineSummaryValue: { fontSize: 14, fontWeight: '900', color: '#111827' },
+  timelineSummaryItem: { flexGrow: 1, flexBasis: '30%', minWidth: 92, alignItems: 'stretch', justifyContent: 'space-between', gap: 8, paddingHorizontal: 10, paddingVertical: 10, borderRadius: 12, backgroundColor: '#FFF' },
+  timelineSummaryItemHeader: { minHeight: 30, flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  timelineSummaryDot: { marginTop: 3 },
+  timelineSummaryLabel: { flex: 1, minWidth: 0, fontSize: 11, lineHeight: 14, fontWeight: '700', color: '#64748B' },
+  timelineSummaryValue: { alignSelf: 'flex-end', minWidth: 44, fontSize: 20, lineHeight: 24, fontWeight: '900', color: '#111827', textAlign: 'right' },
   timelineChart: { minHeight: 124, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 4 },
   timelineColumn: { flex: 1, minWidth: 0, alignItems: 'center', gap: 6, paddingHorizontal: 2, paddingVertical: 6, borderRadius: 12 },
   timelineColumnActive: { backgroundColor: '#F8FAFC' },
