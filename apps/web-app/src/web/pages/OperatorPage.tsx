@@ -195,6 +195,7 @@ export function OperatorPage() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.allRequests() }),
         queryClient.invalidateQueries({ queryKey: queryKeys.metrics }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.operatorStats }),
         queryClient.invalidateQueries({ queryKey: queryKeys.publicRequests }),
         selectedRequestId
           ? queryClient.invalidateQueries({ queryKey: queryKeys.request(selectedRequestId) })
