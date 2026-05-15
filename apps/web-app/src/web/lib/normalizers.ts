@@ -3,6 +3,7 @@ import type {
   CivicRequest,
   District,
   Locale,
+  NewsPriority,
   NewsItem,
   NewsListResponse,
   NotificationItem,
@@ -198,20 +199,21 @@ function normalizeStatus(value: unknown): RequestStatus {
 }
 
 function normalizePriority(value: unknown): RequestPriority {
-  const normalized = (asString(value, "warning") || "warning").toLowerCase();
+  const normalized = (asString(value, "normal") || "normal").toLowerCase();
+  return normalized === "low" || normalized === "normal" || normalized === "high"
+    ? normalized
+    : "normal";
+}
+
+function normalizeNewsPriority(value: unknown): NewsPriority | "" {
+  const normalized = asString(value).toLowerCase();
+  if (normalized === "critical" || normalized === "warning" || normalized === "information") {
+    return normalized;
+  }
   if (normalized === "info") {
     return "information";
   }
-
-  if (normalized === "normal") {
-    return "medium";
-  }
-
-  if (normalized === "urgent") {
-    return "high";
-  }
-
-  return normalized as RequestPriority;
+  return "";
 }
 
 export function normalizeUser(payload: unknown): User {
@@ -455,22 +457,13 @@ export function normalizeNews(payload: unknown): NewsItem {
     types: Array.isArray(rawTypes) ? rawTypes : undefined,
     priority: pick(record, ["priority", "severity", "type", "category"]),
   });
-  const fallbackPriority =
+  const fallbackPriority: NewsPriority =
     types[0] === "Аварийные работы"
       ? "critical"
       : types[0] === "Плановые работы" || types[0] === "Дорожные ситуации"
         ? "warning"
         : "information";
-  const rawPriority = normalizePriority(pick(record, ["priority", "severity"]));
-  const priority =
-    rawPriority === "critical" ||
-    rawPriority === "warning" ||
-    rawPriority === "information" ||
-    rawPriority === "high" ||
-    rawPriority === "medium" ||
-    rawPriority === "low"
-      ? rawPriority
-      : fallbackPriority;
+  const priority = normalizeNewsPriority(pick(record, ["priority", "severity"])) || fallbackPriority;
 
   return {
     id: asString(pick(record, ["id", "newsId", "uuid"]), crypto.randomUUID()),

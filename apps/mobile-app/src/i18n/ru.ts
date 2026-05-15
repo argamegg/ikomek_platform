@@ -26,6 +26,12 @@ export const ru = {
     close: 'Закрыть',
   },
 
+  priority: {
+    low: 'Низкий',
+    normal: 'Обычный',
+    high: 'Высокий',
+  },
+
   // Auth
   auth: {
     welcome: 'Добро пожаловать',
@@ -262,7 +268,7 @@ export const ru = {
     },
     priorities: {
       low: 'Низкий',
-      medium: 'Средний',
+      normal: 'Обычный',
       high: 'Высокий',
     },
   },
@@ -521,7 +527,7 @@ export const ru = {
     filterByStatus: 'По статусу',
     filterByPriority: 'По приоритету',
     filterByDistrict: 'По району',
-    urgent: 'Срочно',
+    highPriority: 'Высокий',
     normal: 'Обычный',
     internalNotes: 'Внутренние заметки',
     internalNotesPlaceholder: 'Внутренние заметки...',

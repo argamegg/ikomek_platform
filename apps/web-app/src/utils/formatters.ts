@@ -22,9 +22,9 @@ export function formatStatus(status: RequestStatus) {
 
 export function formatPriority(priority: RequestPriority) {
   return {
-    critical: "Critical",
-    warning: "Warning",
-    information: "Information",
+    low: "Low",
+    normal: "Normal",
+    high: "High",
   }[priority];
 }
 

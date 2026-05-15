@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import type { RequestStatus } from "../../types/platform";
+import type { CivicRequest, RequestPriority, RequestStatus } from "../../types/platform";
 import { PageHeader } from "../components/ui/PageHeader";
 import { Card } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
@@ -18,11 +18,14 @@ import {
 } from "../lib/requestMeta";
 import { getErrorMessage, platformApi, queryKeys } from "../services/platformApi";
 
+const PRIORITY_OPTIONS: RequestPriority[] = ["low", "normal", "high"];
+
 export function OperatorPage() {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [status, setStatus] = useState<RequestStatus>("in_progress");
+  const [priority, setPriority] = useState<RequestPriority>("normal");
   const [departmentName, setDepartmentName] = useState("");
   const [internalNote, setInternalNote] = useState("");
   const requestsQuery = useQuery({
@@ -36,10 +39,19 @@ export function OperatorPage() {
     [requestsQuery.data, selectedRequestId],
   );
 
+  function openUpdateModal(request: CivicRequest) {
+    setSelectedRequestId(request.id);
+    setStatus(request.status);
+    setPriority(request.priority);
+    setDepartmentName(request.assignment?.departmentName ?? "");
+    setInternalNote(request.internalNote ?? "");
+  }
+
   const statusMutation = useMutation({
     mutationFn: () =>
       platformApi.updateRequestStatus(selectedRequestId ?? "", {
         status,
+        priority,
         departmentName,
         internalNote,
       }),
@@ -87,7 +99,7 @@ export function OperatorPage() {
               <span>{request.address}</span>
               <span>{formatDate(request.createdAt, i18n.language as "en" | "ru" | "kz")}</span>
             </div>
-            <Button variant="secondary" onClick={() => setSelectedRequestId(request.id)}>
+            <Button variant="secondary" onClick={() => openUpdateModal(request)}>
               {t("operator.update")}
             </Button>
           </Card>
@@ -113,6 +125,22 @@ export function OperatorPage() {
             <option value="closed">{localizeRequestStatus("closed", t)}</option>
             <option value="resolved">{localizeRequestStatus("resolved", t)}</option>
           </Select>
+          <div className="operator-priority-field">
+            <span className="field__label">{t("operator.priority")}</span>
+            <div className="operator-priority-options" role="radiogroup" aria-label={t("operator.priority")}>
+              {PRIORITY_OPTIONS.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  className={priority === item ? "is-active" : ""}
+                  onClick={() => setPriority(item)}
+                  aria-pressed={priority === item}
+                >
+                  <Badge tone={getPriorityTone(item)}>{localizeRequestPriority(item, t)}</Badge>
+                </button>
+              ))}
+            </div>
+          </div>
           <Input value={departmentName} onChange={(event) => setDepartmentName(event.target.value)} placeholder="Department name" />
           <Textarea rows={5} value={internalNote} onChange={(event) => setInternalNote(event.target.value)} placeholder="Internal note" />
           <Button type="submit" isLoading={statusMutation.isPending}>

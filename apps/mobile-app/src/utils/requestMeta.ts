@@ -10,15 +10,9 @@ export const statusKeyMap: Record<string, string> = {
 };
 
 export const priorityKeyMap: Record<string, string> = {
-  low: 'requests.priorities.low',
-  medium: 'requests.priorities.medium',
-  high: 'requests.priorities.high',
-  warning: 'requests.priorities.medium',
-  normal: 'requests.priorities.medium',
-  info: 'requests.priorities.low',
-  information: 'requests.priorities.low',
-  urgent: 'requests.priorities.high',
-  critical: 'requests.priorities.high',
+  low: 'priority.low',
+  normal: 'priority.normal',
+  high: 'priority.high',
 };
 
 const prettify = (value?: string | null) => {

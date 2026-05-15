@@ -5,5 +5,5 @@ export function getMarkerTone(request: CivicRequest, currentUserId?: string) {
     return "mine";
   }
 
-  return request.priority === "critical" ? "heat" : "public";
+  return request.priority === "high" ? "heat" : "public";
 }

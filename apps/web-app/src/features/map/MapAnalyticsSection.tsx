@@ -55,7 +55,7 @@ export function MapAnalyticsSection({
           <h3>Analytics summary</h3>
           <ul className="feature-list">
             <li>Total public requests: {publicRequests.length}</li>
-            <li>Critical issues: {publicRequests.filter((item) => item.priority === "critical").length}</li>
+            <li>High priority issues: {publicRequests.filter((item) => item.priority === "high").length}</li>
             <li>Pending issues: {publicRequests.filter((item) => item.status === "pending").length}</li>
             <li>Astana districts in view: {districts.length}</li>
           </ul>

@@ -44,6 +44,11 @@ const resources = {
         public: "Public",
         private: "Private",
       },
+      priority: {
+        low: "Low",
+        normal: "Normal",
+        high: "High",
+      },
       nav: {
         home: "Home",
         cabinet: "My Cabinet",
@@ -367,7 +372,7 @@ const resources = {
         },
         priorities: {
           low: "Low",
-          medium: "Medium",
+          normal: "Normal",
           high: "High",
         },
         attachmentTypes: {
@@ -799,6 +804,7 @@ const resources = {
         title: "Operator workspace",
         description: "Prioritize the queue, review details, and update statuses without leaving the shared system.",
         update: "Update status",
+        priority: "Priority",
         stats: {
           title: "My Operator Statistics",
           assigned: "Taken In Work",
@@ -918,6 +924,11 @@ const resources = {
         empty: "Пока нет данных",
         public: "Публично",
         private: "Приватно",
+      },
+      priority: {
+        low: "Низкий",
+        normal: "Обычный",
+        high: "Высокий",
       },
       nav: {
         home: "Главная",
@@ -1243,7 +1254,7 @@ const resources = {
         },
         priorities: {
           low: "Низкий",
-          medium: "Средний",
+          normal: "Обычный",
           high: "Высокий",
         },
         attachmentTypes: {
@@ -1678,6 +1689,7 @@ const resources = {
         title: "Рабочее место оператора",
         description: "Приоритизируйте очередь, проверяйте детали и обновляйте статусы внутри общей системы.",
         update: "Обновить статус",
+        priority: "Приоритет",
         stats: {
           title: "Моя статистика оператора",
           assigned: "Взято в работу",
@@ -1797,6 +1809,11 @@ const resources = {
         empty: "Әзірге дерек жоқ",
         public: "Ашық",
         private: "Жеке",
+      },
+      priority: {
+        low: "Төмен",
+        normal: "Қалыпты",
+        high: "Жоғары",
       },
       nav: {
         home: "Басты бет",
@@ -2123,7 +2140,7 @@ const resources = {
         },
         priorities: {
           low: "Төмен",
-          medium: "Орташа",
+          normal: "Қалыпты",
           high: "Жоғары",
         },
         attachmentTypes: {
@@ -2557,6 +2574,7 @@ const resources = {
         description:
           "Кезекті басқарыңыз, деректерді тексеріңіз және статустарды ортақ жүйеден шықпай жаңартыңыз.",
         update: "Статусты жаңарту",
+        priority: "Басымдық",
         stats: {
           title: "Менің оператор статистикам",
           assigned: "Жұмысқа алынды",

@@ -37,7 +37,7 @@ const TIMELINE_COLORS = {
   closed: "#34c759",
 } as const;
 
-const PRIORITY_OPTIONS = ["all", "low", "medium", "high"] as const;
+const PRIORITY_OPTIONS = ["all", "low", "normal", "high"] as const;
 const WEEKDAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 
 type PriorityFilter = (typeof PRIORITY_OPTIONS)[number];
@@ -115,9 +115,7 @@ function getTimelineSeriesLabel(key: string, t: TranslationFn) {
 
 function getPriorityMatch(request: CivicRequest, priority: PriorityFilter) {
   if (priority === "all") return true;
-  if (priority === "high") return request.priority === "high" || request.priority === "critical";
-  if (priority === "medium") return request.priority === "medium" || request.priority === "warning";
-  return request.priority === "low" || request.priority === "information";
+  return request.priority === priority;
 }
 
 function getStatusCount(requests: CivicRequest[], status: RequestStatus) {

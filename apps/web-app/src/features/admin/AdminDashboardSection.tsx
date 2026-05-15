@@ -3,7 +3,7 @@ import type { Copy } from "../../App";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { SectionHeading } from "../../components/ui/SectionHeading";
-import type { PlatformMetrics, RequestCategory } from "../../types/platform";
+import type { NewsPriority, PlatformMetrics, RequestCategory } from "../../types/platform";
 
 type AdminDashboardSectionProps = {
   copy: Copy;
@@ -12,7 +12,7 @@ type AdminDashboardSectionProps = {
   onPublishNews: (payload: {
     title: string;
     category: string;
-    priority: "critical" | "warning" | "information";
+    priority: NewsPriority;
     summary: string;
     body: string;
     location: string;

@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
-import { apiService, Request, Message } from '../../src/utils/api';
+import { apiService, type Request, type Message, type RequestPriority } from '../../src/utils/api';
 import { StatusBadge } from '../../src/components/StatusBadge';
 import {
   getStatusTranslationKey,
@@ -15,9 +15,15 @@ import {
   localizeProblemType,
   localizeRequestDescription,
 } from '../../src/utils/requestLocalization';
+import { localizeRequestPriority } from '../../src/utils/requestMeta';
 
 const ORANGE = '#FF6B00';
 const STATUSES = ['pending', 'in_progress', 'closed'];
+const PRIORITY_META: Record<RequestPriority, { background: string; text: string; strip: string }> = {
+  low: { background: '#F2F4F7', text: '#667085', strip: '#98A2B3' },
+  normal: { background: '#EAF2FF', text: '#007AFF', strip: '#007AFF' },
+  high: { background: '#FFF3E8', text: '#FF6B00', strip: '#FF6B00' },
+};
 const STATS_HORIZONTAL_PADDING = 16;
 const STATS_GAP = 8;
 
@@ -91,23 +97,41 @@ export default function OperatorDashboard() {
   const statsColumns = viewportWidth >= 340 ? 4 : 2;
   const availableStatsWidth = Math.max(viewportWidth - (STATS_HORIZONTAL_PADDING * 2), 0);
   const statCardWidth = (availableStatsWidth - STATS_GAP * (statsColumns - 1)) / statsColumns;
-
-  const renderCard = ({ item }: { item: Request }) => (
-    <TouchableOpacity style={styles.card} onPress={() => openDetail(item)} activeOpacity={0.8} data-testid={`op-req-${item.id}`}>
-      <View style={[styles.cardStrip, { backgroundColor: item.priority === 'urgent' ? '#FF3B30' : (({ pending: '#FF9500', in_progress: '#007AFF', closed: '#34C759' } as any)[item.status] || '#FF9500') }]} />
-      <View style={styles.cardBody}>
-        <View style={styles.cardTop}>
-          <Text style={styles.cardTitle} numberOfLines={1}>{localizeProblemType(item.category_id, item.problem_type, t)}</Text>
-          <StatusBadge status={item.status} size="small" />
-        </View>
-        <Text style={styles.cardAddress} numberOfLines={1}>{item.address}</Text>
-        <View style={styles.cardMeta}>
-          <Text style={styles.cardDate}>{format(new Date(item.created_at), 'dd.MM.yy HH:mm')}</Text>
-          {item.priority === 'urgent' && <View style={styles.urgentBadge}><Text style={styles.urgentText}>{t('operator.urgent')}</Text></View>}
-        </View>
+  const getPriorityValue = (priority?: Request['priority']) => priority ?? 'normal';
+  const renderPriorityBadge = (priorityValue?: Request['priority']) => {
+    const priority = getPriorityValue(priorityValue);
+    const meta = PRIORITY_META[priority];
+    return (
+      <View style={[styles.priorityBadge, { backgroundColor: meta.background }]}>
+        <Text style={[styles.priorityText, { color: meta.text }]}>
+          {localizeRequestPriority(priority, t)}
+        </Text>
       </View>
-    </TouchableOpacity>
-  );
+    );
+  };
+
+  const renderCard = ({ item }: { item: Request }) => {
+    const priority = getPriorityValue(item.priority);
+    const statusColor = (({ pending: '#FF9500', in_progress: '#007AFF', closed: '#34C759' } as any)[item.status] || '#FF9500');
+    return (
+      <TouchableOpacity style={styles.card} onPress={() => openDetail(item)} activeOpacity={0.8} data-testid={`op-req-${item.id}`}>
+        <View style={[styles.cardStrip, { backgroundColor: priority === 'high' ? PRIORITY_META.high.strip : statusColor }]} />
+        <View style={styles.cardBody}>
+          <View style={styles.cardTop}>
+            <Text style={styles.cardTitle} numberOfLines={1}>{localizeProblemType(item.category_id, item.problem_type, t)}</Text>
+            <View style={styles.cardBadges}>
+              <StatusBadge status={item.status} size="small" />
+              {renderPriorityBadge(priority)}
+            </View>
+          </View>
+          <Text style={styles.cardAddress} numberOfLines={1}>{item.address}</Text>
+          <View style={styles.cardMeta}>
+            <Text style={styles.cardDate}>{format(new Date(item.created_at), 'dd.MM.yy HH:mm')}</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   if (isLoading) return <View style={[styles.container, styles.centered]}><ActivityIndicator size="large" color={ORANGE} /></View>;
 
@@ -171,6 +195,10 @@ export default function OperatorDashboard() {
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>{t('operator.filterByStatus')}</Text>
                 <StatusBadge status={selected.status} />
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>{t('operator.filterByPriority')}</Text>
+                {renderPriorityBadge(selected.priority)}
               </View>
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>{t('myRequests.created')}</Text>
@@ -248,13 +276,14 @@ const styles = StyleSheet.create({
   card: { backgroundColor: '#FFF', borderRadius: 14, marginBottom: 10, flexDirection: 'row', overflow: 'hidden' },
   cardStrip: { width: 4 },
   cardBody: { flex: 1, padding: 14 },
-  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 },
   cardTitle: { fontSize: 15, fontWeight: '600', color: '#1C1C1E', flex: 1, marginRight: 8 },
+  cardBadges: { alignItems: 'flex-end', gap: 6 },
   cardAddress: { fontSize: 13, color: '#8E8E93', marginBottom: 6 },
   cardMeta: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardDate: { fontSize: 12, color: '#C7C7CC' },
-  urgentBadge: { backgroundColor: '#FF3B3015', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  urgentText: { fontSize: 10, fontWeight: '700', color: '#FF3B30' },
+  priorityBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  priorityText: { fontSize: 10, fontWeight: '700' },
   emptyBox: { alignItems: 'center', padding: 60 },
   emptyText: { fontSize: 16, color: '#8E8E93', marginTop: 12 },
   modalContainer: { flex: 1, backgroundColor: '#FFF' },

@@ -3,7 +3,7 @@ import type { Copy } from "../../App";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { SectionHeading } from "../../components/ui/SectionHeading";
-import type { NewsItem, RequestPriority } from "../../types/platform";
+import type { NewsItem, NewsPriority } from "../../types/platform";
 import { formatDate } from "../../utils/formatters";
 
 type NewsAlertsSectionProps = {
@@ -11,7 +11,7 @@ type NewsAlertsSectionProps = {
   items: NewsItem[];
 };
 
-const priorities: Array<"all" | RequestPriority> = [
+const priorities: Array<"all" | NewsPriority> = [
   "all",
   "critical",
   "warning",
@@ -19,7 +19,7 @@ const priorities: Array<"all" | RequestPriority> = [
 ];
 
 export function NewsAlertsSection({ copy, items }: NewsAlertsSectionProps) {
-  const [priority, setPriority] = useState<"all" | RequestPriority>("all");
+  const [priority, setPriority] = useState<"all" | NewsPriority>("all");
   const deferredPriority = useDeferredValue(priority);
   const filtered = items.filter((item) =>
     deferredPriority === "all" ? true : item.priority === deferredPriority,

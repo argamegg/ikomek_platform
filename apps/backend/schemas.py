@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import Enum
 from typing import List, Optional
 import uuid
 
@@ -8,6 +9,11 @@ from pydantic import BaseModel, EmailStr, Field
 ROLE_CITIZEN = "citizen"
 ROLE_OPERATOR = "operator"
 ROLE_ADMIN = "admin"
+
+class Priority(str, Enum):
+    low = "low"
+    normal = "normal"
+    high = "high"
 
 class UserCreate(BaseModel):
     email: EmailStr
@@ -104,7 +110,7 @@ class RequestModel(BaseModel):
     source_lang: Optional[str] = "ru"
     photos: List[str] = []
     status: str = "pending"
-    priority: str = "normal"  # normal, urgent
+    priority: Priority = Priority.normal
     district: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -208,7 +214,7 @@ class StatusUpdate(BaseModel):
     resolution_notes: Optional[str] = None
     operator_notes: Optional[str] = None
     assigned_department: Optional[str] = None
-    priority: Optional[str] = None
+    priority: Optional[Priority] = None
 
 class LanguageUpdate(BaseModel):
     language: str

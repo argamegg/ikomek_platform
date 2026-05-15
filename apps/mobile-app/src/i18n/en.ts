@@ -26,6 +26,12 @@ export const en = {
     close: 'Close',
   },
 
+  priority: {
+    low: 'Low',
+    normal: 'Normal',
+    high: 'High',
+  },
+
   // Auth
   auth: {
     welcome: 'Welcome',
@@ -262,7 +268,7 @@ export const en = {
     },
     priorities: {
       low: 'Low',
-      medium: 'Medium',
+      normal: 'Normal',
       high: 'High',
     },
   },
@@ -521,7 +527,7 @@ export const en = {
     filterByStatus: 'By Status',
     filterByPriority: 'By Priority',
     filterByDistrict: 'By District',
-    urgent: 'Urgent',
+    highPriority: 'High',
     normal: 'Normal',
     internalNotes: 'Internal Notes',
     internalNotesPlaceholder: 'Internal notes...',

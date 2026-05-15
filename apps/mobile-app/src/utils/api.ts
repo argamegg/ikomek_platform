@@ -59,6 +59,8 @@ export function getApiErrorMessage(error: unknown, fallbackMessage: string): str
   return fallbackMessage;
 }
 
+export type RequestPriority = 'low' | 'normal' | 'high';
+
 export interface Category {
   id: string;
   name: string;
@@ -86,7 +88,7 @@ export interface Request {
   source_lang?: string;
   photos: string[];
   status: 'pending' | 'in_progress' | 'closed';
-  priority?: string;
+  priority?: RequestPriority;
   district?: string;
   created_at: string;
   updated_at: string;
@@ -286,7 +288,7 @@ export const apiService = {
   getRequest: (id: string) => api.get<Request>(`/requests/${id}`, { params: { lang: getCurrentLang() } }),
 
   // Requests - Operator
-  getOperatorRequests: (params?: { category?: string; status?: string; priority?: string; district?: string }) =>
+  getOperatorRequests: (params?: { category?: string; status?: string; priority?: RequestPriority; district?: string }) =>
     api.get<Request[]>('/operator/requests', { params: { ...params, lang: getCurrentLang() } }),
   getOperatorMyStats: () => api.get<OperatorStatsResponse>('/operator/my-stats'),
   updateRequestOperator: (id: string, data: {
@@ -294,7 +296,7 @@ export const apiService = {
     resolution_notes?: string;
     operator_notes?: string;
     assigned_department?: string;
-    priority?: string;
+    priority?: RequestPriority;
   }) => api.put(`/operator/requests/${id}`, data),
 
   // Locations

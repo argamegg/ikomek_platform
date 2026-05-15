@@ -16,11 +16,8 @@ const statusToneMap: Record<string, "neutral" | "warning" | "success" | "danger"
 };
 
 const priorityToneMap: Record<string, "neutral" | "warning" | "success" | "danger" | "info"> = {
-  critical: "danger",
   high: "danger",
-  warning: "warning",
-  medium: "warning",
-  information: "info",
+  normal: "info",
   low: "neutral",
 };
 

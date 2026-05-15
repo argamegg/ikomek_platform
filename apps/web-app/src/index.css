@@ -1720,6 +1720,39 @@ button {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.operator-priority-field {
+  display: grid;
+  gap: 10px;
+}
+
+.operator-priority-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.operator-priority-options button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.operator-priority-options button:hover,
+.operator-priority-options button.is-active {
+  border-color: rgba(255, 107, 0, 0.42);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.operator-priority-options button.is-active {
+  transform: translateY(-1px);
+}
+
 .form-grid > .field,
 .form-grid > .upload-dropzone,
 .form-grid > .switcher,

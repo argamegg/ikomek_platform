@@ -26,6 +26,12 @@ export const kz = {
     close: 'Жабу',
   },
 
+  priority: {
+    low: 'Төмен',
+    normal: 'Қалыпты',
+    high: 'Жоғары',
+  },
+
   // Auth
   auth: {
     welcome: 'Қош келдіңіз',
@@ -262,7 +268,7 @@ export const kz = {
     },
     priorities: {
       low: 'Төмен',
-      medium: 'Орташа',
+      normal: 'Қалыпты',
       high: 'Жоғары',
     },
   },
@@ -521,8 +527,8 @@ export const kz = {
     filterByStatus: 'Мәртебе бойынша',
     filterByPriority: 'Басымдық бойынша',
     filterByDistrict: 'Аудан бойынша',
-    urgent: 'Шұғыл',
-    normal: 'Қарапайым',
+    highPriority: 'Жоғары',
+    normal: 'Қалыпты',
     internalNotes: 'Ішкі жазбалар',
     internalNotesPlaceholder: 'Ішкі жазбалар...',
     assignDepartment: 'Бөлімді тағайындау',

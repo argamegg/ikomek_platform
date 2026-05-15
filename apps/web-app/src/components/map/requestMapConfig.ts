@@ -51,9 +51,9 @@ export function getRequestCoordinate(request: CivicRequest): [number, number] {
 }
 
 export function getRequestWeight(request: CivicRequest) {
-  return request.priority === "critical" || request.priority === "high"
+  return request.priority === "high"
     ? 1
-    : request.priority === "warning"
+    : request.priority === "normal"
       ? 0.66
       : 0.4;
 }
@@ -65,7 +65,7 @@ export function getRequestColor(
   const statusColor = STATUS_COLORS[request.status];
   if (statusColor) return statusColor;
 
-  return request.priority === "critical" ? palette.critical : palette.default;
+  return request.priority === "high" ? palette.critical : palette.default;
 }
 
 export function getRequestStrokeColor(

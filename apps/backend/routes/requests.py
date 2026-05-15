@@ -13,7 +13,7 @@ from helpers import (
     normalize_translation_language,
     require_role,
 )
-from schemas import ROLE_ADMIN, ROLE_OPERATOR, RequestCreate, RequestModel, StatusUpdate
+from schemas import ROLE_ADMIN, ROLE_OPERATOR, Priority, RequestCreate, RequestModel, StatusUpdate
 from services.translation import translate_to_all_languages
 
 router = APIRouter()
@@ -280,7 +280,7 @@ async def get_operator_my_stats(current_user: dict = Depends(get_current_user)):
 async def get_operator_requests(
     category: Optional[str] = None,
     status: Optional[str] = None,
-    priority: Optional[str] = None,
+    priority: Optional[Priority] = None,
     district: Optional[str] = None,
     lang: str = "ru",
     current_user: dict = Depends(require_role([ROLE_OPERATOR, ROLE_ADMIN]))
@@ -291,7 +291,7 @@ async def get_operator_requests(
     if status:
         query["status"] = status
     if priority:
-        query["priority"] = priority
+        query["priority"] = priority.value
     if district:
         query["district"] = district
     
@@ -322,8 +322,8 @@ async def update_request_operator(
         update_data["operator_notes"] = status_update.operator_notes
     if status_update.assigned_department:
         update_data["assigned_department"] = status_update.assigned_department
-    if status_update.priority:
-        update_data["priority"] = status_update.priority
+    if status_update.priority is not None:
+        update_data["priority"] = status_update.priority.value
     
     await db.requests.update_one({"id": request_id}, {"$set": update_data})
     return {"message": "Request updated"}

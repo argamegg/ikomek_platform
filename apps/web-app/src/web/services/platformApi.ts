@@ -555,6 +555,7 @@ export const platformApi = {
         status: payload.status,
         assigned_department: payload.departmentName,
         operator_notes: payload.internalNote,
+        priority: payload.priority,
       },
     );
 

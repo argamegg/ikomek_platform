@@ -11,14 +11,9 @@ export type RequestStatus =
   | "rejected"
   | string;
 
-export type RequestPriority =
-  | "critical"
-  | "warning"
-  | "information"
-  | "high"
-  | "medium"
-  | "low"
-  | string;
+export type RequestPriority = "low" | "normal" | "high";
+
+export type NewsPriority = "critical" | "warning" | "information";
 
 export type SavedLocationType =
   | "home"
@@ -164,7 +159,7 @@ export type NewsItem = {
     | "Управление образования"
     | "Мероприятия города"
   >;
-  priority?: RequestPriority;
+  priority?: NewsPriority;
   summary: string;
   summaryRu?: string;
   summaryKz?: string;
@@ -350,6 +345,7 @@ export type RequestStatusUpdateInput = {
   status: RequestStatus;
   departmentName?: string;
   internalNote?: string;
+  priority?: RequestPriority;
 };
 
 export type RequestMessageInput = {

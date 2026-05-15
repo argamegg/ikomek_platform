@@ -4,12 +4,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { StatusBadge } from './StatusBadge';
-import { Request } from '../utils/api';
+import type { Request } from '../utils/api';
 import {
   localizeCategory,
   localizeProblemType,
   localizeRequestDescription,
 } from '../utils/requestLocalization';
+import { localizeRequestPriority } from '../utils/requestMeta';
 
 const CATEGORY_COLORS: Record<string, string> = {
   electricity: '#FFB300',
@@ -33,6 +34,11 @@ const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   other: 'ellipsis-horizontal'
 };
 
+const PRIORITY_COLORS = {
+  low: { background: '#F2F4F7', text: '#667085' },
+  high: { background: '#FFF3E8', text: '#FF6B00' },
+} as const;
+
 interface RequestCardProps {
   request: Request;
   onPress: () => void;
@@ -51,6 +57,8 @@ export const RequestCard = ({ request, onPress }: RequestCardProps) => {
     request.reason,
     t,
   );
+  const priority = request.priority ?? 'normal';
+  const priorityStyle = priority === 'low' || priority === 'high' ? PRIORITY_COLORS[priority] : null;
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
@@ -62,7 +70,16 @@ export const RequestCard = ({ request, onPress }: RequestCardProps) => {
           <Text style={styles.problemType} numberOfLines={1}>{problem}</Text>
           <Text style={styles.category}>{category}</Text>
         </View>
-        <StatusBadge status={request.status} size="small" />
+        <View style={styles.badges}>
+          <StatusBadge status={request.status} size="small" />
+          {priorityStyle && (
+            <View style={[styles.priorityBadge, { backgroundColor: priorityStyle.background }]}>
+              <Text style={[styles.priorityText, { color: priorityStyle.text }]}>
+                {localizeRequestPriority(priority, t)}
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
       
       <View style={styles.content}>
@@ -112,7 +129,22 @@ const styles = StyleSheet.create({
     marginRight: 12
   },
   headerText: {
-    flex: 1
+    flex: 1,
+    minWidth: 0
+  },
+  badges: {
+    alignItems: 'flex-end',
+    gap: 6,
+    marginLeft: 8
+  },
+  priorityBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8
+  },
+  priorityText: {
+    fontSize: 11,
+    fontWeight: '700'
   },
   problemType: {
     fontSize: 16,
