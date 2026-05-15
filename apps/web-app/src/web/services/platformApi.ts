@@ -759,14 +759,19 @@ export const platformApi = {
   },
 
   async updateProfile(payload: UserProfileUpdateInput) {
-    await platformClient.put("/auth/profile", null, {
-      params: {
-        full_name: payload.name,
-        phone: payload.phone,
-      },
+    const profilePayload = {
+      full_name: payload.name,
+      phone: payload.phone,
+      display_name: payload.displayName,
+      gender: payload.gender,
+      birth_date: payload.birthDate,
+      avatar_url: payload.avatarUrl,
+    };
+    await platformClient.put("/auth/profile", profilePayload, {
+      params: profilePayload,
     });
     await platformClient.put("/auth/language", { language: payload.language });
-    return (await this.getCurrentUser()) as User;
+    return (await platformApi.getCurrentUser()) as User;
   },
 
   async getNotifications() {

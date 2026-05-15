@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { FormEvent, PointerEvent, ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import {
   CalendarClock,
+  Check,
   CheckCircle2,
   Clock3,
   FileText,
@@ -24,6 +25,7 @@ import {
   Plus,
   Radio,
   Trash2,
+  X,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -42,8 +44,36 @@ import { searchAstanaAddresses } from "../lib/locationGeocoding";
 const ACCENT = "#ff6b35";
 const MONTH_WINDOW = 6;
 const SAVED_LOCATION_TYPES: SavedLocationType[] = ["home", "work", "study", "family", "other"];
+const AVATAR_CROP_SIZE = 512;
 
 type StatKey = "total" | "closed" | "inProgress" | "pending";
+type ProfileFormState = {
+  firstName: string;
+  lastName: string;
+  displayName: string;
+  gender: string;
+  birthDate: string;
+  phone: string;
+  avatarUrl: string;
+  language: Locale;
+  notificationsEnabled: boolean;
+};
+type AvatarCropState = {
+  source: string;
+  cropX: number;
+  cropY: number;
+  cropSize: number;
+};
+type AvatarDragState = {
+  pointerId: number;
+  mode: "move" | "resize";
+  corner?: "nw" | "ne" | "sw" | "se";
+  startX: number;
+  startY: number;
+  cropX: number;
+  cropY: number;
+  cropSize: number;
+};
 
 type StatCard = {
   key: StatKey;
@@ -171,6 +201,85 @@ function statusIcon(status: RequestStatus) {
   return <Clock3 size={18} />;
 }
 
+function splitProfileName(name: string | undefined) {
+  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  return {
+    firstName: parts[0] ?? "",
+    lastName: parts.slice(1).join(" "),
+  };
+}
+
+function cropAvatarImage(crop: AvatarCropState) {
+  return new Promise<string>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = AVATAR_CROP_SIZE;
+      canvas.height = AVATAR_CROP_SIZE;
+      const context = canvas.getContext("2d");
+      if (!context) {
+        reject(new Error("Canvas is not available"));
+        return;
+      }
+
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, AVATAR_CROP_SIZE, AVATAR_CROP_SIZE);
+
+      const coverScale = Math.max(1 / image.naturalWidth, 1 / image.naturalHeight);
+      const renderedWidth = image.naturalWidth * coverScale;
+      const renderedHeight = image.naturalHeight * coverScale;
+      const renderedX = (1 - renderedWidth) / 2;
+      const renderedY = (1 - renderedHeight) / 2;
+      const sourceX = Math.max(0, (crop.cropX - renderedX) / coverScale);
+      const sourceY = Math.max(0, (crop.cropY - renderedY) / coverScale);
+      const sourceSize = Math.min(
+        image.naturalWidth - sourceX,
+        image.naturalHeight - sourceY,
+        crop.cropSize / coverScale,
+      );
+
+      context.drawImage(
+        image,
+        sourceX,
+        sourceY,
+        sourceSize,
+        sourceSize,
+        0,
+        0,
+        AVATAR_CROP_SIZE,
+        AVATAR_CROP_SIZE,
+      );
+      resolve(canvas.toDataURL("image/jpeg", 0.9));
+    };
+    image.onerror = reject;
+    image.src = crop.source;
+  });
+}
+
+function clampAvatarCrop(cropX: number, cropY: number, cropSize: number) {
+  const size = Math.min(0.96, Math.max(0.28, cropSize));
+  return {
+    cropSize: size,
+    cropX: Math.min(1 - size, Math.max(0, cropX)),
+    cropY: Math.min(1 - size, Math.max(0, cropY)),
+  };
+}
+
+function getNextAvatarCrop(drag: AvatarDragState, deltaX: number, deltaY: number) {
+  if (drag.mode === "move") {
+    return clampAvatarCrop(drag.cropX + deltaX, drag.cropY + deltaY, drag.cropSize);
+  }
+
+  const delta = drag.corner?.includes("n") || drag.corner?.includes("w")
+    ? -((deltaX + deltaY) / 2)
+    : (deltaX + deltaY) / 2;
+  const nextSize = drag.cropSize + delta;
+  const sizeDelta = nextSize - drag.cropSize;
+  const cropX = drag.corner?.includes("w") ? drag.cropX - sizeDelta : drag.cropX;
+  const cropY = drag.corner?.includes("n") ? drag.cropY - sizeDelta : drag.cropY;
+  return clampAvatarCrop(cropX, cropY, nextSize);
+}
+
 export function ProfilePage() {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
@@ -183,6 +292,21 @@ export function ProfilePage() {
     address: "",
     lat: "",
     lng: "",
+  });
+  const [profileEditorOpen, setProfileEditorOpen] = useState(false);
+  const [avatarCrop, setAvatarCrop] = useState<AvatarCropState | null>(null);
+  const avatarDragRef = useRef<AvatarDragState | null>(null);
+  const [profileNameError, setProfileNameError] = useState(false);
+  const [profileForm, setProfileForm] = useState<ProfileFormState>({
+    firstName: "",
+    lastName: "",
+    displayName: "",
+    gender: "",
+    birthDate: "",
+    phone: "",
+    avatarUrl: "",
+    language: locale,
+    notificationsEnabled: true,
   });
 
   const currentUserQuery = useQuery({
@@ -307,6 +431,165 @@ export function ProfilePage() {
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   });
+  const profileDisplayName = `${profileForm.firstName} ${profileForm.lastName}`.trim();
+
+  useEffect(() => {
+    if (!profileEditorOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [profileEditorOpen]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const name = splitProfileName(currentUser.name);
+    setProfileForm({
+      firstName: name.firstName,
+      lastName: name.lastName,
+      displayName: currentUser.displayName || name.firstName || currentUser.name,
+      gender: currentUser.gender ?? "",
+      birthDate: currentUser.birthDate ?? "",
+      phone: currentUser.phone ?? "",
+      avatarUrl: currentUser.avatarUrl ?? "",
+      language: currentUser.language,
+      notificationsEnabled: currentUser.notificationsEnabled,
+    });
+  }, [currentUser]);
+
+  const updateProfileMutation = useMutation({
+    mutationFn: platformApi.updateProfile,
+    onMutate: async (payload) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.currentUser });
+      const previousUser = queryClient.getQueryData(queryKeys.currentUser);
+      queryClient.setQueryData(queryKeys.currentUser, (current: typeof currentUser) => current ? {
+        ...current,
+        name: payload.name,
+        displayName: payload.displayName,
+        gender: payload.gender,
+        birthDate: payload.birthDate,
+        avatarUrl: payload.avatarUrl,
+      } : current);
+      return { previousUser };
+    },
+    onSuccess: (updatedUser, payload) => {
+      queryClient.setQueryData(queryKeys.currentUser, {
+        ...updatedUser,
+        name: payload.name,
+        displayName: payload.displayName,
+        gender: payload.gender,
+        birthDate: payload.birthDate,
+        avatarUrl: payload.avatarUrl,
+      });
+      toast.success(t("cabinet.profileEditor.saved"));
+      setProfileEditorOpen(false);
+    },
+    onError: (error, _payload, context) => {
+      if (context?.previousUser) {
+        queryClient.setQueryData(queryKeys.currentUser, context.previousUser);
+      }
+      toast.error(getErrorMessage(error));
+    },
+  });
+
+  function updateProfileForm<K extends keyof ProfileFormState>(key: K, value: ProfileFormState[K]) {
+    if (key === "firstName" || key === "lastName") {
+      setProfileNameError(false);
+    }
+    setProfileForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function handleAvatarChange(file: File | undefined) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setAvatarCrop({
+          source: reader.result,
+          cropX: 0.08,
+          cropY: 0.05,
+          cropSize: 0.84,
+        });
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleAvatarCropStart(
+    event: PointerEvent<HTMLDivElement | HTMLButtonElement>,
+    mode: AvatarDragState["mode"],
+    corner?: AvatarDragState["corner"],
+  ) {
+    if (!avatarCrop) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const stage = event.currentTarget.closest(".avatar-crop-stage") as HTMLElement | null;
+    stage?.setPointerCapture(event.pointerId);
+    avatarDragRef.current = {
+      pointerId: event.pointerId,
+      mode,
+      corner,
+      startX: event.clientX,
+      startY: event.clientY,
+      cropX: avatarCrop.cropX,
+      cropY: avatarCrop.cropY,
+      cropSize: avatarCrop.cropSize,
+    };
+  }
+
+  function handleAvatarDragMove(event: PointerEvent<HTMLDivElement>) {
+    const drag = avatarDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const deltaX = (event.clientX - drag.startX) / rect.width;
+    const deltaY = (event.clientY - drag.startY) / rect.height;
+    setAvatarCrop((current) => current ? {
+      ...current,
+      ...getNextAvatarCrop(drag, deltaX, deltaY),
+    } : current);
+  }
+
+  function handleAvatarDragEnd(event: PointerEvent<HTMLDivElement>) {
+    if (avatarDragRef.current?.pointerId === event.pointerId) {
+      avatarDragRef.current = null;
+    }
+  }
+
+  async function applyAvatarCrop() {
+    if (!avatarCrop) return;
+    try {
+      const croppedAvatar = await cropAvatarImage(avatarCrop);
+      updateProfileForm("avatarUrl", croppedAvatar);
+      setAvatarCrop(null);
+    } catch {
+      toast.error(t("cabinet.profileEditor.photoError"));
+    }
+  }
+
+  function handleProfileSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const firstName = profileForm.firstName.trim();
+    const lastName = profileForm.lastName.trim();
+    const fullName = `${firstName} ${lastName}`.trim();
+    if (!firstName || !lastName) {
+      setProfileNameError(true);
+      toast.error(t("cabinet.profileEditor.nameRequired"));
+      return;
+    }
+
+    updateProfileMutation.mutate({
+      name: fullName,
+      phone: currentUser?.phone ?? "",
+      displayName: profileDisplayName,
+      gender: profileForm.gender,
+      birthDate: profileForm.birthDate,
+      avatarUrl: profileForm.avatarUrl,
+      language: currentUser?.language ?? locale,
+      notificationsEnabled: currentUser?.notificationsEnabled ?? true,
+    });
+  }
 
   async function handleLogout() {
     try {
@@ -358,7 +641,7 @@ export function ProfilePage() {
           variant="secondary"
           fullWidth
           iconLeft={<Pencil size={16} />}
-          onClick={() => toast(t("cabinet.comingSoon"))}
+          onClick={() => setProfileEditorOpen(true)}
         >
           {t("cabinet.editProfile")}
         </Button>
@@ -605,6 +888,189 @@ export function ProfilePage() {
           </>
         )}
       </div>
+
+      {profileEditorOpen ? (
+        <div
+          className="profile-editor-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setProfileEditorOpen(false);
+            }
+          }}
+        >
+          <motion.form
+            className="profile-editor-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="profile-editor-title"
+            initial={{ opacity: 0, y: 20, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.2 }}
+            onSubmit={handleProfileSubmit}
+          >
+            <div className="profile-editor-modal__header">
+              <div>
+                <p className="cabinet-kicker">{t("cabinet.title")}</p>
+                <h2 id="profile-editor-title">{t("cabinet.profileEditor.title")}</h2>
+              </div>
+              <button
+                type="button"
+                className="profile-editor-modal__close"
+                onClick={() => setProfileEditorOpen(false)}
+                aria-label={t("common.close")}
+              >
+                <X size={22} />
+              </button>
+            </div>
+
+            <div className="profile-editor-modal__hero">
+              <div className="profile-editor-avatar-wrap">
+                <div className="profile-editor-avatar" aria-hidden="true">
+                  {profileForm.avatarUrl ? <img src={profileForm.avatarUrl} alt="" /> : getInitials(profileDisplayName || currentUser?.name || "IK")}
+                </div>
+                <label className="profile-editor-avatar-edit" title={t("cabinet.profileEditor.changePhoto")}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => handleAvatarChange(event.target.files?.[0])}
+                  />
+                  <Pencil size={14} />
+                </label>
+              </div>
+              {profileForm.avatarUrl ? (
+                <button
+                  type="button"
+                  className="profile-editor-avatar-remove"
+                  onClick={() => updateProfileForm("avatarUrl", "")}
+                >
+                  <Trash2 size={14} />
+                  {t("cabinet.profileEditor.removePhoto")}
+                </button>
+              ) : null}
+              <label className="profile-editor-field profile-editor-field--wide">
+                <span>{t("cabinet.profileEditor.displayName")}</span>
+                <input
+                  value={profileDisplayName}
+                  placeholder={t("cabinet.profileEditor.displayNamePlaceholder")}
+                  readOnly
+                />
+                <small>{t("cabinet.profileEditor.displayNameHint")}</small>
+              </label>
+            </div>
+
+            <div className="profile-editor-modal__scroll">
+              <section className="profile-editor-panel">
+                <h3>{t("cabinet.profileEditor.personalData")}</h3>
+                <div className="profile-editor-grid">
+                <label className={`profile-editor-field ${profileNameError ? "profile-editor-field--error" : ""}`}>
+                  <span>{t("cabinet.profileEditor.firstName")}</span>
+                  <input
+                    value={profileForm.firstName}
+                    onChange={(event) => updateProfileForm("firstName", event.target.value)}
+                    autoComplete="given-name"
+                  />
+                </label>
+                <label className={`profile-editor-field ${profileNameError ? "profile-editor-field--error" : ""}`}>
+                  <span>{t("cabinet.profileEditor.lastName")}</span>
+                  <input
+                    value={profileForm.lastName}
+                    onChange={(event) => updateProfileForm("lastName", event.target.value)}
+                    autoComplete="family-name"
+                  />
+                </label>
+                {profileNameError ? (
+                  <p className="profile-editor-error">{t("cabinet.profileEditor.nameRequired")}</p>
+                ) : null}
+                <div className="profile-editor-field">
+                  <span>{t("cabinet.profileEditor.gender")}</span>
+                  <div className="profile-editor-segmented" role="group" aria-label={t("cabinet.profileEditor.gender")}>
+                    {(["male", "female"] as const).map((gender) => (
+                      <button
+                        key={gender}
+                        type="button"
+                        className={profileForm.gender === gender ? "is-active" : ""}
+                        onClick={() => updateProfileForm("gender", gender)}
+                      >
+                        {t(`cabinet.profileEditor.genders.${gender}`)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <label className="profile-editor-field">
+                  <span>{t("cabinet.profileEditor.birthDate")}</span>
+                  <input
+                    type="date"
+                    value={profileForm.birthDate}
+                    onChange={(event) => updateProfileForm("birthDate", event.target.value)}
+                  />
+                </label>
+                </div>
+              </section>
+
+              <div className="profile-editor-actions">
+                <Button type="button" variant="ghost" onClick={() => setProfileEditorOpen(false)}>
+                  {t("common.cancel")}
+                </Button>
+                <Button type="submit" isLoading={updateProfileMutation.isPending}>
+                  {t("cabinet.profileEditor.save")}
+                </Button>
+              </div>
+            </div>
+          </motion.form>
+
+          {avatarCrop ? (
+            <div className="avatar-crop-backdrop" role="presentation">
+              <div className="avatar-crop-modal" role="dialog" aria-modal="true" aria-label={t("cabinet.profileEditor.cropPhoto")}>
+                <div
+                  className="avatar-crop-stage"
+                  onPointerDown={(event) => handleAvatarCropStart(event, "move")}
+                  onPointerMove={handleAvatarDragMove}
+                  onPointerUp={handleAvatarDragEnd}
+                  onPointerCancel={handleAvatarDragEnd}
+                >
+                  <img
+                    src={avatarCrop.source}
+                    alt=""
+                    draggable={false}
+                  />
+                  <div className="avatar-crop-mask" />
+                  <div
+                    className="avatar-crop-frame"
+                    style={{
+                      left: `${avatarCrop.cropX * 100}%`,
+                      top: `${avatarCrop.cropY * 100}%`,
+                      width: `${avatarCrop.cropSize * 100}%`,
+                      height: `${avatarCrop.cropSize * 100}%`,
+                    }}
+                  >
+                    {(["nw", "ne", "sw", "se"] as const).map((corner) => (
+                      <button
+                        key={corner}
+                        type="button"
+                        className={`avatar-crop-handle avatar-crop-handle--${corner}`}
+                        aria-label={t("cabinet.profileEditor.photoScale")}
+                        onPointerDown={(event) => handleAvatarCropStart(event, "resize", corner)}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="avatar-crop-actions">
+                  <button type="button" className="avatar-crop-action avatar-crop-action--ghost" onClick={() => setAvatarCrop(null)}>
+                    <X size={22} />
+                    {t("common.cancel")}
+                  </button>
+                  <button type="button" className="avatar-crop-action avatar-crop-action--primary" onClick={() => void applyAvatarCrop()}>
+                    <Check size={22} />
+                    {t("common.done")}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
