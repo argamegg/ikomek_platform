@@ -468,7 +468,10 @@ export function HomePage() {
           "home.how.stepOneBody",
           "A resident submits a request with category, location, photos, and details from mobile or web.",
         ),
-        meta: safeT("home.how.stepOneMeta", "Category, address, media, and request ID"),
+        owner: safeT("home.how.stepOneOwner", "Resident"),
+        status: safeT("home.how.stepOneStatus", "New request"),
+        visible: safeT("home.how.stepOneVisible", "Category, address, media, and request ID"),
+        result: safeT("home.how.stepOneResult", "The request appears in the shared queue and on the public map when allowed."),
         icon: MapPinned,
       },
       {
@@ -479,7 +482,10 @@ export function HomePage() {
           "home.how.stepTwoBody",
           "Call center staff review incoming reports, update status, and coordinate the proper response path.",
         ),
-        meta: safeT("home.how.stepTwoMeta", "Status, priority, department, and internal notes"),
+        owner: safeT("home.how.stepTwoOwner", "Call center operator"),
+        status: safeT("home.how.stepTwoStatus", "In review / assigned"),
+        visible: safeT("home.how.stepTwoVisible", "Status, priority, department, and internal notes"),
+        result: safeT("home.how.stepTwoResult", "The request gets a responsible route instead of staying as an unstructured message."),
         icon: Radar,
       },
       {
@@ -490,7 +496,10 @@ export function HomePage() {
           "home.how.stepThreeBody",
           "The request progresses through shared statuses with comments, notes, and supporting communication.",
         ),
-        meta: safeT("home.how.stepThreeMeta", "Operator comments and service coordination"),
+        owner: safeT("home.how.stepThreeOwner", "City service team"),
+        status: safeT("home.how.stepThreeStatus", "In progress"),
+        visible: safeT("home.how.stepThreeVisible", "Operator comments, service notes, and coordination history"),
+        result: safeT("home.how.stepThreeResult", "Everyone sees the same progress timeline without duplicate calls or lost context."),
         icon: ShieldCheck,
       },
       {
@@ -501,8 +510,56 @@ export function HomePage() {
           "home.how.stepFourBody",
           "The same person who reported the issue can track updates and close the loop with confidence.",
         ),
-        meta: safeT("home.how.stepFourMeta", "Public status, personal cabinet, and final resolution"),
+        owner: safeT("home.how.stepFourOwner", "Resident and operator"),
+        status: safeT("home.how.stepFourStatus", "Resolved / closed"),
+        visible: safeT("home.how.stepFourVisible", "Public status, personal cabinet, and final resolution"),
+        result: safeT("home.how.stepFourResult", "The resident understands what changed, when it changed, and where to see the record later."),
         icon: CheckCircle2,
+      },
+    ],
+    [safeT],
+  );
+
+  const flowHighlights = useMemo(
+    () => [
+      {
+        id: "single-id",
+        icon: MapPinned,
+        value: safeT("home.how.highlightOneValue", "1 ID"),
+        label: safeT("home.how.highlightOneLabel", "One request record from web, mobile, map, and operator panels."),
+      },
+      {
+        id: "visible-status",
+        icon: Clock3,
+        value: safeT("home.how.highlightTwoValue", "Live status"),
+        label: safeT("home.how.highlightTwoLabel", "Every participant sees where the request is in the lifecycle."),
+      },
+      {
+        id: "role-actions",
+        icon: ShieldCheck,
+        value: safeT("home.how.highlightThreeValue", "Role actions"),
+        label: safeT("home.how.highlightThreeLabel", "Residents, operators, and admins see different actions on the same data."),
+      },
+    ],
+    [safeT],
+  );
+
+  const heroTrustItems = useMemo(
+    () => [
+      {
+        id: "queue",
+        icon: Radar,
+        label: safeT("home.heroTrust.queue", "One live request queue"),
+      },
+      {
+        id: "roles",
+        icon: ShieldCheck,
+        label: safeT("home.heroTrust.roles", "Role-based actions"),
+      },
+      {
+        id: "map",
+        icon: MapPinned,
+        label: safeT("home.heroTrust.map", "Public city map"),
       },
     ],
     [safeT],
@@ -539,6 +596,18 @@ export function HomePage() {
                 </motion.div>
               </Link>
             </div>
+            <div className="home-hero__trust-row" aria-label={t("home.preview.issueStream")}>
+              {heroTrustItems.map((item) => {
+                const Icon = item.icon;
+
+                return (
+                  <span key={item.id}>
+                    <Icon size={15} />
+                    {item.label}
+                  </span>
+                );
+              })}
+            </div>
           </div>
 
           <motion.div
@@ -549,6 +618,13 @@ export function HomePage() {
           >
             <div className="home-hero__visual-orbit home-hero__visual-orbit--one" />
             <div className="home-hero__visual-orbit home-hero__visual-orbit--two" />
+            <div className="home-hero__visual-top">
+              <span>
+                <i />
+                {t("home.preview.issueStream")}
+              </span>
+              <strong>{t("home.preview.inProgressCount", { count: statusCounts.inProgress || 0 })}</strong>
+            </div>
             <div className="home-hero__visual-panel home-hero__visual-panel--primary">
               <span>{t("home.preview.signalLabel")}</span>
               <strong>{t("home.preview.activeMapPoints", { count: publicRequests.length || 0 })}</strong>
@@ -588,6 +664,10 @@ export function HomePage() {
                   <span>{request.address}</span>
                 </motion.article>
               ))}
+            </div>
+            <div className="home-hero__visual-footer">
+              <span>{t("home.preview.syncedCategories")}</span>
+              <strong>{t("home.preview.serviceRoutes", { count: categories.length || 0 })}</strong>
             </div>
           </motion.div>
         </div>
@@ -903,6 +983,7 @@ export function HomePage() {
       </motion.section>
 
       <motion.section
+        id="map-preview"
         className="home-landing__section home-map-preview"
         initial={{ opacity: 0, scale: 0.97, y: 40 }}
         whileInView={{ opacity: 1, scale: 1, y: 0 }}
@@ -916,7 +997,7 @@ export function HomePage() {
         </div>
 
         <div className="home-map-preview__shell">
-          <div className="home-map-preview__overlay">
+          <div className="home-map-preview__main">
             <div className="home-map-preview__pills">
               <span className="home-map-preview__pulse">
                 <i />
@@ -925,6 +1006,23 @@ export function HomePage() {
               <span>{t("home.preview.mapPoints", { count: publicRequests.length || 0 })}</span>
               <span>{t("home.preview.inProgressCount", { count: statusCounts.inProgress || 0 })}</span>
             </div>
+            <div className="home-map-preview__canvas">
+              <IssueMap
+                requests={publicRequests.slice(0, 24)}
+                mode="all"
+                onSelectRequest={setSelectedPreviewRequest}
+                focusRequestId={previewRequest?.id}
+              />
+            </div>
+          </div>
+
+          <aside className="home-map-preview__panel">
+            <div className="home-map-preview__panel-head">
+              <span>{t("home.mapPreview.panelEyebrow")}</span>
+              <h3>{t("home.mapPreview.panelTitle")}</h3>
+              <p>{t("home.mapPreview.panelDescription")}</p>
+            </div>
+
             {previewRequest ? (
               <motion.div
                 key={previewRequest.id}
@@ -970,20 +1068,46 @@ export function HomePage() {
                 </div>
               </motion.div>
             ) : null}
-          </div>
 
-          <div className="home-map-preview__canvas">
-            <IssueMap
-              requests={publicRequests.slice(0, 24)}
-              mode="all"
-              onSelectRequest={setSelectedPreviewRequest}
-              focusRequestId={previewRequest?.id}
-            />
-          </div>
+            <div className="home-map-preview__panel-stats">
+              <div>
+                <strong>{statusCounts.pending}</strong>
+                <span>{t("home.overview.pendingMetric")}</span>
+              </div>
+              <div>
+                <strong>{statusCounts.inProgress}</strong>
+                <span>{t("home.overview.inProgressMetric")}</span>
+              </div>
+              <div>
+                <strong>{statusCounts.closed}</strong>
+                <span>{t("home.overview.closedMetric")}</span>
+              </div>
+            </div>
+
+            <div className="home-map-preview__queue">
+              <span>{t("home.mapPreview.queueTitle")}</span>
+              {recentRequests.map((request) => (
+                <button
+                  key={request.id}
+                  type="button"
+                  onClick={() => setSelectedPreviewRequest(request)}
+                  className={previewRequest?.id === request.id ? "is-active" : undefined}
+                >
+                  <strong>{localizeRequestProblemType(request.categoryId || request.categoryName, request.title, t)}</strong>
+                  <small>
+                    {request.statusLabel
+                      ? localizeRequestStatus(request.statusLabel, t)
+                      : getLocalizedRequestStatus(request.status)}
+                  </small>
+                </button>
+              ))}
+            </div>
+          </aside>
         </div>
       </motion.section>
 
       <motion.section
+        id="how-it-works"
         className="home-landing__section home-how"
         initial={{ opacity: 0, y: 32 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -993,6 +1117,23 @@ export function HomePage() {
         <div className="home-section-heading home-section-heading--centered">
           <span>{t("home.how.eyebrow")}</span>
           <h2>{t("home.how.title")}</h2>
+          <p>{t("home.how.description")}</p>
+        </div>
+
+        <div className="home-how__summary">
+          {flowHighlights.map((item) => {
+            const HighlightIcon = item.icon;
+
+            return (
+              <div key={item.id} className="home-how__summary-item">
+                <span className="home-how__summary-icon">
+                  <HighlightIcon size={18} />
+                </span>
+                <strong>{item.value}</strong>
+                <p>{item.label}</p>
+              </div>
+            );
+          })}
         </div>
 
         <div className="home-how__timeline">
@@ -1008,14 +1149,32 @@ export function HomePage() {
                 viewport={{ once: true, amount: 0.45 }}
                 transition={{ duration: 0.45, delay: index * 0.08 }}
               >
-                <div className="home-how__step-number">{item.step}</div>
+                <div className="home-how__step-head">
+                  <div className="home-how__step-number">{item.step}</div>
+                  <div>
+                    <span className="home-how__step-owner">
+                      <StepIcon size={16} />
+                      {item.owner}
+                    </span>
+                    <h3>{item.title}</h3>
+                  </div>
+                </div>
                 <div className="home-how__step-body">
-                  <h3>{item.title}</h3>
                   <p>{item.body}</p>
-                  <span className="home-how__step-meta">
-                    <StepIcon size={16} />
-                    {item.meta}
-                  </span>
+                  <dl className="home-how__step-facts">
+                    <div>
+                      <dt>{t("home.how.statusLabel")}</dt>
+                      <dd>{item.status}</dd>
+                    </div>
+                    <div>
+                      <dt>{t("home.how.visibleLabel")}</dt>
+                      <dd>{item.visible}</dd>
+                    </div>
+                    <div className="home-how__step-fact--wide">
+                      <dt>{t("home.how.resultLabel")}</dt>
+                      <dd>{item.result}</dd>
+                    </div>
+                  </dl>
                 </div>
               </motion.article>
             );

@@ -73,7 +73,7 @@ const resources = {
       },
       shell: {
         account: "Account",
-        status: "Shared backend connection",
+        status: "Shared platform connection",
         connected: "Live against the existing FastAPI platform",
         guest: "Guest mode",
         userProfile: "User profile",
@@ -87,11 +87,16 @@ const resources = {
       },
       home: {
         badge: "Unified city operations platform",
-        title: "A single command center for iKOMEK 109 city services.",
+        title: "One city service center for iKOMEK 109.",
         description:
-          "Residents, operators, and managers connect through one shared backend, one live workflow, one chat and one city map.",
+          "Residents, operators, and managers connect through one shared city platform, one live process, one chat and one city map.",
         primary: "Report an issue",
         secondary: "View the map",
+        heroTrust: {
+          queue: "One live request queue",
+          roles: "Role-based actions",
+          map: "Public city map",
+        },
         stats: {
           requests: "Public city reports on the map",
           alerts: "Live city alerts",
@@ -113,7 +118,7 @@ const resources = {
           closedMetric: "Resolved requests",
           categoriesMetric: "Service routes",
           cardOneEyebrow: "Shared data",
-          cardOneTitle: "All city workflows on one backend.",
+          cardOneTitle: "All city processes in one shared system.",
           cardOneBody:
             "Everyone sees the same requests, statuses and map context in one connected system.",
           cardTwoEyebrow: "Responsive operations",
@@ -139,7 +144,8 @@ const resources = {
           issueStream: "Shared issue stream",
           disruptions: "Priority notices and incidents",
           inProgressDetail: "Already accepted by operators",
-          syncedCategories: "Service categories synced with backend",
+          syncedCategories: "Service categories synced with the platform",
+          serviceRoutes: "{{count}} service routes ready",
           liveIssuePulse: "Live city pulse",
           mapPoints: "{{count}} points on the map",
           alertsCount: "{{count}} alerts",
@@ -155,7 +161,7 @@ const resources = {
         },
         newsPreview: {
           eyebrow: "City updates",
-          title: "Useful city updates without losing the request workflow.",
+          title: "Useful city updates without losing the request flow.",
           description:
             "Search official announcements, service changes, and city posts while the main page stays focused on requests.",
           locationFallback: "Astana",
@@ -266,37 +272,69 @@ const resources = {
         },
         mapPreview: {
           eyebrow: "Map preview",
-          title: "A compact city map preview with only the actions needed here.",
+          title: "A live city map preview with requests, status and next action.",
           description:
-            "Click a marker to inspect a short public card. Signed-in users can continue to the full request; guests stay in read-only mode.",
+            "Inspect the public city pulse, choose a request, and move from map context to the full request record without losing the request flow.",
+          panelEyebrow: "Selected signal",
+          panelTitle: "Map context becomes an actionable request.",
+          panelDescription:
+            "The preview combines public map visibility with the operational details residents and operators need next.",
+          queueTitle: "Recent public requests",
         },
         how: {
           eyebrow: "How it works",
-          title: "From signal to resolution, every step has a clear owner and visible status.",
+          title: "From request to result: what happens at each step.",
+          description:
+            "The request flow is built around one record: each step shows who owns it, what status is visible, what data moves forward, and what outcome the resident receives.",
+          statusLabel: "Visible status",
+          visibleLabel: "Data and context",
+          resultLabel: "Outcome",
+          highlightOneValue: "1 ID",
+          highlightOneLabel: "One request record from web, mobile, map, and operator panels.",
+          highlightTwoValue: "Live status",
+          highlightTwoLabel: "Every participant sees where the request is in the lifecycle.",
+          highlightThreeValue: "Role actions",
+          highlightThreeLabel: "Residents, operators, and admins see different actions on the same data.",
           stepOneTitle: "Citizen reports the issue",
           stepOneBody:
             "A resident submits a request with category, location, photos, and details from mobile or web.",
           stepOneMeta: "Category, address, media, and request ID",
+          stepOneOwner: "Resident",
+          stepOneStatus: "New request",
+          stepOneVisible: "Category, address, media, and request ID",
+          stepOneResult: "The request appears in the shared queue and on the public map when allowed.",
           stepTwoTitle: "Operators triage and assign",
           stepTwoBody:
             "Call center staff review incoming reports, update status, and coordinate the proper response path.",
           stepTwoMeta: "Status, priority, department, and internal notes",
+          stepTwoOwner: "Call center operator",
+          stepTwoStatus: "In review / assigned",
+          stepTwoVisible: "Status, priority, department, and internal notes",
+          stepTwoResult: "The request gets a responsible route instead of staying as an unstructured message.",
           stepThreeTitle: "City services resolve",
           stepThreeBody:
             "The request progresses through shared statuses with comments, notes, and supporting communication.",
           stepThreeMeta: "Operator comments and service coordination",
+          stepThreeOwner: "City service team",
+          stepThreeStatus: "In progress",
+          stepThreeVisible: "Operator comments, service notes, and coordination history",
+          stepThreeResult: "Everyone sees the same progress timeline without duplicate calls or lost context.",
           stepFourTitle: "Resident sees the result",
           stepFourBody:
             "The same person who reported the issue can track updates and close the loop with confidence.",
           stepFourMeta: "Public status, personal cabinet, and final resolution",
+          stepFourOwner: "Resident and operator",
+          stepFourStatus: "Resolved / closed",
+          stepFourVisible: "Public status, personal cabinet, and final resolution",
+          stepFourResult: "The resident understands what changed, when it changed, and where to see the record later.",
         },
         cta: {
           badge: "Report a city issue",
           title: "Turn awareness into action with one tap.",
           description:
-            "The landing page guides attention toward a real request inside the shared iKOMEK workflow.",
+            "The landing page guides attention toward a real request inside the shared iKOMEK flow.",
           button: "Create request",
-          trust: "Shared backend, synced statuses, one live service lifecycle.",
+          trust: "Shared platform, synced statuses, one live service lifecycle.",
         },
         requestStatus: {
           pending: "Pending",
@@ -310,7 +348,7 @@ const resources = {
           pulse: "City pulse",
           pulseDescription: "Latest alerts and editorial updates from the shared news stream.",
           categories: "Popular categories",
-          categoriesDescription: "Shared request taxonomy pulled from the existing backend.",
+          categoriesDescription: "Shared request taxonomy pulled from the platform catalog.",
           journey: "How the platform works",
         },
       },
@@ -357,7 +395,7 @@ const resources = {
         },
         recoverNotice: {
           title: "Password recovery is not available yet",
-          body: "The shared FastAPI backend does not expose a password recovery flow at the moment.",
+          body: "The server-side service does not expose a password recovery flow at the moment.",
           hint: "You can use a demo account or create a new account from this page.",
         },
         fields: {
@@ -584,7 +622,7 @@ const resources = {
         noAttachments: "No attachments yet.",
         noMessages: "No messages yet.",
         notFoundTitle: "Request not found",
-        notFoundDescription: "We could not load this request from the backend.",
+        notFoundDescription: "We could not load this request from the server.",
       },
       chat: {
         title: "Request chat",
@@ -1018,7 +1056,7 @@ const resources = {
       },
       admin: {
         title: "Admin studio",
-        description: "Monitor request metrics and publish city updates with a product-grade editorial workflow.",
+        description: "Monitor request metrics and publish city updates with a polished editorial flow.",
         publish: "Publish news",
         stats: {
           title: "Platform Statistics",
@@ -1078,7 +1116,7 @@ const resources = {
       },
       emptyStates: {
         genericTitle: "Nothing to show yet",
-        genericDescription: "Once the backend returns records, they’ll appear here automatically.",
+        genericDescription: "Once the server returns records, they’ll appear here automatically.",
       },
     },
   },
@@ -1132,7 +1170,7 @@ const resources = {
         dashboard: "Кабинет жителя",
         requests: "Обращения",
         newRequest: "Подать проблему",
-        news: "Новости и алерты",
+        news: "Новости и оповещения",
         map: "Карта города",
         profile: "Профиль",
         settings: "Настройки",
@@ -1149,7 +1187,7 @@ const resources = {
       },
       shell: {
         account: "Аккаунт",
-        status: "Подключение к shared backend",
+        status: "Подключение к общей платформе",
         connected: "Работает с существующей FastAPI платформой",
         guest: "Гостевой режим",
         userProfile: "Профиль пользователя",
@@ -1162,15 +1200,20 @@ const resources = {
         executor: "Исполнитель",
       },
       home: {
-        badge: "Единая платформа городских сервисов",
-        title: "Единый командный центр для iKOMEK 109.",
+        badge: "Единая городская платформа",
+        title: "Центр управления iKOMEK 109.",
         description:
-          "Жители, операторы и администрация работают через один общий backend, живой поток заявок, единый чат и карту города.",
+          "Жители, операторы и администрация работают через общий поток заявок, единый чат и карту города.",
         primary: "Сообщить проблему",
         secondary: "Открыть карту",
+        heroTrust: {
+          queue: "Одна живая очередь заявок",
+          roles: "Действия по ролям",
+          map: "Публичная карта города",
+        },
         stats: {
           requests: "Общественные заявки на карте",
-          alerts: "Живые городские алерты",
+          alerts: "Городские оповещения",
           inProgress: "Заявки в работе",
           categories: "Категории услуг",
         },
@@ -1189,7 +1232,7 @@ const resources = {
           closedMetric: "Решенные обращения",
           categoriesMetric: "Маршруты служб",
           cardOneEyebrow: "Общие данные",
-          cardOneTitle: "Все городские процессы на одном backend.",
+          cardOneTitle: "Все городские процессы в одной системе.",
           cardOneBody:
             "Все видят одни и те же заявки, статусы и карту в единой системе.",
           cardTwoEyebrow: "Оперативные действия",
@@ -1211,15 +1254,16 @@ const resources = {
           sharedQueue:
             "Веб и мобильное приложение используют одну очередь заявок и общий городской поток.",
           categories: "Категории",
-          alerts: "Алерты",
+          alerts: "Оповещения",
           inProgress: "В работе",
           issueStream: "Общий поток заявок",
           disruptions: "Приоритетные уведомления и инциденты",
           inProgressDetail: "Уже приняты оператором",
-          syncedCategories: "Категории услуг синхронизированы с backend",
+          syncedCategories: "Категории услуг синхронизированы с платформой",
+          serviceRoutes: "{{count}} маршрутов служб готовы",
           liveIssuePulse: "Живой пульс города",
           mapPoints: "{{count}} точек на карте",
-          alertsCount: "{{count}} алертов",
+          alertsCount: "{{count}} оповещений",
           inProgressCount: "{{count}} в работе",
           selectedIssue: "Выбранная проблема",
           publicRequest: "Публичное обращение",
@@ -1227,7 +1271,7 @@ const resources = {
           closeSelected: "Закрыть выбранную проблему",
           openDetails: "Открыть детали",
           signInToAct: "Войти для действий",
-          authenticatedHint: "Откройте полную заявку, чтобы увидеть таймлайн, чат и доступные действия роли.",
+          authenticatedHint: "Откройте полную заявку, чтобы увидеть хронологию, чат и доступные действия роли.",
           guestHint: "Гостевой режим только для просмотра: войдите, чтобы создавать, контактировать или управлять заявками.",
         },
         newsPreview: {
@@ -1239,9 +1283,9 @@ const resources = {
         },
         alertsStory: {
           eyebrow: "Публичная видимость",
-          title: "Алерты рядом с действием.",
+          title: "Оповещения рядом с действием.",
           body: "Жители видят перебои и уведомления в том же интерфейсе, где создаются заявки.",
-          landingMetric: "Редакционные обновления и городские алерты на главной странице",
+          landingMetric: "Редакционные обновления и городские оповещения на главной странице",
         },
         severity: {
           critical: "Критический",
@@ -1342,30 +1386,62 @@ const resources = {
           },
         },
         mapPreview: {
-          eyebrow: "Превью карты",
-          title: "Компактное превью карты с нужными действиями прямо здесь.",
+          eyebrow: "Предпросмотр карты",
+          title: "Живая карта: обращения, статус и следующий шаг.",
           description:
-            "Нажмите на маркер, чтобы посмотреть короткую публичную карточку. Авторизованные пользователи могут перейти в полную заявку, гости остаются в режиме просмотра.",
+            "Смотрите пульс города, выбирайте обращение и переходите от карты к полной записи заявки без потери контекста.",
+          panelEyebrow: "Выбранный сигнал",
+          panelTitle: "Контекст карты превращается в понятное действие.",
+          panelDescription:
+            "Предпросмотр соединяет публичную карту с операционными деталями, которые нужны жителю и оператору.",
+          queueTitle: "Последние публичные обращения",
         },
         how: {
           eyebrow: "Как это работает",
-          title: "От сигнала до решения: у каждого этапа есть владелец и видимый статус.",
+          title: "От заявки до результата: что происходит на каждом этапе.",
+          description:
+            "Весь процесс строится вокруг одной записи заявки: на каждом этапе видно ответственного, текущий статус, передаваемые данные и результат для жителя.",
+          statusLabel: "Видимый статус",
+          visibleLabel: "Данные и контекст",
+          resultLabel: "Результат",
+          highlightOneValue: "1 ID",
+          highlightOneLabel: "Одна запись заявки для веба, мобильного приложения, карты и операторских панелей.",
+          highlightTwoValue: "Живой статус",
+          highlightTwoLabel: "Каждый участник видит, на каком этапе находится обращение.",
+          highlightThreeValue: "Действия по ролям",
+          highlightThreeLabel: "Жители, операторы и администраторы работают с одними данными, но видят свои действия.",
           stepOneTitle: "Житель сообщает о проблеме",
           stepOneBody:
             "Житель отправляет заявку с категорией, локацией, фотографиями и деталями через мобильное приложение или веб.",
           stepOneMeta: "Категория, адрес, медиа и ID заявки",
+          stepOneOwner: "Житель",
+          stepOneStatus: "Новая заявка",
+          stepOneVisible: "Категория, адрес, медиа и ID заявки",
+          stepOneResult: "Заявка попадает в общую очередь и на публичную карту, если это разрешено.",
           stepTwoTitle: "Операторы обрабатывают и назначают",
           stepTwoBody:
             "Сотрудники call-центра просматривают входящие заявки, обновляют статус и координируют правильный путь реагирования.",
           stepTwoMeta: "Статус, приоритет, отдел и внутренние заметки",
+          stepTwoOwner: "Оператор call-центра",
+          stepTwoStatus: "На проверке / назначена",
+          stepTwoVisible: "Статус, приоритет, отдел и внутренние заметки",
+          stepTwoResult: "У обращения появляется ответственный маршрут, а не просто свободное сообщение.",
           stepThreeTitle: "Городские службы решают",
           stepThreeBody:
             "Заявка проходит через общие статусы с комментариями, заметками и сопроводительной коммуникацией.",
           stepThreeMeta: "Комментарии оператора и координация служб",
+          stepThreeOwner: "Городская служба",
+          stepThreeStatus: "В работе",
+          stepThreeVisible: "Комментарии оператора, заметки службы и история координации",
+          stepThreeResult: "Все видят один прогресс без повторных звонков и потерянного контекста.",
           stepFourTitle: "Житель видит результат",
           stepFourBody:
             "Тот же человек, который сообщил о проблеме, может отслеживать обновления и уверенно закрыть цикл.",
           stepFourMeta: "Публичный статус, личный кабинет и итоговое решение",
+          stepFourOwner: "Житель и оператор",
+          stepFourStatus: "Решена / закрыта",
+          stepFourVisible: "Публичный статус, личный кабинет и итоговое решение",
+          stepFourResult: "Житель понимает, что изменилось, когда это произошло и где позже найти запись.",
         },
         cta: {
           badge: "Сообщите о проблеме",
@@ -1373,7 +1449,7 @@ const resources = {
           description:
             "Главная страница ведет к реальному обращению внутри единого iKOMEK-потока.",
           button: "Создать заявку",
-          trust: "Единый backend, синхронизированные статусы, один рабочий цикл.",
+          trust: "Единая платформа, синхронизированные статусы, один рабочий цикл.",
         },
         requestStatus: {
           pending: "Ожидает",
@@ -1385,9 +1461,9 @@ const resources = {
         },
         sections: {
           pulse: "Пульс города",
-          pulseDescription: "Последние алерты и новости из общего контентного потока.",
+          pulseDescription: "Последние оповещения и новости из общего контентного потока.",
           categories: "Популярные категории",
-          categoriesDescription: "Общая таксономия заявок из существующего backend.",
+          categoriesDescription: "Общая таксономия заявок из существующей платформы.",
           journey: "Как работает платформа",
         },
       },
@@ -1434,7 +1510,7 @@ const resources = {
         },
         recoverNotice: {
           title: "Восстановление пароля пока недоступно",
-          body: "Общий FastAPI backend сейчас не предоставляет сценарий восстановления пароля.",
+          body: "Общая серверная часть сейчас не предоставляет сценарий восстановления пароля.",
           hint: "Вы можете использовать демо-аккаунт или создать новый аккаунт на этой странице.",
         },
         fields: {
@@ -1447,7 +1523,7 @@ const resources = {
       },
       dashboard: {
         title: "Центр управления жителя",
-        description: "Следите за заявками, сохраненными адресами, алертами и личной активностью в одном месте.",
+        description: "Следите за заявками, сохраненными адресами, оповещениями и личной активностью в одном месте.",
         cards: {
           total: "Все заявки",
           active: "Активные",
@@ -1597,7 +1673,7 @@ const resources = {
         summaryReadyDescription: "Все обязательные данные заполнены. Обращение можно отправлять.",
         summaryStatusReady: "Готово к отправке",
         summaryStatusDraft: "Нужно дополнить",
-        summaryMapTitle: "Превью локации",
+        summaryMapTitle: "Предпросмотр локации",
         summaryMapEmpty: "Добавьте корректные координаты, чтобы увидеть точку на карте.",
         sectionStatusReady: "Все хорошо",
         sectionStatusNeedsAttention: "Проверьте локацию",
@@ -1664,7 +1740,7 @@ const resources = {
         noAttachments: "Вложений пока нет.",
         noMessages: "Сообщений пока нет.",
         notFoundTitle: "Обращение не найдено",
-        notFoundDescription: "Не удалось загрузить обращение из backend.",
+        notFoundDescription: "Не удалось загрузить обращение с сервера.",
       },
       chat: {
         title: "Чат обращения",
@@ -2028,8 +2104,8 @@ const resources = {
           approximateFound: "Мы нашли примерную точку. Проверьте ее на карте перед сохранением.",
         },
         alerts: {
-          title: "Алерты и уведомления",
-          empty: "Пока нет алертов или уведомлений.",
+          title: "Оповещения и уведомления",
+          empty: "Пока нет оповещений или уведомлений.",
         },
       },
       settings: {
@@ -2098,7 +2174,7 @@ const resources = {
       },
       admin: {
         title: "Админ-студия",
-        description: "Контролируйте метрики и публикуйте городские обновления в аккуратном workflow.",
+        description: "Контролируйте метрики и публикуйте городские обновления в аккуратном рабочем процессе.",
         publish: "Опубликовать новость",
         stats: {
           title: "Статистика платформы",
@@ -2158,7 +2234,7 @@ const resources = {
       },
       emptyStates: {
         genericTitle: "Пока нечего показывать",
-        genericDescription: "Как только backend вернет записи, они автоматически появятся здесь.",
+        genericDescription: "Как только сервер вернет записи, они автоматически появятся здесь.",
       },
     },
   },
@@ -2229,7 +2305,7 @@ const resources = {
       },
       shell: {
         account: "Аккаунт",
-        status: "Ортақ backend байланысы",
+        status: "Ортақ платформа байланысы",
         connected: "Қолданыстағы FastAPI платформасымен жұмыс істейді",
         guest: "Қонақ режимі",
         userProfile: "Пайдаланушы профилі",
@@ -2242,12 +2318,17 @@ const resources = {
         executor: "Орындаушы",
       },
       home: {
-        badge: "Біріккен қала қызметтері платформасы",
-        title: "iKOMEK 109 үшін бір ғана командалық орталық.",
+        badge: "Бірыңғай қалалық платформа",
+        title: "iKOMEK 109 басқару орталығы.",
         description:
-          "Тұрғындар, операторлар және әкімдік бір жалпы backend, біртұтас өтінімдер ағымы, ортақ чат және карта арқылы байланысады.",
+          "Тұрғындар, операторлар және әкімдік ортақ өтінімдер ағымы, бірыңғай чат және қала картасы арқылы жұмыс істейді.",
         primary: "Мәселе жөнінде хабарлау",
         secondary: "Картаны ашу",
+        heroTrust: {
+          queue: "Бір тірі өтінім кезегі",
+          roles: "Рөлге байланысты әрекеттер",
+          map: "Қаланың ашық картасы",
+        },
         stats: {
           requests: "Картадағы ашық мәселелер",
           alerts: "Белсенді ескертулер",
@@ -2269,7 +2350,7 @@ const resources = {
           closedMetric: "Шешілген өтінімдер",
           categoriesMetric: "Қызмет бағыттары",
           cardOneEyebrow: "Ортақ дерек",
-          cardOneTitle: "Барлық қала процесстері бір backend-та.",
+          cardOneTitle: "Барлық қала процестері бір жүйеде.",
           cardOneBody:
             "Барлығы бірдей өтінімдерді, статустарды және карта контентін бір жүйеде көреді.",
           cardTwoEyebrow: "Жылдам әрекет",
@@ -2296,7 +2377,8 @@ const resources = {
           issueStream: "Қалалық өтінімдердің ортақ ағыны",
           disruptions: "Басым хабарламалар мен үзілістер",
           inProgressDetail: "Операторлар қабылдаған",
-          syncedCategories: "Қызмет санаттары backend-пен синхрондалған",
+          syncedCategories: "Қызмет санаттары платформамен синхрондалған",
+          serviceRoutes: "{{count}} қызмет бағыты дайын",
           liveIssuePulse: "Қалалық өтінімдер пульсі",
           mapPoints: "Карта нүктелері: {{count}}",
           alertsCount: "Ескертулер: {{count}}",
@@ -2307,7 +2389,7 @@ const resources = {
           closeSelected: "Таңдалған мәселені жабу",
           openDetails: "Мәліметті ашу",
           signInToAct: "Әрекет үшін кіру",
-          authenticatedHint: "Толық өтінімді ашып, таймлайнды, чатты және рөлге қолжетімді әрекеттерді көріңіз.",
+          authenticatedHint: "Толық өтінімді ашып, хронологияны, чатты және рөлге қолжетімді әрекеттерді көріңіз.",
           guestHint: "Қонақ режимі тек қарауға арналған: өтінім жасау, байланысу немесе басқару үшін кіріңіз.",
         },
         newsPreview: {
@@ -2423,29 +2505,61 @@ const resources = {
         },
         mapPreview: {
           eyebrow: "Карта алдын ала қарауы",
-          title: "Қажетті әрекеттері бар ықшам карта алдын ала қарауы.",
+          title: "Тірі карта алдын ала қарауы: өтінімдер, статус және келесі қадам.",
           description:
-            "Маркерді басып, қысқа ашық карточканы қараңыз. Авторизацияланған пайдаланушылар толық өтінімге өте алады, қонақтар тек қарайды.",
+            "Қала пульсін көріңіз, өтінімді таңдаңыз және карта контекстінен толық жазбаға тез өтіңіз.",
+          panelEyebrow: "Таңдалған сигнал",
+          panelTitle: "Карта контексті түсінікті әрекетке айналады.",
+          panelDescription:
+            "Алдын ала қарау ашық картаны тұрғын мен операторға қажет операциялық мәліметтермен байланыстырады.",
+          queueTitle: "Соңғы ашық өтінімдер",
         },
         how: {
           eyebrow: "Қалай жұмыс істейді",
-          title: "Сигналдан шешімге дейін: әр кезеңнің иесі және көрінетін статусы бар.",
+          title: "Өтінімнен нәтижеге дейін: әр кезеңде не болады.",
+          description:
+            "Процесс бір өтінім жазбасының айналасында құрылады: әр кезеңде жауапты адам, көрінетін статус, алға өтетін деректер және тұрғын алатын нәтиже көрсетіледі.",
+          statusLabel: "Көрінетін статус",
+          visibleLabel: "Деректер мен контекст",
+          resultLabel: "Нәтиже",
+          highlightOneValue: "1 ID",
+          highlightOneLabel: "Веб, мобильді қосымша, карта және оператор панельдері үшін бір өтінім жазбасы.",
+          highlightTwoValue: "Тірі статус",
+          highlightTwoLabel: "Әр қатысушы өтінім өмірлік циклдің қай кезеңінде екенін көреді.",
+          highlightThreeValue: "Рөлдік әрекеттер",
+          highlightThreeLabel: "Тұрғындар, операторлар және әкімшілер бір дерекпен жұмыс істеп, өз әрекеттерін көреді.",
           stepOneTitle: "Тұрғын мәселені хабарлайды",
           stepOneBody:
             "Тұрғын мобильді қосымша не веб арқылы санат, орын, фото және толық мәліметпен өтінім жібереді.",
           stepOneMeta: "Санат, мекенжай, медиа және өтінім ID",
+          stepOneOwner: "Тұрғын",
+          stepOneStatus: "Жаңа өтінім",
+          stepOneVisible: "Санат, мекенжай, медиа және өтінім ID",
+          stepOneResult: "Өтінім ортақ кезекке және рұқсат етілсе ашық картаға түседі.",
           stepTwoTitle: "Операторлар сұрыптап, тағайындайды",
           stepTwoBody:
             "Call-орталық қызметкерлері кіріс өтінімдерді қарап, статусын жаңартып, дұрыс әрекет жолын үйлестіреді.",
           stepTwoMeta: "Статус, басымдық, бөлім және ішкі жазбалар",
+          stepTwoOwner: "Call-орталық операторы",
+          stepTwoStatus: "Тексеруде / тағайындалды",
+          stepTwoVisible: "Статус, басымдық, бөлім және ішкі жазбалар",
+          stepTwoResult: "Өтінім бос хабарлама емес, жауапты бағытқа түседі.",
           stepThreeTitle: "Қалалық қызметтер шешеді",
           stepThreeBody:
             "Өтінім ортақ статустар, пікірлер, ескертпелер және сүйемелдеуші байланыс арқылы алға жылжиды.",
           stepThreeMeta: "Оператор пікірлері және қызметтерді үйлестіру",
+          stepThreeOwner: "Қалалық қызмет",
+          stepThreeStatus: "Орындалуда",
+          stepThreeVisible: "Оператор пікірлері, қызмет жазбалары және үйлестіру тарихы",
+          stepThreeResult: "Барлығы бір прогресті көреді, қайталама қоңыраулар мен жоғалған контекст азаяды.",
           stepFourTitle: "Тұрғын нәтижені көреді",
           stepFourBody:
             "Мәселені хабарлаған сол адам жаңартуларды бақылап, циклді сенімді түрде жаба алады.",
           stepFourMeta: "Ашық статус, жеке кабинет және соңғы шешім",
+          stepFourOwner: "Тұрғын және оператор",
+          stepFourStatus: "Шешілді / жабылды",
+          stepFourVisible: "Ашық статус, жеке кабинет және соңғы шешім",
+          stepFourResult: "Тұрғын не өзгергенін, қашан өзгергенін және жазбаны кейін қайдан табатынын түсінеді.",
         },
         cta: {
           badge: "Мәселе туралы хабарлау",
@@ -2453,7 +2567,7 @@ const resources = {
           description:
             "Басты бет назарды iKOMEK-тің ортақ жұмыс ағымына бағыттайды.",
           button: "Өтінім жасау",
-          trust: "Ортақ backend, синхрондалған статустар, біртұтас қызмет өміршеңдігі.",
+          trust: "Ортақ платформа, синхрондалған статустар, біртұтас қызмет ағымы.",
         },
         requestStatus: {
           pending: "Күтуде",
@@ -2467,7 +2581,7 @@ const resources = {
           pulse: "Қала пульсі",
           pulseDescription: "Ортақ жаңалықтар ағынынан соңғы ескертулер мен жаңартулар.",
           categories: "Танымал санаттар",
-          categoriesDescription: "Қолданыстағы backend-тен келетін ортақ өтінім таксономиясы.",
+          categoriesDescription: "Қолданыстағы платформадан келетін ортақ өтінім таксономиясы.",
           journey: "Платформа қалай жұмыс істейді",
         },
       },
@@ -2514,7 +2628,7 @@ const resources = {
         },
         recoverNotice: {
           title: "Құпиясөзді қалпына келтіру әзірге қолжетімсіз",
-          body: "Ортақ FastAPI backend қазір құпиясөзді қалпына келтіру сценарийін ұсынбайды.",
+          body: "Ортақ серверлік бөлік қазір құпиясөзді қалпына келтіру сценарийін ұсынбайды.",
           hint: "Демо-аккаунтты пайдалана аласыз немесе осы беттен жаңа аккаунт жасай аласыз.",
         },
         fields: {
@@ -2570,7 +2684,7 @@ const resources = {
         filtersPending: "Күтуде",
         filtersProgress: "Орындалуда",
         filtersClosed: "Жабық",
-        timeline: "Статус таймлайны",
+        timeline: "Статус хронологиясы",
         attachments: "Тіркемелер",
         empty: "Бұл фильтр бойынша ештеңе табылмады.",
         statuses: {
@@ -2743,7 +2857,7 @@ const resources = {
         noAttachments: "Әзірге тіркеме жоқ.",
         noMessages: "Әзірге хабарлама жоқ.",
         notFoundTitle: "Өтініш табылмады",
-        notFoundDescription: "Өтінішті backend-тен жүктеу мүмкін болмады.",
+        notFoundDescription: "Өтінішті серверден жүктеу мүмкін болмады.",
       },
       chat: {
         title: "Өтінім чаты",
@@ -3178,7 +3292,7 @@ const resources = {
       },
       admin: {
         title: "Әкімші студиясы",
-        description: "Метрикаларды бақылап, қалалық жаңартуларды жинақы workflow арқылы жариялаңыз.",
+        description: "Метрикаларды бақылап, қалалық жаңартуларды жинақы жұмыс процесі арқылы жариялаңыз.",
         publish: "Жаңалық жариялау",
         stats: {
           title: "Платформа статистикасы",
