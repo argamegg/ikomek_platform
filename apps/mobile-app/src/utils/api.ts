@@ -360,7 +360,7 @@ export const apiService = {
   },
   getNewsItem: (id: string) => api.get<NewsItem>(`/news/${id}`, { params: { lang: getCurrentLang() } }),
   previewNewsTranslation: (data: { title: string; content: string; summary?: string }) =>
-    api.post<NewsTranslationPreview>('/admin/news/translate-preview', data),
+    api.post<NewsTranslationPreview>('/admin/news/translate-preview', data, { timeout: 30000 }),
 
   // Admin - News
   createNews: (data: {

@@ -123,7 +123,7 @@ export function Sidebar({
           isCompact && "sidebar--compact",
           isCompact && mobileOpen && "sidebar--mobile-open",
         )}
-        style={!isCompact ? { width: collapsed ? 94 : 320 } : undefined}
+        style={!isCompact ? { width: collapsed ? 94 : "var(--sidebar-width)" } : undefined}
       >
         {!isCompact ? (
           <button
