@@ -1,9 +1,10 @@
 import asyncio
 import logging
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Request
 from pymongo.errors import PyMongoError
 from starlette.middleware.cors import CORSMiddleware
+from starlette.responses import JSONResponse
 
 from core.config import CORS_ORIGINS, CORS_ORIGIN_REGEX, client, db
 from routes import ROUTERS
@@ -35,6 +36,33 @@ logger = logging.getLogger(__name__)
 @app.get("/api/health")
 async def health_check():
     return {"status": "ok", "service": "iKOMEK 109"}
+
+
+@app.get("/api/health/db")
+async def database_health_check():
+    try:
+        await db.command("ping")
+    except PyMongoError as exc:
+        logger.warning("MongoDB health check failed: %s", exc)
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "error",
+                "service": "mongodb",
+                "detail": "Database is temporarily unavailable",
+            },
+        )
+
+    return {"status": "ok", "service": "mongodb"}
+
+
+@app.exception_handler(PyMongoError)
+async def mongo_exception_handler(request: Request, exc: PyMongoError):
+    logger.exception("MongoDB request failed for %s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Database is temporarily unavailable"},
+    )
 
 
 async def create_indexes():

@@ -1,8 +1,9 @@
 {
   "expo": {
-    "name": "ikomek109",
-    "slug": "ikomek109",
+    "name": "iKOMEK 109",
+    "slug": "ikomek-109",
     "version": "1.0.0",
+    "owner": "argamegg",
     "orientation": "portrait",
     "icon": "./assets/images/app-icon.png",
     "splash": {
@@ -47,6 +48,13 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "backendUrl": "https://ikomek-backend.onrender.com",
+      "eas": {
+        "projectId": "40989f85-c02c-44eb-8c65-9ce231bd0de9"
+      }
     }
   }
 }
