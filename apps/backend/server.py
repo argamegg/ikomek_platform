@@ -32,6 +32,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+@app.get("/api/health")
+async def health_check():
+    return {"status": "ok", "service": "iKOMEK 109"}
+
+
 async def create_indexes():
     await db.requests.create_index(
         [("created_at", -1)],
