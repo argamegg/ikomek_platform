@@ -47,6 +47,7 @@ DEFAULT_CORS_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://localhost:8081",
     "http://127.0.0.1:8081",
+    "https://ikomek-platform.vercel.app",
 ]
 CORS_ORIGINS = [
     origin.strip()
@@ -55,7 +56,7 @@ CORS_ORIGINS = [
 ] or DEFAULT_CORS_ORIGINS
 CORS_ORIGIN_REGEX = os.environ.get(
     "CORS_ORIGIN_REGEX",
-    r"https?://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+):\d+",
+    r"https?://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+):\d+|https://[a-z0-9-]+\.vercel\.app",
 ).strip() or None
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
