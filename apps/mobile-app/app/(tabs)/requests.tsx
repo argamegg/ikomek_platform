@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Image,
   Modal,
+  Pressable,
   ScrollView,
   TextInput,
   KeyboardAvoidingView,
@@ -25,6 +26,7 @@ import { AIAssistantHeaderButton } from '../../src/components/AIAssistantWidget'
 import { RequestCard } from '../../src/components/RequestCard';
 import { StatusBadge } from '../../src/components/StatusBadge';
 import {
+  REQUEST_CATEGORIES,
   localizeCategory,
   localizeProblemType,
   localizeReason,
@@ -33,12 +35,14 @@ import {
 import { localizeRequestPriority } from '../../src/utils/requestMeta';
 
 const ORANGE = '#FF6B00';
+const REQUESTS_PAGE_SIZE = 8;
 
 const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   electricity: 'flash',
   water: 'water',
   roads: 'car',
   public_order: 'shield-checkmark',
+  sewage: 'water',
   waste: 'trash',
   heating: 'flame',
   street_lighting: 'bulb',
@@ -50,6 +54,12 @@ const PRIORITY_BADGE_STYLES = {
   medium: { background: '#FEF9C3', text: '#CA8A04', border: '#FDE047' },
   high: { background: '#FEE2E2', text: '#DC2626', border: '#FCA5A5' },
 } as const;
+
+type SortMode = 'newest' | 'oldest' | 'priority';
+type RequestPriorityFilter = 'all' | 'low' | 'medium' | 'high';
+
+const PRIORITY_WEIGHT: Record<string, number> = { high: 3, medium: 2, low: 1 };
+const formatRequestId = (id?: string | null) => (id ? `#${id.slice(0, 8)}` : '#—');
 
 type ChatAttachment = {
   uri: string;
@@ -78,6 +88,12 @@ export default function RequestsScreen() {
   const [newMessage, setNewMessage] = useState('');
   const [chatAttachment, setChatAttachment] = useState<ChatAttachment | null>(null);
   const [filter, setFilter] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState<RequestPriorityFilter>('all');
+  const [sortMode, setSortMode] = useState<SortMode>('newest');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [isSending, setIsSending] = useState(false);
   const chatSocketRef = useRef<WebSocket | null>(null);
   
@@ -86,20 +102,14 @@ export default function RequestsScreen() {
   const fetchRequests = useCallback(async () => {
     try {
       const response = await apiService.getUserRequests();
-      let data = response.data;
-      
-      if (filter) {
-        data = data.filter(r => r.status === filter);
-      }
-      
-      setRequests(data);
+      setRequests(response.data);
     } catch (error) {
       console.error('Error fetching requests:', error);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [filter]);
+  }, []);
 
   useEffect(() => {
     fetchRequests();
@@ -206,6 +216,65 @@ export default function RequestsScreen() {
     { key: 'closed', label: t('status.closed'), color: '#34C759' }
   ];
 
+  const categoryOptions = useMemo(
+    () => REQUEST_CATEGORIES.map((category) => ({
+      id: category.id,
+      label: localizeCategory(category.id, t),
+    })),
+    [t],
+  );
+
+  const filteredRequests = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
+    return requests
+      .filter((request) => {
+        const matchesStatus = !filter || request.status === filter;
+        const matchesCategory = categoryFilter === 'all' || request.category_id === categoryFilter;
+        const priority = request.priority ?? 'medium';
+        const matchesPriority = priorityFilter === 'all' || priority === priorityFilter;
+        const searchable = [
+          request.id,
+          request.address,
+          request.description,
+          localizeProblemType(request.category_id, request.problem_type, t),
+          localizeCategory(request.category_id || request.category_name, t),
+        ].join(' ').toLowerCase();
+        const matchesSearch = !query || searchable.includes(query);
+        return matchesStatus && matchesCategory && matchesPriority && matchesSearch;
+      })
+      .slice()
+      .sort((first, second) => {
+        if (sortMode === 'oldest') {
+          return new Date(first.created_at).getTime() - new Date(second.created_at).getTime();
+        }
+        if (sortMode === 'priority') {
+          const priorityDiff = (PRIORITY_WEIGHT[second.priority ?? 'medium'] ?? 2) - (PRIORITY_WEIGHT[first.priority ?? 'medium'] ?? 2);
+          if (priorityDiff !== 0) return priorityDiff;
+        }
+        return new Date(second.created_at).getTime() - new Date(first.created_at).getTime();
+      });
+  }, [categoryFilter, filter, priorityFilter, requests, searchQuery, sortMode, t]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [categoryFilter, filter, priorityFilter, searchQuery, sortMode]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRequests.length / REQUESTS_PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedRequests = useMemo(() => {
+    const start = (safeCurrentPage - 1) * REQUESTS_PAGE_SIZE;
+    return filteredRequests.slice(start, start + REQUESTS_PAGE_SIZE);
+  }, [filteredRequests, safeCurrentPage]);
+
+  useEffect(() => {
+    if (currentPage !== safeCurrentPage) {
+      setCurrentPage(safeCurrentPage);
+    }
+  }, [currentPage, safeCurrentPage]);
+
+  const hasActiveFilters = Boolean(filter) || categoryFilter !== 'all' || priorityFilter !== 'all' || sortMode !== 'newest';
+
   const renderRequestDetail = () => {
     if (!selectedRequest) return null;
 
@@ -255,6 +324,7 @@ export default function RequestsScreen() {
                 <Ionicons name={categoryIcon} size={24} color={ORANGE} />
               </View>
               <View style={styles.detailHeaderText}>
+                <Text style={styles.detailRequestId}>{formatRequestId(selectedRequest.id)}</Text>
                 <Text style={styles.detailTitle}>{detailProblem}</Text>
                 <Text style={styles.detailCategory}>{detailCategory}</Text>
               </View>
@@ -412,28 +482,42 @@ export default function RequestsScreen() {
       <View style={styles.header}>
         <View style={styles.headerTextBlock}>
           <Text style={styles.headerTitle}>{t('myRequests.title')}</Text>
-          <Text style={styles.headerSubtitle}>{t('myRequests.totalRequestsCount', { count: requests.length })}</Text>
+          <Text style={styles.headerSubtitle}>{t('myRequests.totalRequestsCount', { count: filteredRequests.length })}</Text>
         </View>
         <AIAssistantHeaderButton />
       </View>
 
-      <View style={styles.filterContainer}>
-        {filters.map((f) => (
-          <TouchableOpacity
-            key={f.key || 'all'}
-            style={[styles.filterButton, filter === f.key && styles.filterButtonActive]}
-            onPress={() => setFilter(f.key)}
-          >
-            {f.color && <View style={[styles.filterDot, { backgroundColor: f.color }]} />}
-            <Text style={[styles.filterText, filter === f.key && styles.filterTextActive]}>
-              {f.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+      <View style={styles.searchPanel}>
+        <View style={styles.searchBox}>
+          <Ionicons name="search" size={18} color="#94A3B8" />
+          <TextInput
+            style={styles.searchInput}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder={t('myRequests.searchPlaceholder')}
+            placeholderTextColor="#94A3B8"
+            returnKeyType="search"
+          />
+          {searchQuery ? (
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.searchClear}>
+              <Ionicons name="close" size={16} color="#94A3B8" />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+        <TouchableOpacity
+          style={[styles.filterTrigger, hasActiveFilters && styles.filterTriggerActive]}
+          onPress={() => setIsFilterOpen(true)}
+          activeOpacity={0.78}
+        >
+          <Ionicons name="options-outline" size={18} color={hasActiveFilters ? '#FFF' : ORANGE} />
+          <Text style={[styles.filterTriggerText, hasActiveFilters && styles.filterTriggerTextActive]}>
+            {t('common.filter')}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <FlatList
-        data={requests}
+        data={paginatedRequests}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <RequestCard request={item} onPress={() => openRequestDetail(item)} />
@@ -442,6 +526,40 @@ export default function RequestsScreen() {
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={ORANGE} />
         }
         contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+        ListHeaderComponent={
+          filteredRequests.length > 0 ? (
+            <Text style={styles.pageHint}>
+              {t('myRequests.pageHint', { page: safeCurrentPage, total: totalPages })}
+            </Text>
+          ) : null
+        }
+        ListFooterComponent={
+          filteredRequests.length > REQUESTS_PAGE_SIZE ? (
+            <View style={styles.paginationRow}>
+              <TouchableOpacity
+                style={[styles.paginationButton, safeCurrentPage <= 1 && styles.paginationButtonDisabled]}
+                disabled={safeCurrentPage <= 1}
+                onPress={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                activeOpacity={0.76}
+              >
+                <Text style={[styles.paginationButtonText, safeCurrentPage <= 1 && styles.paginationButtonTextDisabled]}>
+                  {t('common.back')}
+                </Text>
+              </TouchableOpacity>
+              <Text style={styles.paginationCount}>{safeCurrentPage} / {totalPages}</Text>
+              <TouchableOpacity
+                style={[styles.paginationButton, safeCurrentPage >= totalPages && styles.paginationButtonDisabled]}
+                disabled={safeCurrentPage >= totalPages}
+                onPress={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                activeOpacity={0.76}
+              >
+                <Text style={[styles.paginationButtonText, safeCurrentPage >= totalPages && styles.paginationButtonTextDisabled]}>
+                  {t('common.continue')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : null
+        }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="document-text-outline" size={48} color="#C7C7CC" />
@@ -450,6 +568,121 @@ export default function RequestsScreen() {
           </View>
         }
       />
+
+      <Modal visible={isFilterOpen} transparent animationType="slide" onRequestClose={() => setIsFilterOpen(false)}>
+        <View style={styles.filterOverlay}>
+          <Pressable style={styles.filterBackdrop} onPress={() => setIsFilterOpen(false)} />
+          <View style={[styles.filterSheet, { paddingBottom: insets.bottom + 18 }]}>
+            <View style={styles.filterHandle} />
+            <View style={styles.filterSheetHeader}>
+              <View>
+                <Text style={styles.filterSheetTitle}>{t('myRequests.filtersTitle')}</Text>
+                <Text style={styles.filterSheetSubtitle}>{t('myRequests.resultCount', { count: filteredRequests.length })}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.filterReset}
+                onPress={() => {
+                  setFilter(null);
+                  setCategoryFilter('all');
+                  setPriorityFilter('all');
+                  setSortMode('newest');
+                }}
+                activeOpacity={0.78}
+              >
+                <Text style={styles.filterResetText}>{t('myRequests.resetFilters')}</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.filterSheetContent}>
+              <Text style={styles.filterSectionTitle}>{t('myRequests.statusFilter')}</Text>
+              <View style={styles.optionGrid}>
+                {filters.map((item) => {
+                  const active = filter === item.key;
+                  return (
+                    <TouchableOpacity
+                      key={item.key || 'all'}
+                      style={[styles.sheetOption, active && styles.sheetOptionActive]}
+                      onPress={() => setFilter(item.key)}
+                      activeOpacity={0.78}
+                    >
+                      {item.color ? <View style={[styles.sheetOptionDot, { backgroundColor: item.color }]} /> : <Ionicons name="apps-outline" size={16} color={active ? '#FFF' : '#64748B'} />}
+                      <Text style={[styles.sheetOptionText, active && styles.sheetOptionTextActive]}>{item.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={styles.filterSectionTitle}>{t('myRequests.categoryFilter')}</Text>
+              <View style={styles.optionGrid}>
+                <TouchableOpacity
+                  style={[styles.sheetOption, categoryFilter === 'all' && styles.sheetOptionActive]}
+                  onPress={() => setCategoryFilter('all')}
+                  activeOpacity={0.78}
+                >
+                  <Ionicons name="grid-outline" size={16} color={categoryFilter === 'all' ? '#FFF' : '#64748B'} />
+                  <Text style={[styles.sheetOptionText, categoryFilter === 'all' && styles.sheetOptionTextActive]}>{t('myRequests.allCategories')}</Text>
+                </TouchableOpacity>
+                {categoryOptions.map((item) => {
+                  const active = categoryFilter === item.id;
+                  return (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={[styles.sheetOption, active && styles.sheetOptionActive]}
+                      onPress={() => setCategoryFilter(item.id)}
+                      activeOpacity={0.78}
+                    >
+                      <Text style={[styles.sheetOptionText, active && styles.sheetOptionTextActive]} numberOfLines={1}>{item.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={styles.filterSectionTitle}>{t('myRequests.priorityFilter')}</Text>
+              <View style={styles.optionGrid}>
+                {(['all', 'high', 'medium', 'low'] as RequestPriorityFilter[]).map((item) => {
+                  const active = priorityFilter === item;
+                  const label = item === 'all' ? t('myRequests.allPriorities') : localizeRequestPriority(item, t);
+                  return (
+                    <TouchableOpacity
+                      key={item}
+                      style={[styles.sheetOption, active && styles.sheetOptionActive]}
+                      onPress={() => setPriorityFilter(item)}
+                      activeOpacity={0.78}
+                    >
+                      <Text style={[styles.sheetOptionText, active && styles.sheetOptionTextActive]}>{label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={styles.filterSectionTitle}>{t('myRequests.sortLabel')}</Text>
+              <View style={styles.optionGrid}>
+                {([
+                  ['newest', t('myRequests.sortNewest')],
+                  ['oldest', t('myRequests.sortOldest')],
+                  ['priority', t('myRequests.sortPriority')],
+                ] as const).map(([item, label]) => {
+                  const active = sortMode === item;
+                  return (
+                    <TouchableOpacity
+                      key={item}
+                      style={[styles.sheetOption, active && styles.sheetOptionActive]}
+                      onPress={() => setSortMode(item)}
+                      activeOpacity={0.78}
+                    >
+                      <Text style={[styles.sheetOptionText, active && styles.sheetOptionTextActive]}>{label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+
+            <TouchableOpacity style={styles.filterApply} onPress={() => setIsFilterOpen(false)} activeOpacity={0.82}>
+              <Text style={styles.filterApplyText}>{t('myRequests.applyFilters')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {renderRequestDetail()}
     </View>
@@ -486,6 +719,64 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginTop: 4
   },
+  searchPanel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingBottom: 12
+  },
+  searchBox: {
+    flex: 1,
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.94)',
+    borderWidth: 1,
+    borderColor: '#E2E8F0'
+  },
+  searchInput: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+    paddingVertical: 0
+  },
+  searchClear: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F1F5F9'
+  },
+  filterTrigger: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+    backgroundColor: '#FFF4EC',
+    borderWidth: 1,
+    borderColor: 'rgba(255,107,0,0.2)'
+  },
+  filterTriggerActive: {
+    backgroundColor: ORANGE,
+    borderColor: ORANGE
+  },
+  filterTriggerText: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: ORANGE
+  },
+  filterTriggerTextActive: {
+    color: '#FFF'
+  },
   filterContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
@@ -519,6 +810,160 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingTop: 4
+  },
+  pageHint: {
+    marginHorizontal: 18,
+    marginBottom: 6,
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#64748B'
+  },
+  paginationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    paddingHorizontal: 18,
+    paddingTop: 12
+  },
+  paginationButton: {
+    minHeight: 42,
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    backgroundColor: '#FFF4EC',
+    borderWidth: 1,
+    borderColor: 'rgba(255,107,0,0.18)'
+  },
+  paginationButtonDisabled: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0'
+  },
+  paginationButtonText: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: ORANGE
+  },
+  paginationButtonTextDisabled: {
+    color: '#94A3B8'
+  },
+  paginationCount: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#111827'
+  },
+  filterOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end'
+  },
+  filterBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15,23,42,0.38)'
+  },
+  filterSheet: {
+    maxHeight: '84%',
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    backgroundColor: '#FFF'
+  },
+  filterHandle: {
+    alignSelf: 'center',
+    width: 44,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: '#CBD5E1',
+    marginBottom: 16
+  },
+  filterSheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12
+  },
+  filterSheetTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#111827'
+  },
+  filterSheetSubtitle: {
+    marginTop: 2,
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#64748B'
+  },
+  filterReset: {
+    minHeight: 36,
+    justifyContent: 'center',
+    paddingHorizontal: 13,
+    borderRadius: 999,
+    backgroundColor: '#FFF4EC',
+    borderWidth: 1,
+    borderColor: 'rgba(255,107,0,0.18)'
+  },
+  filterResetText: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: ORANGE
+  },
+  filterSheetContent: {
+    paddingTop: 18,
+    paddingBottom: 16,
+    gap: 14
+  },
+  filterSectionTitle: {
+    marginTop: 2,
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#94A3B8',
+    textTransform: 'uppercase'
+  },
+  optionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8
+  },
+  sheetOption: {
+    minHeight: 42,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingHorizontal: 12,
+    borderRadius: 15,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0'
+  },
+  sheetOptionActive: {
+    backgroundColor: ORANGE,
+    borderColor: ORANGE
+  },
+  sheetOptionDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 4.5
+  },
+  sheetOptionText: {
+    maxWidth: 190,
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#475569'
+  },
+  sheetOptionTextActive: {
+    color: '#FFF'
+  },
+  filterApply: {
+    minHeight: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 18,
+    backgroundColor: ORANGE
+  },
+  filterApplyText: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#FFF'
   },
   emptyContainer: {
     alignItems: 'center',
@@ -587,6 +1032,12 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: 8,
     marginLeft: 10
+  },
+  detailRequestId: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: ORANGE,
+    marginBottom: 3
   },
   priorityBadge: {
     paddingHorizontal: 10,

@@ -8,11 +8,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
-import { apiService, MapPoint } from '../../src/utils/api';
+import { apiService, MapPoint, Request } from '../../src/utils/api';
 import { RequestsMap } from '../../src/components/RequestsMap';
 import { StatusBadge } from '../../src/components/StatusBadge';
 import { AIAssistantHeaderButton } from '../../src/components/AIAssistantWidget';
-import { REQUEST_CATEGORIES, localizeCategory, localizeProblemType } from '../../src/utils/requestLocalization';
+import {
+  REQUEST_CATEGORIES,
+  localizeCategory,
+  localizeProblemType,
+  localizeReason,
+  localizeRequestDescription,
+} from '../../src/utils/requestLocalization';
+import { localizeRequestPriority } from '../../src/utils/requestMeta';
 
 const ORANGE = '#FF6B00';
 
@@ -32,12 +39,19 @@ const TIMELINE_COLORS = {
   closed: '#34C759',
 } as const;
 
+const PRIORITY_BADGE_STYLES = {
+  low: { background: '#F3F4F6', text: '#6B7280', border: '#D1D5DB' },
+  medium: { background: '#FEF9C3', text: '#CA8A04', border: '#FDE047' },
+  high: { background: '#FEE2E2', text: '#DC2626', border: '#FCA5A5' },
+} as const;
+
 const ANALYTICS_MONTHS = 12;
 const HOUR_MARKS = ['00', '06', '12', '18'];
 const WEEKDAY_DATES = Array.from({ length: 7 }, (_, index) => new Date(Date.UTC(2024, 0, index + 1, 12)));
 const LOCALE_TAGS = { ru: 'ru-RU', en: 'en-US', kz: 'kk-KZ' } as const;
 const MAX_DATE_RANGE_DAYS = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
+const MAP_LIST_PAGE_SIZE = 8;
 
 type LocaleKey = keyof typeof LOCALE_TAGS;
 type Hotspot = { address: string; count: number; points: MapPoint[] };
@@ -210,6 +224,8 @@ const formatWeekdayLabel = (dayIndex: number, locale: LocaleKey) => {
     return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][dayIndex];
   }
 };
+
+const formatRequestId = (id?: string | null) => (id ? `#${id.slice(0, 8)}` : '#—');
 
 const getAllMonthsBounds = () => {
   const now = new Date();
@@ -697,6 +713,9 @@ export default function MapScreen() {
   const [filter, setFilter] = useState<'all' | 'my'>('all');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [selectedPoint, setSelectedPoint] = useState<MapPoint | null>(null);
+  const [selectedPointRequest, setSelectedPointRequest] = useState<Request | null>(null);
+  const [isPointRequestLoading, setIsPointRequestLoading] = useState(false);
+  const [isPointExpanded, setIsPointExpanded] = useState(false);
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
   const [activeHotspotAddress, setActiveHotspotAddress] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -704,6 +723,7 @@ export default function MapScreen() {
   const [timelineMode, setTimelineMode] = useState<TimelineMode>('period');
   const [allTimelinePoints, setAllTimelinePoints] = useState<MapPoint[]>([]);
   const [isMapFiltersOpen, setIsMapFiltersOpen] = useState(false);
+  const [listPage, setListPage] = useState(1);
   const allMonthsBounds = useMemo(() => getAllMonthsBounds(), []);
 
   const loadPoints = useCallback(async () => {
@@ -804,6 +824,24 @@ export default function MapScreen() {
   const clearMapFocus = useCallback(() => {
     setActiveHotspotAddress(null);
     setSelectedPoint(null);
+    setSelectedPointRequest(null);
+    setIsPointExpanded(false);
+  }, []);
+
+  const openPointDetail = useCallback(async (point: MapPoint) => {
+    setSelectedPoint(point);
+    setSelectedPointRequest(null);
+    setIsPointExpanded(false);
+    setIsPointRequestLoading(true);
+
+    try {
+      const response = await apiService.getRequest(point.id);
+      setSelectedPointRequest(response.data);
+    } catch (error) {
+      console.error('Error loading request detail:', error);
+    } finally {
+      setIsPointRequestLoading(false);
+    }
   }, []);
 
   const updateOwnershipFilter = useCallback((nextFilter: 'all' | 'my') => {
@@ -894,9 +932,28 @@ export default function MapScreen() {
 
   const mapPoints = activeHotspot ? activeHotspot.points : filteredPoints;
 
+  useEffect(() => {
+    setListPage(1);
+  }, [categoryFilter, dateRange, filter, statusFilter, viewMode]);
+
+  const listTotalPages = Math.max(1, Math.ceil(filteredPoints.length / MAP_LIST_PAGE_SIZE));
+  const safeListPage = Math.min(listPage, listTotalPages);
+  const paginatedListPoints = useMemo(() => {
+    const start = (safeListPage - 1) * MAP_LIST_PAGE_SIZE;
+    return filteredPoints.slice(start, start + MAP_LIST_PAGE_SIZE);
+  }, [filteredPoints, safeListPage]);
+
+  useEffect(() => {
+    if (listPage !== safeListPage) {
+      setListPage(safeListPage);
+    }
+  }, [listPage, safeListPage]);
+
   const focusHotspot = useCallback((hotspot: Hotspot) => {
     setViewMode('map');
     setSelectedPoint(null);
+    setSelectedPointRequest(null);
+    setIsPointExpanded(false);
     setActiveHotspotAddress(hotspot.address);
     requestAnimationFrame(() => {
       contentScrollRef.current?.scrollTo({ y: 0, animated: true });
@@ -908,7 +965,7 @@ export default function MapScreen() {
     const statusColor = STATUS_COLORS[item.status] || '#FF9500';
     const title = localizeProblemType(item.category, item.title, t);
     return (
-      <TouchableOpacity key={item.id} style={styles.pointCard} onPress={() => setSelectedPoint(item)} activeOpacity={0.8} data-testid={`point-card-${item.id}`}>
+      <TouchableOpacity key={item.id} style={styles.pointCard} onPress={() => openPointDetail(item)} activeOpacity={0.8} data-testid={`point-card-${item.id}`}>
         <View style={[styles.statusIndicator, { backgroundColor: statusColor }]} />
         <View style={styles.pointContent}>
           <View style={styles.pointHeader}>
@@ -917,6 +974,7 @@ export default function MapScreen() {
               <View style={styles.pointInfo}>
                 <Text style={styles.pointTitle} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
                 <Text style={styles.pointAddress} numberOfLines={1} ellipsizeMode="tail">{item.address}</Text>
+                <Text style={styles.pointId}>{formatRequestId(item.id)}</Text>
               </View>
             </View>
             <View style={styles.pointBadge}>
@@ -935,6 +993,29 @@ export default function MapScreen() {
       <Text style={styles.analyticsEmptyText}>{t('map.analytics.insufficientData')}</Text>
     </View>
   );
+
+  const selectedPointCategoryId = selectedPointRequest?.category_id ?? selectedPoint?.category;
+  const selectedPointProblemType = selectedPointRequest?.problem_type ?? selectedPoint?.title;
+  const selectedPointTitle = selectedPoint
+    ? localizeProblemType(selectedPointCategoryId, selectedPointProblemType, t)
+    : '';
+  const selectedPointCategory = selectedPoint
+    ? localizeCategory(selectedPointCategoryId, t)
+    : '';
+  const selectedPointReason = selectedPointRequest
+    ? localizeReason(selectedPointRequest.category_id, selectedPointRequest.reason, t)
+    : '';
+  const selectedPointDescription = selectedPointRequest
+    ? localizeRequestDescription(
+      selectedPointRequest.description,
+      selectedPointRequest.category_id,
+      selectedPointRequest.problem_type,
+      selectedPointRequest.reason,
+      t,
+    )
+    : '';
+  const selectedPointPriority = selectedPointRequest?.priority ?? selectedPoint?.priority ?? 'medium';
+  const selectedPointPriorityStyle = PRIORITY_BADGE_STYLES[selectedPointPriority] ?? PRIORITY_BADGE_STYLES.medium;
 
   if (isLoading) {
     return <View style={[styles.container, styles.centered]}><ActivityIndicator size="large" color={ORANGE} /></View>;
@@ -1008,7 +1089,7 @@ export default function MapScreen() {
               points={mapPoints}
               categoryColors={CATEGORY_COLORS}
               statusColors={STATUS_COLORS}
-              onPointPress={setSelectedPoint}
+              onPointPress={openPointDetail}
               focusPoints={activeHotspot?.points ?? null}
             />
             <TouchableOpacity
@@ -1049,7 +1130,7 @@ export default function MapScreen() {
                 </View>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hotspotMapRequests}>
                   {activeHotspot.points.map((point) => (
-                    <TouchableOpacity key={point.id} style={styles.hotspotMapRequest} onPress={() => setSelectedPoint(point)} activeOpacity={0.76}>
+                    <TouchableOpacity key={point.id} style={styles.hotspotMapRequest} onPress={() => openPointDetail(point)} activeOpacity={0.76}>
                       <View style={styles.hotspotMapRequestTop}>
                         <View style={[styles.hotspotMapCategoryMark, { backgroundColor: CATEGORY_COLORS[point.category] || '#9E9E9E' }]} />
                         <StatusBadge status={point.status as any} size="small" />
@@ -1078,12 +1159,37 @@ export default function MapScreen() {
         ) : (
           <View style={[styles.listSurface, { minHeight: listMinHeight, marginHorizontal: horizontalPadding }]}>
             <View style={styles.listContent}>
-              {filteredPoints.length > 0 ? filteredPoints.map(renderPointCard) : (
+              {filteredPoints.length > 0 ? paginatedListPoints.map(renderPointCard) : (
                 <View style={styles.emptyContainer}>
                   <Ionicons name="map-outline" size={48} color="#CBD5E1" />
                   <Text style={styles.emptyText}>{t('myRequests.noRequests')}</Text>
                 </View>
               )}
+              {filteredPoints.length > MAP_LIST_PAGE_SIZE ? (
+                <View style={styles.paginationRow}>
+                  <TouchableOpacity
+                    style={[styles.paginationButton, safeListPage <= 1 && styles.paginationButtonDisabled]}
+                    disabled={safeListPage <= 1}
+                    onPress={() => setListPage((page) => Math.max(1, page - 1))}
+                    activeOpacity={0.76}
+                  >
+                    <Text style={[styles.paginationButtonText, safeListPage <= 1 && styles.paginationButtonTextDisabled]}>
+                      {t('common.back')}
+                    </Text>
+                  </TouchableOpacity>
+                  <Text style={styles.paginationCount}>{safeListPage} / {listTotalPages}</Text>
+                  <TouchableOpacity
+                    style={[styles.paginationButton, safeListPage >= listTotalPages && styles.paginationButtonDisabled]}
+                    disabled={safeListPage >= listTotalPages}
+                    onPress={() => setListPage((page) => Math.min(listTotalPages, page + 1))}
+                    activeOpacity={0.76}
+                  >
+                    <Text style={[styles.paginationButtonText, safeListPage >= listTotalPages && styles.paginationButtonTextDisabled]}>
+                      {t('common.continue')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
             </View>
           </View>
         )}
@@ -1292,20 +1398,74 @@ export default function MapScreen() {
                   <Ionicons name="location" size={24} color={CATEGORY_COLORS[selectedPoint.category] || '#9E9E9E'} />
                 </View>
                 <View style={{ flex: 1, marginLeft: 14, gap: 6 }}>
-                  <Text style={styles.modalTitle}>{localizeProblemType(selectedPoint.category, selectedPoint.title, t)}</Text>
-                  <StatusBadge status={selectedPoint.status as any} />
+                  <Text style={styles.modalRequestId}>{formatRequestId(selectedPoint.id)}</Text>
+                  <Text style={styles.modalTitle}>{selectedPointTitle}</Text>
+                  <View style={styles.modalBadgeRow}>
+                    <StatusBadge status={selectedPoint.status as any} />
+                    <View style={[styles.modalPriorityBadge, { backgroundColor: selectedPointPriorityStyle.background, borderColor: selectedPointPriorityStyle.border }]}>
+                      <Text style={[styles.modalPriorityText, { color: selectedPointPriorityStyle.text }]}>
+                        {localizeRequestPriority(selectedPointPriority, t)}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
-                <TouchableOpacity style={styles.modalClose} onPress={() => setSelectedPoint(null)}>
+                <TouchableOpacity
+                  style={styles.modalClose}
+                  onPress={() => {
+                    setSelectedPoint(null);
+                    setSelectedPointRequest(null);
+                    setIsPointExpanded(false);
+                  }}
+                >
                   <Ionicons name="close" size={24} color="#8E8E93" />
                 </TouchableOpacity>
               </View>
               <View style={styles.modalBody}>
+                <View style={styles.infoRow}><Ionicons name="pricetag-outline" size={18} color="#8E8E93" /><Text style={styles.infoText}>{selectedPointCategory}</Text></View>
                 <View style={styles.infoRow}><Ionicons name="location" size={18} color={ORANGE} /><Text style={styles.infoText}>{selectedPoint.address}</Text></View>
                 <View style={styles.infoRow}><Ionicons name="time-outline" size={18} color="#8E8E93" /><Text style={styles.infoText}>{format(new Date(selectedPoint.created_at), 'dd.MM.yyyy HH:mm')}</Text></View>
                 <View style={styles.infoRow}><Ionicons name="navigate-outline" size={18} color="#8E8E93" /><Text style={styles.infoText}>{selectedPoint.lat.toFixed(5)}, {selectedPoint.lng.toFixed(5)}</Text></View>
                 {selectedPoint.is_mine && (
                   <View style={styles.myBadge}><Ionicons name="checkmark-circle" size={16} color={ORANGE} /><Text style={styles.myBadgeText}>{t('map.yourRequest')}</Text></View>
                 )}
+                {isPointExpanded ? (
+                  <View style={styles.fullInfoBox}>
+                    {isPointRequestLoading ? (
+                      <View style={styles.fullInfoLoading}>
+                        <ActivityIndicator color={ORANGE} />
+                        <Text style={styles.fullInfoLoadingText}>{t('common.loading')}</Text>
+                      </View>
+                    ) : selectedPointRequest ? (
+                      <>
+                        <View style={styles.fullInfoRow}>
+                          <Text style={styles.fullInfoLabel}>{t('myRequests.detailsSection')}</Text>
+                          <Text style={styles.fullInfoValue}>{selectedPointReason}</Text>
+                        </View>
+                        <Text style={styles.fullInfoDescription}>{selectedPointDescription}</Text>
+                        {selectedPointRequest.assigned_department ? (
+                          <View style={styles.fullInfoRow}>
+                            <Text style={styles.fullInfoLabel}>{t('operator.assignDepartment')}</Text>
+                            <Text style={styles.fullInfoValue}>{selectedPointRequest.assigned_department}</Text>
+                          </View>
+                        ) : null}
+                        {selectedPointRequest.resolution_notes ? (
+                          <View style={styles.fullInfoRow}>
+                            <Text style={styles.fullInfoLabel}>{t('myRequests.resolution')}</Text>
+                            <Text style={styles.fullInfoValue}>{selectedPointRequest.resolution_notes}</Text>
+                          </View>
+                        ) : null}
+                      </>
+                    ) : (
+                      <Text style={styles.fullInfoDescription}>{t('map.detailsUnavailable')}</Text>
+                    )}
+                  </View>
+                ) : null}
+                <TouchableOpacity style={styles.fullInfoButton} onPress={() => setIsPointExpanded((value) => !value)} activeOpacity={0.78}>
+                  <Text style={styles.fullInfoButtonText}>
+                    {isPointExpanded ? t('map.hideDetails') : t('map.showFullDetails')}
+                  </Text>
+                  <Ionicons name={isPointExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={ORANGE} />
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -1443,7 +1603,14 @@ const styles = StyleSheet.create({
   pointBadge: { flexShrink: 0, alignItems: 'flex-end' },
   pointTitle: { fontSize: 15, fontWeight: '600', color: '#1C1C1E' },
   pointAddress: { fontSize: 12, color: '#64748B', marginTop: 2 },
+  pointId: { marginTop: 3, fontSize: 10, color: '#94A3B8', fontWeight: '900' },
   pointDate: { fontSize: 12, color: '#94A3B8' },
+  paginationRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingTop: 8 },
+  paginationButton: { minHeight: 42, justifyContent: 'center', paddingHorizontal: 14, borderRadius: 16, backgroundColor: '#FFF4EC', borderWidth: 1, borderColor: 'rgba(255, 107, 0, 0.18)' },
+  paginationButtonDisabled: { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' },
+  paginationButtonText: { fontSize: 13, fontWeight: '900', color: ORANGE },
+  paginationButtonTextDisabled: { color: '#94A3B8' },
+  paginationCount: { fontSize: 14, fontWeight: '900', color: '#111827' },
   emptyContainer: { alignItems: 'center', justifyContent: 'center', padding: 60 },
   emptyText: { fontSize: 16, color: '#475569', marginTop: 12, fontWeight: '500' },
   analyticsSection: { gap: 14 },
@@ -1510,11 +1677,24 @@ const styles = StyleSheet.create({
   modalHandle: { width: 36, height: 4, backgroundColor: '#E5E5EA', borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
   modalHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   modalCatIcon: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  modalRequestId: { fontSize: 11, fontWeight: '900', color: ORANGE },
   modalTitle: { fontSize: 18, fontWeight: '600', color: '#1C1C1E' },
+  modalBadgeRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
+  modalPriorityBadge: { paddingHorizontal: 9, paddingVertical: 5, borderRadius: 999, borderWidth: 1 },
+  modalPriorityText: { fontSize: 11, fontWeight: '900' },
   modalClose: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F2F2F7', alignItems: 'center', justifyContent: 'center' },
   modalBody: { gap: 14 },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   infoText: { flex: 1, fontSize: 15, color: '#3C3C43' },
+  fullInfoBox: { gap: 12, padding: 14, borderRadius: 18, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' },
+  fullInfoLoading: { minHeight: 72, alignItems: 'center', justifyContent: 'center', gap: 8 },
+  fullInfoLoadingText: { fontSize: 13, fontWeight: '700', color: '#64748B' },
+  fullInfoRow: { gap: 4 },
+  fullInfoLabel: { fontSize: 11, fontWeight: '900', color: '#94A3B8', textTransform: 'uppercase' },
+  fullInfoValue: { fontSize: 14, lineHeight: 20, fontWeight: '800', color: '#111827' },
+  fullInfoDescription: { fontSize: 14, lineHeight: 21, color: '#475569', fontWeight: '600' },
+  fullInfoButton: { minHeight: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 16, backgroundColor: '#FFF4EC', borderWidth: 1, borderColor: 'rgba(255, 107, 0, 0.16)' },
+  fullInfoButtonText: { fontSize: 14, fontWeight: '900', color: ORANGE },
   myBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: `${ORANGE}10`, padding: 10, borderRadius: 10, marginTop: 6 },
   myBadgeText: { fontSize: 14, fontWeight: '600', color: ORANGE },
 });
