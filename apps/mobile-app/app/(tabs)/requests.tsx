@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,14 +7,17 @@ import {
   RefreshControl,
   TouchableOpacity,
   ActivityIndicator,
+  Image,
   Modal,
   ScrollView,
   TextInput,
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { apiService, Request, Message } from '../../src/utils/api';
@@ -48,6 +51,23 @@ const PRIORITY_BADGE_STYLES = {
   high: { background: '#FEE2E2', text: '#DC2626', border: '#FCA5A5' },
 } as const;
 
+type ChatAttachment = {
+  uri: string;
+  dataUrl: string;
+  label: string;
+  type: 'image';
+};
+
+function mergeMessages(current: Message[], incoming: Message) {
+  if (current.some((message) => message.id === incoming.id)) {
+    return current;
+  }
+
+  return [...current, incoming].sort(
+    (first, second) => new Date(first.created_at).getTime() - new Date(second.created_at).getTime(),
+  );
+}
+
 export default function RequestsScreen() {
   const { t } = useTranslation();
   const [requests, setRequests] = useState<Request[]>([]);
@@ -56,8 +76,10 @@ export default function RequestsScreen() {
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
+  const [chatAttachment, setChatAttachment] = useState<ChatAttachment | null>(null);
   const [filter, setFilter] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const chatSocketRef = useRef<WebSocket | null>(null);
   
   const insets = useSafeAreaInsets();
 
@@ -90,6 +112,7 @@ export default function RequestsScreen() {
 
   const openRequestDetail = async (request: Request) => {
     setSelectedRequest(request);
+    setChatAttachment(null);
     try {
       const response = await apiService.getMessages(request.id);
       setMessages(response.data);
@@ -98,14 +121,77 @@ export default function RequestsScreen() {
     }
   };
 
+  useEffect(() => {
+    if (!selectedRequest) return undefined;
+
+    let isCancelled = false;
+    let socket: WebSocket | null = null;
+
+    AsyncStorage.getItem('token').then((token) => {
+      if (!token || isCancelled) return;
+      socket = new WebSocket(apiService.getMessageSocketUrl(selectedRequest.id, token));
+      chatSocketRef.current = socket;
+      socket.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload?.type === 'message' && payload.message) {
+            setMessages((current) => mergeMessages(current, payload.message as Message));
+          }
+        } catch (error) {
+          console.warn('Unable to parse chat socket message', error);
+        }
+      };
+    });
+
+    return () => {
+      isCancelled = true;
+      socket?.close();
+      if (chatSocketRef.current === socket) {
+        chatSocketRef.current = null;
+      }
+    };
+  }, [selectedRequest]);
+
+  const pickChatMedia = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: false,
+      quality: 0.7,
+      base64: true,
+    });
+
+    const asset = result.canceled ? null : result.assets[0];
+    if (!asset?.base64) {
+      return;
+    }
+
+    setChatAttachment({
+      uri: asset.uri,
+      dataUrl: `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}`,
+      label: asset.fileName || 'image.jpg',
+      type: 'image',
+    });
+  };
+
   const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedRequest || isSending) return;
+    if ((!newMessage.trim() && !chatAttachment) || !selectedRequest || isSending) return;
     
     setIsSending(true);
     try {
-      const response = await apiService.sendMessage(selectedRequest.id, newMessage.trim());
-      setMessages([...messages, response.data]);
+      const response = await apiService.sendMessage(selectedRequest.id, {
+        content: newMessage.trim(),
+        attachment_url: chatAttachment?.dataUrl,
+        attachment_label: chatAttachment?.label,
+        attachment_type: chatAttachment?.type,
+      });
+      setMessages((current) => mergeMessages(current, response.data));
       setNewMessage('');
+      setChatAttachment(null);
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
@@ -144,7 +230,15 @@ export default function RequestsScreen() {
           style={styles.modalContainer}
         >
           <View style={[styles.modalHeader, { paddingTop: insets.top || 16 }]}>
-            <TouchableOpacity onPress={() => setSelectedRequest(null)} style={styles.closeButton}>
+            <TouchableOpacity
+              onPress={() => {
+                setSelectedRequest(null);
+                setMessages([]);
+                setNewMessage('');
+                setChatAttachment(null);
+              }}
+              style={styles.closeButton}
+            >
               <Ionicons name="close" size={24} color="#1C1C1E" />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>{t('myRequests.details')}</Text>
@@ -260,13 +354,30 @@ export default function RequestsScreen() {
                     ]}>
                       {format(new Date(msg.created_at), 'HH:mm')}
                     </Text>
+                    {msg.attachment_url ? (
+                      <TouchableOpacity activeOpacity={0.9}>
+                        <Image source={{ uri: msg.attachment_url }} style={styles.messageImage} />
+                      </TouchableOpacity>
+                    ) : null}
                   </View>
                 ))
               )}
             </View>
           </ScrollView>
 
+          {chatAttachment ? (
+            <View style={styles.pendingAttachment}>
+              <Image source={{ uri: chatAttachment.uri }} style={styles.pendingAttachmentImage} />
+              <Text style={styles.pendingAttachmentText} numberOfLines={1}>{chatAttachment.label}</Text>
+              <TouchableOpacity onPress={() => setChatAttachment(null)} style={styles.pendingAttachmentRemove}>
+                <Ionicons name="close" size={16} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+          ) : null}
           <View style={[styles.messageInputContainer, { paddingBottom: insets.bottom || 16 }]}>
+            <TouchableOpacity style={styles.attachButton} onPress={pickChatMedia}>
+              <Ionicons name="image-outline" size={21} color={ORANGE} />
+            </TouchableOpacity>
             <TextInput
               style={styles.messageInput}
               placeholder={t('myRequests.typeMessage')}
@@ -276,9 +387,9 @@ export default function RequestsScreen() {
               multiline
             />
             <TouchableOpacity
-              style={[styles.sendButton, (!newMessage.trim() || isSending) && styles.sendButtonDisabled]}
+              style={[styles.sendButton, ((!newMessage.trim() && !chatAttachment) || isSending) && styles.sendButtonDisabled]}
               onPress={sendMessage}
-              disabled={!newMessage.trim() || isSending}
+              disabled={(!newMessage.trim() && !chatAttachment) || isSending}
             >
               <Ionicons name="send" size={20} color="#FFF" />
             </TouchableOpacity>
@@ -597,6 +708,45 @@ const styles = StyleSheet.create({
   operatorMessageTime: {
     color: '#8E8E93'
   },
+  messageImage: {
+    width: 210,
+    height: 150,
+    borderRadius: 14,
+    marginTop: 8,
+    backgroundColor: 'rgba(0,0,0,0.08)'
+  },
+  pendingAttachment: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: `${ORANGE}30`,
+    backgroundColor: `${ORANGE}10`,
+    padding: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10
+  },
+  pendingAttachmentImage: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: '#E5E7EB'
+  },
+  pendingAttachmentText: {
+    flex: 1,
+    color: '#1C1C1E',
+    fontSize: 13,
+    fontWeight: '700'
+  },
+  pendingAttachmentRemove: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#FFF',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
   messageInputContainer: {
     flexDirection: 'row',
     padding: 16,
@@ -604,6 +754,16 @@ const styles = StyleSheet.create({
     borderTopColor: '#F2F2F7',
     alignItems: 'flex-end',
     gap: 12
+  },
+  attachButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFF7F0',
+    borderWidth: 1,
+    borderColor: `${ORANGE}35`,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   messageInput: {
     flex: 1,

@@ -358,6 +358,7 @@ export function normalizeMessage(payload: unknown): RequestMessage {
 
   return {
     id: asString(pick(record, ["id", "messageId", "uuid"]), crypto.randomUUID()),
+    senderId: asString(pick(record, ["senderId", "sender_id"])),
     senderRole: normalizeRole(
       pick(record, ["senderRole", "sender_role", "role"]) ?? senderType,
     ),
@@ -367,7 +368,8 @@ export function normalizeMessage(payload: unknown): RequestMessage {
       pick(record, ["timestamp", "createdAt", "created_at"]),
       new Date().toISOString(),
     ),
-    attachmentLabel: asString(pick(record, ["attachmentLabel", "attachment_name"])),
+    attachmentType: asString(pick(record, ["attachmentType", "attachment_type"])),
+    attachmentLabel: asString(pick(record, ["attachmentLabel", "attachment_label", "attachment_name"])),
     attachmentUrl: asString(pick(record, ["attachmentUrl", "attachment_url"])),
   };
 }

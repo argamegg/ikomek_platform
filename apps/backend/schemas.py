@@ -144,12 +144,18 @@ class Message(BaseModel):
     sender_type: str  # user, operator
     sender_id: str
     sender_name: str = ""
-    content: str
+    content: str = ""
+    attachment_label: Optional[str] = None
+    attachment_url: Optional[str] = None
+    attachment_type: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     is_read: bool = False
 
 class MessageCreate(BaseModel):
-    content: str
+    content: str = Field(default="", max_length=2000)
+    attachment_label: Optional[str] = Field(default=None, max_length=160)
+    attachment_url: Optional[str] = None
+    attachment_type: Optional[str] = Field(default="image", max_length=32)
 
 class AIAssistantMessage(BaseModel):
     role: str

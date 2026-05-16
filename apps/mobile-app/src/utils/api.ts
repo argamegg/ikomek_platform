@@ -180,6 +180,9 @@ export interface Message {
   sender_id: string;
   sender_name?: string;
   content: string;
+  attachment_label?: string | null;
+  attachment_url?: string | null;
+  attachment_type?: string | null;
   created_at: string;
   is_read: boolean;
 }
@@ -309,8 +312,20 @@ export const apiService = {
 
   // Messages
   getMessages: (requestId: string) => api.get<Message[]>(`/requests/${requestId}/messages`),
-  sendMessage: (requestId: string, content: string) =>
-    api.post<Message>(`/requests/${requestId}/messages`, { content }),
+  sendMessage: (requestId: string, data: string | {
+    content?: string;
+    attachment_url?: string | null;
+    attachment_label?: string | null;
+    attachment_type?: string | null;
+  }) => {
+    const payload = typeof data === 'string' ? { content: data } : data;
+    return api.post<Message>(`/requests/${requestId}/messages`, payload);
+  },
+  getMessageSocketUrl: (requestId: string, token: string) => {
+    const baseUrl = API_URL.replace(/\/+$/, '');
+    const wsBaseUrl = baseUrl.replace(/^https:\/\//, 'wss://').replace(/^http:\/\//, 'ws://');
+    return `${wsBaseUrl}/api/requests/${requestId}/messages/ws?token=${encodeURIComponent(token)}`;
+  },
 
   // AI Assistant
   askAIAssistant: (data: { message: string; history: AIAssistantMessage[]; locale: string }) =>

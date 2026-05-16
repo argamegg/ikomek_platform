@@ -59,3 +59,7 @@ async def ensure_indexes():
         [("user_id", 1), ("created_at", -1)],
         name="saved_locations_user_created_index",
     )
+    await db.messages.create_index(
+        [("request_id", 1), ("created_at", 1)],
+        name="messages_request_created_index",
+    )
