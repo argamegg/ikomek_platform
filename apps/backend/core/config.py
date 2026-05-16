@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+import certifi
 from dotenv import load_dotenv
 from fastapi.security import HTTPBearer
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -10,7 +11,15 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 load_dotenv(ROOT_DIR / ".env")
 
 mongo_url = os.environ["MONGO_URL"]
-client = AsyncIOMotorClient(mongo_url)
+mongo_client_options = {}
+mongo_tls_ca_file = os.environ.get("MONGO_TLS_CA_FILE", "").strip()
+
+if mongo_tls_ca_file:
+    mongo_client_options["tlsCAFile"] = mongo_tls_ca_file
+elif mongo_url.startswith("mongodb+srv://") or "mongodb.net" in mongo_url:
+    mongo_client_options["tlsCAFile"] = certifi.where()
+
+client = AsyncIOMotorClient(mongo_url, **mongo_client_options)
 db = client[os.environ["DB_NAME"]]
 
 SECRET_KEY = os.environ["JWT_SECRET"]

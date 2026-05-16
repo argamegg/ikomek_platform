@@ -56,6 +56,8 @@ JWT_SECRET=<long random secret>
 CORS_ORIGINS=<Vercel URL>,<mobile dev URL if needed>
 ```
 
+For MongoDB Atlas, the backend automatically uses the `certifi` CA bundle. Only set `MONGO_TLS_CA_FILE` if you need to override the CA file path manually.
+
 Optional env vars:
 
 ```env
