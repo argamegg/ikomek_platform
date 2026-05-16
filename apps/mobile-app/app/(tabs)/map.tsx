@@ -961,7 +961,7 @@ export default function MapScreen() {
   }, []);
 
   const renderPointCard = (item: MapPoint) => {
-    const catColor = CATEGORY_COLORS[item.category] || '#9E9E9E';
+    const priorityStyle = PRIORITY_BADGE_STYLES[item.priority ?? 'medium'] ?? PRIORITY_BADGE_STYLES.medium;
     const statusColor = STATUS_COLORS[item.status] || '#FF9500';
     const title = localizeProblemType(item.category, item.title, t);
     return (
@@ -970,7 +970,7 @@ export default function MapScreen() {
         <View style={styles.pointContent}>
           <View style={styles.pointHeader}>
             <View style={styles.pointMeta}>
-              <View style={[styles.categoryDot, { backgroundColor: catColor }]} />
+              <View style={[styles.categoryDot, { backgroundColor: priorityStyle.text }]} />
               <View style={styles.pointInfo}>
                 <Text style={styles.pointTitle} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
                 <Text style={styles.pointAddress} numberOfLines={1} ellipsizeMode="tail">{item.address}</Text>

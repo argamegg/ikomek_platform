@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.anonymous.ikomekmobileapp'
+    namespace 'kz.ikomek.mobile'
     defaultConfig {
-        applicationId 'com.anonymous.ikomekmobileapp'
+        applicationId 'kz.ikomek.mobile'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
