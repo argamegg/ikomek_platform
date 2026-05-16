@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, useInView } from "framer-motion";
 import {
   ArrowRight,
-  BellRing,
   CircleHelp,
   CheckCircle2,
   Clock3,
@@ -16,11 +15,12 @@ import {
   ShieldAlert,
   Trash2,
   Waves,
+  X,
   Zap,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import type { NewsItem } from "../../types/platform";
+import type { CivicRequest, NewsItem } from "../../types/platform";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { Card } from "../components/ui/Card";
@@ -30,13 +30,12 @@ import { Input } from "../components/ui/Input";
 import { IssueMap } from "../components/maps/IssueMap";
 import { formatRelativeTime, getStatusTone } from "../lib/format";
 import { categoryKeyMap, formatNewsDate, formatNewsPeriod, typeKeyMap } from "../lib/normalizers";
-import { localizeRequestProblemType, localizeRequestStatus } from "../lib/requestMeta";
+import { localizeRequestCategory, localizeRequestProblemType, localizeRequestStatus } from "../lib/requestMeta";
 import {
   getBorderColor,
   getNewsCategory,
   getNewsTypeMeta,
   getNewsTypes,
-  NEWS_CATEGORY_COLOR,
 } from "../lib/newsMeta";
 import { platformApi, queryKeys } from "../services/platformApi";
 
@@ -73,10 +72,10 @@ function CountUpNumber({ value }: { value: number }) {
 
 export function HomePage() {
   const { t, i18n } = useTranslation();
-  const safeT = (key: string, fallback: string, options?: Record<string, unknown>) => {
+  const safeT = useCallback((key: string, fallback: string, options?: Record<string, unknown>) => {
     const value = t(key, { defaultValue: fallback, ...(options ?? {}) });
     return typeof value === "string" && value.trim().length > 0 ? value : fallback;
-  };
+  }, [t]);
   const publicRequestsQuery = useQuery({
     queryKey: [...queryKeys.publicRequests, i18n.language],
     queryFn: platformApi.getPublicRequests,
@@ -102,18 +101,25 @@ export function HomePage() {
     queryFn: platformApi.getCategories,
     placeholderData: (previous) => previous ?? [],
   });
+  const currentUserQuery = useQuery({
+    queryKey: queryKeys.currentUser,
+    queryFn: platformApi.getCurrentUser,
+  });
 
-  const publicRequests = publicRequestsQuery.data ?? [];
-  const alerts = alertsQuery.data ?? [];
-  const news = newsQuery.data?.news ?? [];
-  const categories = categoriesQuery.data ?? [];
+  const publicRequests = useMemo(() => publicRequestsQuery.data ?? [], [publicRequestsQuery.data]);
+  const alerts = useMemo(() => alertsQuery.data ?? [], [alertsQuery.data]);
+  const news = useMemo(() => newsQuery.data?.news ?? [], [newsQuery.data?.news]);
+  const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
+  const currentUser = currentUserQuery.data ?? null;
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
+  const [selectedPreviewRequest, setSelectedPreviewRequest] = useState<CivicRequest | null>(null);
 
   const featuredUpdates = useMemo(() => {
     const merged = [...alerts, ...news].slice(0, 4);
     return merged;
   }, [alerts, news]);
   const previewNewsItems = newsSearch ? newsPreviewQuery.data?.news ?? [] : featuredUpdates.slice(0, 3);
+  const recentRequests = publicRequests.slice(0, 3);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -124,7 +130,22 @@ export function HomePage() {
   }, [newsSearchInput]);
 
   const highlightRequest = publicRequests[0] ?? null;
+  const previewRequest = selectedPreviewRequest ?? highlightRequest;
   const activeCategory = categories.find((category) => category.id === activeCategoryId) ?? null;
+  const statusCounts = useMemo(
+    () => ({
+      pending: publicRequests.filter((request) => request.status === "pending").length,
+      inProgress: publicRequests.filter((request) => request.status === "in_progress").length,
+      closed: publicRequests.filter((request) => request.status === "closed").length,
+    }),
+    [publicRequests],
+  );
+
+  useEffect(() => {
+    if (selectedPreviewRequest && !publicRequests.some((request) => request.id === selectedPreviewRequest.id)) {
+      setSelectedPreviewRequest(null);
+    }
+  }, [publicRequests, selectedPreviewRequest]);
 
   const getLocalizedCategoryLabel = (category: { id?: string; code?: string; name?: string }) => {
     const key = category.code || category.id || "";
@@ -358,9 +379,9 @@ export function HomePage() {
       },
       {
         id: "alerts",
-        value: alerts.length,
-        label: safeT("home.stats.alerts", "Active city alerts"),
-        detail: safeT("home.preview.disruptions", "Priority notices and disruptions"),
+        value: statusCounts.inProgress,
+        label: safeT("home.stats.inProgress", "Requests in progress"),
+        detail: safeT("home.preview.inProgressDetail", "Already accepted by operators"),
       },
       {
         id: "categories",
@@ -372,7 +393,33 @@ export function HomePage() {
         ),
       },
     ],
-    [alerts.length, categories.length, publicRequests.length, safeT],
+    [categories.length, publicRequests.length, safeT, statusCounts.inProgress],
+  );
+
+  const overviewMetrics = useMemo(
+    () => [
+      {
+        id: "pending",
+        value: statusCounts.pending,
+        label: safeT("home.overview.pendingMetric", "Waiting for review"),
+      },
+      {
+        id: "in-progress",
+        value: statusCounts.inProgress,
+        label: safeT("home.overview.inProgressMetric", "In operator work"),
+      },
+      {
+        id: "closed",
+        value: statusCounts.closed,
+        label: safeT("home.overview.closedMetric", "Resolved requests"),
+      },
+      {
+        id: "categories",
+        value: categories.length,
+        label: safeT("home.overview.categoriesMetric", "Service routes"),
+      },
+    ],
+    [categories.length, safeT, statusCounts.closed, statusCounts.inProgress, statusCounts.pending],
   );
 
   const overviewHighlights = useMemo(
@@ -399,12 +446,12 @@ export function HomePage() {
       },
       {
         id: "public-awareness",
-        icon: BellRing,
-        eyebrow: safeT("home.alertsStory.eyebrow", "Public awareness"),
-        title: safeT("home.alertsStory.title", "News and alerts stay close to action."),
+        icon: MapPinned,
+        eyebrow: safeT("home.overview.cardThreeEyebrow", "Public visibility"),
+        title: safeT("home.overview.cardThreeTitle", "The city map stays open for viewing."),
         body: safeT(
-          "home.alertsStory.body",
-          "Residents can track disruptions, city notices, and issue hotspots in the same product surface where requests are created.",
+          "home.overview.cardThreeBody",
+          "Guests can inspect public reports and hotspots, while contact, edits, and personal actions remain role-based.",
         ),
       },
     ],
@@ -421,6 +468,8 @@ export function HomePage() {
           "home.how.stepOneBody",
           "A resident submits a request with category, location, photos, and details from mobile or web.",
         ),
+        meta: safeT("home.how.stepOneMeta", "Category, address, media, and request ID"),
+        icon: MapPinned,
       },
       {
         id: "triage",
@@ -430,6 +479,8 @@ export function HomePage() {
           "home.how.stepTwoBody",
           "Call center staff review incoming reports, update status, and coordinate the proper response path.",
         ),
+        meta: safeT("home.how.stepTwoMeta", "Status, priority, department, and internal notes"),
+        icon: Radar,
       },
       {
         id: "resolve",
@@ -439,6 +490,8 @@ export function HomePage() {
           "home.how.stepThreeBody",
           "The request progresses through shared statuses with comments, notes, and supporting communication.",
         ),
+        meta: safeT("home.how.stepThreeMeta", "Operator comments and service coordination"),
+        icon: ShieldCheck,
       },
       {
         id: "result",
@@ -448,6 +501,8 @@ export function HomePage() {
           "home.how.stepFourBody",
           "The same person who reported the issue can track updates and close the loop with confidence.",
         ),
+        meta: safeT("home.how.stepFourMeta", "Public status, personal cabinet, and final resolution"),
+        icon: CheckCircle2,
       },
     ],
     [safeT],
@@ -505,49 +560,33 @@ export function HomePage() {
                 <strong>{categories.length}</strong>
               </div>
               <div className="home-hero__visual-chip">
-                <small>{t("home.preview.alerts")}</small>
-                <strong>{alerts.length}</strong>
+                <small>{t("home.preview.inProgress")}</small>
+                <strong>{statusCounts.inProgress}</strong>
               </div>
             </div>
             <div className="home-hero__visual-strip">
-              {featuredUpdates.slice(0, 3).map((item, index) => (
-                (() => {
-                  const types = getNewsTypes(item);
-                  const primaryMeta = getNewsTypeMeta(types[0]);
-                  const category = getNewsCategory(item);
-                  const Icon = primaryMeta.icon;
-
-                  return (
-                    <motion.article
-                      key={item.id}
-                      className="home-hero__signal"
-                      initial={{ opacity: 0, y: 18 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.22 + index * 0.08, duration: 0.45 }}
-                    >
-                      <div className="home-hero__signal-top">
-                        <span
-                          className="home-hero__signal-type"
-                          style={{
-                            backgroundColor: `${primaryMeta.color}14`,
-                            color: primaryMeta.color,
-                          }}
-                        >
-                          <Icon size={14} />
-                          {t(typeKeyMap[types[0]] ?? types[0])}
-                        </span>
-                        <span
-                          className="home-hero__signal-category"
-                          style={{ backgroundColor: NEWS_CATEGORY_COLOR }}
-                        >
-                          {t(categoryKeyMap[category] ?? category)}
-                        </span>
-                      </div>
-                      <strong>{item.title}</strong>
-                      <span>{formatRelativeTime(item.startAt, i18n.language as "en" | "ru" | "kz")}</span>
-                    </motion.article>
-                  );
-                })()
+              {recentRequests.map((request, index) => (
+                <motion.article
+                  key={request.id}
+                  className="home-hero__signal"
+                  initial={{ opacity: 0, y: 18 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.22 + index * 0.08, duration: 0.45 }}
+                >
+                  <div className="home-hero__signal-top">
+                    <span className="home-hero__signal-type">
+                      <MapPinned size={14} />
+                      {request.statusLabel
+                        ? localizeRequestStatus(request.statusLabel, t)
+                        : getLocalizedRequestStatus(request.status)}
+                    </span>
+                    <span className="home-hero__signal-category">
+                      {localizeRequestCategory(request.categoryId || request.categoryName, t)}
+                    </span>
+                  </div>
+                  <strong>{localizeRequestProblemType(request.categoryId || request.categoryName, request.title, t)}</strong>
+                  <span>{request.address}</span>
+                </motion.article>
               ))}
             </div>
           </motion.div>
@@ -569,16 +608,18 @@ export function HomePage() {
 
         <div className="home-overview__grid">
           <div className="home-overview__narrative">
-            <p>{t("home.overview.narrative")}</p>
+            <div className="home-overview__narrative-copy">
+              <span>{t("home.overview.boardEyebrow")}</span>
+              <h3>{t("home.overview.boardTitle")}</h3>
+              <p>{t("home.overview.narrative")}</p>
+            </div>
             <div className="home-overview__metrics">
-              <div>
-                <strong>{publicRequests.length || 0}</strong>
-                <span>{t("home.overview.visibleIssues")}</span>
-              </div>
-              <div>
-                <strong>{featuredUpdates.length || 0}</strong>
-                <span>{t("home.alertsStory.landingMetric")}</span>
-              </div>
+              {overviewMetrics.map((item) => (
+                <div key={item.id}>
+                  <strong>{item.value}</strong>
+                  <span>{item.label}</span>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -882,30 +923,62 @@ export function HomePage() {
                 {t("home.preview.liveIssuePulse")}
               </span>
               <span>{t("home.preview.mapPoints", { count: publicRequests.length || 0 })}</span>
-              <span>{t("home.preview.alertsCount", { count: alerts.length || 0 })}</span>
+              <span>{t("home.preview.inProgressCount", { count: statusCounts.inProgress || 0 })}</span>
             </div>
-            {highlightRequest ? (
+            {previewRequest ? (
               <motion.div
+                key={previewRequest.id}
                 className="home-map-preview__focus"
                 initial={{ opacity: 0, x: 24 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true, amount: 0.4 }}
                 transition={{ duration: 0.45, delay: 0.15 }}
               >
-                <small>{t("home.preview.selectedIssue")}</small>
-                <strong>{localizeRequestProblemType(highlightRequest.categoryId || highlightRequest.categoryName, highlightRequest.title, t)}</strong>
-                <p>{highlightRequest.address}</p>
-                <Badge tone={getStatusTone(highlightRequest.status)}>
-                  {highlightRequest.statusLabel
-                    ? localizeRequestStatus(highlightRequest.statusLabel, t)
-                    : getLocalizedRequestStatus(highlightRequest.status)}
-                </Badge>
+                <div className="home-map-preview__focus-header">
+                  <div>
+                    <small>{t("home.preview.selectedIssue")}</small>
+                    <span>{t("home.preview.requestId", { id: previewRequest.id.slice(0, 8) })}</span>
+                  </div>
+                  {selectedPreviewRequest ? (
+                    <button
+                      type="button"
+                      className="home-map-preview__focus-close"
+                      onClick={() => setSelectedPreviewRequest(null)}
+                      aria-label={t("home.preview.closeSelected")}
+                    >
+                      <X size={16} />
+                    </button>
+                  ) : null}
+                </div>
+                <strong>{localizeRequestProblemType(previewRequest.categoryId || previewRequest.categoryName, previewRequest.title, t)}</strong>
+                <p>{previewRequest.address}</p>
+                <div className="home-map-preview__focus-meta">
+                  <Badge tone={getStatusTone(previewRequest.status)}>
+                    {previewRequest.statusLabel
+                      ? localizeRequestStatus(previewRequest.statusLabel, t)
+                      : getLocalizedRequestStatus(previewRequest.status)}
+                  </Badge>
+                  <span>{formatRelativeTime(previewRequest.createdAt, i18n.language as "en" | "ru" | "kz")}</span>
+                </div>
+                <div className="home-map-preview__focus-actions">
+                  {currentUser ? (
+                    <Link to={`/requests/${previewRequest.id}`}>{t("home.preview.openDetails")}</Link>
+                  ) : (
+                    <Link to="/auth">{t("home.preview.signInToAct")}</Link>
+                  )}
+                  <p>{currentUser ? t("home.preview.authenticatedHint") : t("home.preview.guestHint")}</p>
+                </div>
               </motion.div>
             ) : null}
           </div>
 
           <div className="home-map-preview__canvas">
-            <IssueMap requests={publicRequests.slice(0, 16)} mode="all" />
+            <IssueMap
+              requests={publicRequests.slice(0, 24)}
+              mode="all"
+              onSelectRequest={setSelectedPreviewRequest}
+              focusRequestId={previewRequest?.id}
+            />
           </div>
         </div>
       </motion.section>
@@ -923,22 +996,30 @@ export function HomePage() {
         </div>
 
         <div className="home-how__timeline">
-          {steps.map((item, index) => (
-            <motion.article
-              key={item.id}
-              className="home-how__step"
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.45 }}
-              transition={{ duration: 0.45, delay: index * 0.08 }}
-            >
-              <div className="home-how__step-number">{item.step}</div>
-              <div className="home-how__step-body">
-                <h3>{item.title}</h3>
-                <p>{item.body}</p>
-              </div>
-            </motion.article>
-          ))}
+          {steps.map((item, index) => {
+            const StepIcon = item.icon;
+
+            return (
+              <motion.article
+                key={item.id}
+                className="home-how__step"
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.45 }}
+                transition={{ duration: 0.45, delay: index * 0.08 }}
+              >
+                <div className="home-how__step-number">{item.step}</div>
+                <div className="home-how__step-body">
+                  <h3>{item.title}</h3>
+                  <p>{item.body}</p>
+                  <span className="home-how__step-meta">
+                    <StepIcon size={16} />
+                    {item.meta}
+                  </span>
+                </div>
+              </motion.article>
+            );
+          })}
         </div>
       </motion.section>
 

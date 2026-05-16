@@ -1,0 +1,148 @@
+{
+  "metadata": {
+    "generated_at": "2026-05-16T07:48:38+05:00"
+  },
+  "results": [
+    {
+      "name": "Backend pytest security/API contract",
+      "status": "pass",
+      "returncode": 0,
+      "duration": 2.84,
+      "command": "/Users/argame/Documents/ikomek-project/apps/backend/venv/bin/python -m pytest tests/backend -q",
+      "cwd": ".",
+      "output": "............                                                             [100%]\n=============================== warnings summary ===============================\napps/backend/venv/lib/python3.12/site-packages/passlib/utils/__init__.py:854\n  /Users/argame/Documents/ikomek-project/apps/backend/venv/lib/python3.12/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13\n    from crypt import crypt as _crypt\n\napps/backend/server.py:33\n  /Users/argame/Documents/ikomek-project/apps/backend/server.py:33: DeprecationWarning: \n          on_event is deprecated, use lifespan event handlers instead.\n  \n          Read more about it in the\n          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).\n          \n    @app.on_event(\"shutdown\")\n\napps/backend/venv/lib/python3.12/site-packages/fastapi/applications.py:4598\napps/backend/venv/lib/python3.12/site-packages/fastapi/applications.py:4598\n  /Users/argame/Documents/ikomek-project/apps/backend/venv/lib/python3.12/site-packages/fastapi/applications.py:4598: DeprecationWarning: \n          on_event is deprecated, use lifespan event handlers instead.\n  \n          Read more about it in the\n          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).\n          \n    return self.router.on_event(event_type)  # ty: ignore[deprecated]\n\napps/backend/server.py:40\n  /Users/argame/Documents/ikomek-project/apps/backend/server.py:40: DeprecationWarning: \n          on_event is deprecated, use lifespan event handlers instead.\n  \n          Read more about it in the\n          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).\n          \n    @app.on_event(\"startup\")\n\ntests/backend/test_predeploy_security.py::test_seconds_until_never_returns_negative_values\n  /Users/argame/Documents/ikomek-project/tests/backend/test_predeploy_security.py:68: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    assert seconds_until(datetime.utcnow() - timedelta(minutes=1)) == 0\n\ntests/backend/test_predeploy_security.py::test_seconds_until_never_returns_negative_values\ntests/backend/test_predeploy_security.py::test_seconds_until_never_returns_negative_values\n  /Users/argame/Documents/ikomek-project/apps/backend/helpers.py:50: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    return datetime.utcnow()\n\ntests/backend/test_predeploy_security.py::test_seconds_until_never_returns_negative_values\n  /Users/argame/Documents/ikomek-project/tests/backend/test_predeploy_security.py:70: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    assert seconds_until(datetime.utcnow() + timedelta(seconds=5)) in range(0, 6)\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n12 passed, 9 warnings in 1.53s",
+      "component": "Backend",
+      "summary": "Python backend predeploy check."
+    },
+    {
+      "name": "Backend dependency consistency",
+      "status": "pass",
+      "returncode": 0,
+      "duration": 0.42,
+      "command": "/Users/argame/Documents/ikomek-project/apps/backend/venv/bin/python -m pip check",
+      "cwd": ".",
+      "output": "No broken requirements found.",
+      "component": "Backend",
+      "summary": "Python backend predeploy check."
+    },
+    {
+      "name": "Backend dependency vulnerability audit",
+      "status": "pass",
+      "returncode": 0,
+      "duration": 20.48,
+      "command": "/Users/argame/Documents/ikomek-project/apps/backend/venv/bin/python -m pip_audit -r /Users/argame/Documents/ikomek-project/apps/backend/requirements.txt -f json",
+      "cwd": ".",
+      "output": "{\"dependencies\": [{\"name\": \"uvicorn\", \"version\": \"0.25.0\", \"vulns\": []}, {\"name\": \"bcrypt\", \"version\": \"4.0.1\", \"vulns\": []}, {\"name\": \"fastapi\", \"version\": \"0.136.1\", \"vulns\": []}, {\"name\": \"boto3\", \"version\": \"1.43.9\", \"vulns\": []}, {\"name\": \"botocore\", \"version\": \"1.43.9\", \"vulns\": []}, {\"name\": \"python-dateutil\", \"version\": \"2.9.0.post0\", \"vulns\": []}, {\"name\": \"jmespath\", \"version\": \"1.1.0\", \"vulns\": []}, {\"name\": \"s3transfer\", \"version\": \"0.17.0\", \"vulns\": []}, {\"name\": \"urllib3\", \"version\": \"2.7.0\", \"vulns\": []}, {\"name\": \"requests-oauthlib\", \"version\": \"2.0.0\", \"vulns\": []}, {\"name\": \"cryptography\", \"version\": \"48.0.0\", \"vulns\": []}, {\"name\": \"python-dotenv\", \"version\": \"1.2.2\", \"vulns\": []}, {\"name\": \"pymongo\", \"version\": \"4.17.0\", \"vulns\": []}, {\"name\": \"dnspython\", \"version\": \"2.8.0\", \"vulns\": []}, {\"name\": \"pydantic\", \"version\": \"2.13.4\", \"vulns\": []}, {\"name\": \"pydantic-core\", \"version\": \"2.46.4\", \"vulns\": []}, {\"name\": \"email-validator\", \"version\": \"2.3.0\", \"vulns\": []}, {\"name\": \"pyjwt\", \"version\": \"2.12.1\", \"vulns\": []}, {\"name\": \"passlib\", \"version\": \"1.7.4\", \"vulns\": []}, {\"name\": \"tzdata\", \"version\": \"2026.2\", \"vulns\": []}, {\"name\": \"motor\", \"version\": \"3.7.1\", \"vulns\": []}, {\"name\": \"pytest\", \"version\": \"9.0.3\", \"vulns\": []}, {\"name\": \"pluggy\", \"version\": \"1.6.0\", \"vulns\": []}, {\"name\": \"black\", \"version\": \"26.3.1\", \"vulns\": []}, {\"name\": \"pytokens\", \"version\": \"0.4.1\", \"vulns\": []}, {\"name\": \"isort\", \"version\": \"8.0.1\", \"vulns\": []}, {\"name\": \"flake8\", \"version\": \"7.3.0\", \"vulns\": []}, {\"name\": \"mccabe\", \"version\": \"0.7.0\", \"vulns\": []}, {\"name\": \"pycodestyle\", \"version\": \"2.14.0\", \"vulns\": []}, {\"name\": \"pyflakes\", \"version\": \"3.4.0\", \"vulns\": []}, {\"name\": \"mypy\", \"version\": \"2.1.0\", \"vulns\": []}, {\"name\": \"ast-serialize\", \"version\": \"0.4.0\", \"vulns\": []}, {\"name\": \"python-jose\", \"version\": \"3.5.0\", \"vulns\": []}, {\"name\": \"rsa\", \"version\": \"4.9.1\", \"vulns\": []}, {\"name\": \"requests\", \"version\": \"2.34.2\", \"vulns\": []}, {\"name\": \"charset-normalizer\", \"version\": \"3.4.7\", \"vulns\": []}, {\"name\": \"idna\", \"version\": \"3.15\", \"vulns\": []}, {\"name\": \"pandas\", \"version\": \"3.0.3\", \"vulns\": []}, {\"name\": \"numpy\", \"version\": \"2.4.5\", \"vulns\": []}, {\"name\": \"python-multipart\", \"version\": \"0.0.28\", \"vulns\": []}, {\"name\": \"jq\", \"version\": \"1.11.0\", \"vulns\": []}, {\"name\": \"typer\", \"version\": \"0.25.1\", \"vulns\": []}, {\"name\": \"httpx\", \"version\": \"0.28.1\", \"vulns\": []}, {\"name\": \"httpcore\", \"version\": \"1.0.9\", \"vulns\": []}, {\"name\": \"langdetect\", \"version\": \"1.0.9\", \"vulns\": []}, {\"name\": \"annotated-doc\", \"version\": \"0.0.4\", \"vulns\": []}, {\"name\": \"annotated-types\", \"version\": \"0.7.0\", \"vulns\": []}, {\"name\": \"certifi\", \"version\": \"2026.4.22\", \"vulns\": []}, {\"name\": \"cffi\", \"version\": \"2.0.0\", \"vulns\": []}, {\"name\": \"click\", \"version\": \"8.3.3\", \"vulns\": []}, {\"name\": \"ecdsa\", \"version\": \"0.19.2\", \"vulns\": []}, {\"name\": \"h11\", \"version\": \"0.16.0\", \"vulns\": []}, {\"name\": \"iniconfig\", \"version\": \"2.3.0\", \"vulns\": []}, {\"name\": \"librt\", \"version\": \"0.11.0\", \"vulns\": []}, {\"name\": \"mypy-extensions\", \"version\": \"1.1.0\", \"vulns\": []}, {\"name\": \"oauthlib\", \"version\": \"3.3.1\", \"vulns\": []}, {\"name\": \"pathspec\", \"version\": \"1.1.1\", \"vulns\": []}, {\"name\": \"platformdirs\", \"version\": \"4.9.6\", \"vulns\": []}, {\"name\": \"pyasn1\", \"version\": \"0.6.3\", \"vulns\": []}, {\"name\": \"pygments\", \"version\": \"2.20.0\", \"vulns\": []}, {\"name\": \"rich\", \"version\": \"15.0.0\", \"vulns\": []}, {\"name\": \"markdown-it-py\", \"version\": \"4.2.0\", \"vulns\": []}, {\"name\": \"mdurl\", \"version\": \"0.1.2\", \"vulns\": []}, {\"name\": \"shellingham\", \"version\": \"1.5.4\", \"vulns\": []}, {\"name\": \"six\", \"version\": \"1.17.0\", \"vulns\": []}, {\"name\": \"starlette\", \"version\": \"1.0.0\", \"vulns\": []}, {\"name\": \"anyio\", \"version\": \"4.13.0\", \"vulns\": []}, {\"name\": \"typing-extensions\", \"version\": \"4.15.0\", \"vulns\": []}, {\"name\": \"typing-inspection\", \"version\": \"0.4.2\", \"vulns\": []}, {\"name\": \"pycparser\", \"version\": \"3.0\", \"vulns\": []}], \"fixes\": []}\n\nNo known vulnerabilities found",
+      "summary": "Scans backend Python dependencies for known vulnerabilities.",
+      "component": "Security"
+    },
+    {
+      "name": "Web lint",
+      "status": "pass",
+      "returncode": 0,
+      "duration": 10.1,
+      "command": "npm run lint",
+      "cwd": "apps/web-app",
+      "output": "> ikomek-web-app@0.0.0 lint\n> eslint .\n\n\n/Users/argame/Documents/ikomek-project/apps/web-app/src/web/components/maps/LocationPickerMap.tsx\n  85:7  warning  Functions returned from `useEffectEvent` must not be included in the dependency array. Remove `emitCoordinateChange` from the list  react-hooks/exhaustive-deps\n\n/Users/argame/Documents/ikomek-project/apps/web-app/src/web/pages/AdminPage.tsx\n  82:6  warning  React Hook useEffect has a missing dependency: 'updateParams'. Either include it or remove the dependency array  react-hooks/exhaustive-deps\n\n/Users/argame/Documents/ikomek-project/apps/web-app/src/web/pages/MapPage.tsx\n  396:67  warning  React Hook useMemo has a missing dependency: 'dateRange'. Either include it or remove the dependency array  react-hooks/exhaustive-deps\n  433:5   warning  React Hook useMemo has a missing dependency: 'dateRange'. Either include it or remove the dependency array  react-hooks/exhaustive-deps\n  502:5   warning  React Hook useMemo has a missing dependency: 'dateRange'. Either include it or remove the dependency array  react-hooks/exhaustive-deps\n\n/Users/argame/Documents/ikomek-project/apps/web-app/src/web/pages/NewRequestPage.tsx\n  640:6  warning  React Hook useEffect has a missing dependency: 'updateLocationForm'. Either include it or remove the dependency array  react-hooks/exhaustive-deps\n\n/Users/argame/Documents/ikomek-project/apps/web-app/src/web/pages/NewsPage.tsx\n  105:6  warning  React Hook useEffect has a missing dependency: 'updateParams'. Either include it or remove the dependency array  react-hooks/exhaustive-deps\n\n/Users/argame/Documents/ikomek-project/apps/web-app/src/web/pages/OperatorPage.tsx\n  107:9  warning  The 'requests' logical expression could make the dependencies of useMemo Hook (at line 111) change on every render. To fix this, wrap the initialization of 'requests' in its own useMemo() Hook  react-hooks/exhaustive-deps\n  107:9  warning  The 'requests' logical expression could make the dependencies of useMemo Hook (at line 133) change on every render. To fix this, wrap the initialization of 'requests' in its own useMemo() Hook  react-hooks/exhaustive-deps\n  107:9  warning  The 'requests' logical expression could make the dependencies of useMemo Hook (at line 140) change on every render. To fix this, wrap the initialization of 'requests' in its own useMemo() Hook  react-hooks/exhaustive-deps\n\n✖ 10 problems (0 errors, 10 warnings)",
+      "component": "Web",
+      "summary": "Frontend predeploy check."
+    },
+    {
+      "name": "Web production build",
+      "status": "pass",
+      "returncode": 0,
+      "duration": 9.17,
+      "command": "npm run build",
+      "cwd": "apps/web-app",
+      "output": "> ikomek-web-app@0.0.0 build\n> tsc -b && vite build\n\nvite v8.0.13 building client environment for production...\n\u001b[2K\ntransforming...✓ 2857 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                                     0.49 kB │ gzip:   0.34 kB\ndist/assets/background-laptop-BlyAuq7f.webp       234.50 kB\ndist/assets/background-mobile-DYvYTDwW.webp       263.92 kB\ndist/assets/background-fhd-D_R0Jz_B.webp          295.75 kB\ndist/assets/background-tablet-C8izk1Xf.webp       310.71 kB\ndist/assets/background-2k-BQWCylqS.webp           450.04 kB\ndist/assets/background-ultrawide-CwrlE-97.webp    464.27 kB\ndist/assets/background-4k-D7vmP1Hm.webp           805.77 kB\ndist/assets/index-Bh1JZFr0.css                    200.05 kB │ gzip:  33.93 kB\ndist/assets/index-BWzCIL-t.js                   2,253.95 kB │ gzip: 636.81 kB\n\n✓ built in 1.04s\n\n[plugin builtin:vite-reporter] \n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.",
+      "component": "Web",
+      "summary": "Frontend predeploy check."
+    },
+    {
+      "name": "Web npm audit",
+      "status": "pass",
+      "returncode": 0,
+      "duration": 1.18,
+      "command": "npm audit --json",
+      "cwd": "apps/web-app",
+      "output": "{\n  \"auditReportVersion\": 2,\n  \"vulnerabilities\": {},\n  \"metadata\": {\n    \"vulnerabilities\": {\n      \"info\": 0,\n      \"low\": 0,\n      \"moderate\": 0,\n      \"high\": 0,\n      \"critical\": 0,\n      \"total\": 0\n    },\n    \"dependencies\": {\n      \"prod\": 120,\n      \"dev\": 193,\n      \"optional\": 32,\n      \"peer\": 1,\n      \"peerOptional\": 0,\n      \"total\": 313\n    }\n  }\n}",
+      "component": "Security",
+      "summary": "npm audit vulnerabilities: {'info': 0, 'low': 0, 'moderate': 0, 'high': 0, 'critical': 0, 'total': 0}"
+    },
+    {
+      "name": "Mobile lint",
+      "status": "pass",
+      "returncode": 0,
+      "duration": 2.51,
+      "command": "npm run lint",
+      "cwd": "apps/mobile-app",
+      "output": "> ikomek109@1.0.0 lint\n> expo lint\n\nenv: load .env\nenv: export EXPO_PUBLIC_BACKEND_URL\n\n/Users/argame/Documents/ikomek-project/apps/mobile-app/app/index.tsx\n  38:6  warning  React Hook useEffect has a missing dependency: 'router'. Either include it or remove the dependency array  react-hooks/exhaustive-deps\n\n/Users/argame/Documents/ikomek-project/apps/mobile-app/src/context/AuthContext.tsx\n   81:6   warning  React Hook useEffect has a missing dependency: 'loadStoredAuth'. Either include it or remove the dependency array  react-hooks/exhaustive-deps\n  115:18  warning  'error' is defined but never used                                                                                  @typescript-eslint/no-unused-vars\n\n/Users/argame/Documents/ikomek-project/apps/mobile-app/src/i18n/index.ts\n  7:1  warning  Caution: `i18n` also has a named export `use`. Check if you meant to write `import {use} from 'i18next'` instead  import/no-named-as-default-member\n\n/Users/argame/Documents/ikomek-project/apps/mobile-app/src/utils/api.ts\n  244:21  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type\n  245:20  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type\n  262:19  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type\n  263:21  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type\n  264:23  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type\n\n✖ 9 problems (0 errors, 9 warnings)\n  0 errors and 5 warnings potentially fixable with the `--fix` option.",
+      "component": "Mobile",
+      "summary": "Mobile predeploy check."
+    },
+    {
+      "name": "Mobile TypeScript",
+      "status": "pass",
+      "returncode": 0,
+      "duration": 5.59,
+      "command": "npx tsc --noEmit",
+      "cwd": "apps/mobile-app",
+      "output": "",
+      "component": "Mobile",
+      "summary": "Mobile predeploy check."
+    },
+    {
+      "name": "Mobile Expo doctor",
+      "status": "warn",
+      "returncode": 1,
+      "duration": 6.35,
+      "command": "npx expo-doctor",
+      "cwd": "apps/mobile-app",
+      "output": "env: load .env\nenv: export EXPO_PUBLIC_BACKEND_URL\nRunning 17 checks on your project...\n16/17 checks passed. 1 checks failed. Possible issues detected:\nUse the --verbose flag to see more details about passed checks.\n\n✖ Check for app config fields that may not be synced in a non-CNG project\nThis project contains native project folders but also has native configuration properties in app.json, indicating it is configured to use Prebuild. When the android/ios folders are present, if you don't run prebuild in your build pipeline, the following properties will not be synced: orientation, icon, splash, scheme, userInterfaceStyle, ios, android, plugins, androidStatusBar. \n\n\n\n1 check failed, indicating possible issues with the project.",
+      "component": "Mobile",
+      "summary": "Expo doctor passed runtime/package checks; native folders are present, so app.json changes must be synced by prebuild or manually."
+    },
+    {
+      "name": "Mobile npm audit",
+      "status": "pass",
+      "returncode": 0,
+      "duration": 1.48,
+      "command": "npm audit --json",
+      "cwd": "apps/mobile-app",
+      "output": "{\n  \"auditReportVersion\": 2,\n  \"vulnerabilities\": {},\n  \"metadata\": {\n    \"vulnerabilities\": {\n      \"info\": 0,\n      \"low\": 0,\n      \"moderate\": 0,\n      \"high\": 0,\n      \"critical\": 0,\n      \"total\": 0\n    },\n    \"dependencies\": {\n      \"prod\": 812,\n      \"dev\": 224,\n      \"optional\": 47,\n      \"peer\": 0,\n      \"peerOptional\": 0,\n      \"total\": 1058\n    }\n  }\n}",
+      "component": "Security",
+      "summary": "npm audit vulnerabilities: {'info': 0, 'low': 0, 'moderate': 0, 'high': 0, 'critical': 0, 'total': 0}"
+    },
+    {
+      "name": "Repository secret-pattern scan",
+      "status": "pass",
+      "summary": "0 potential finding(s)",
+      "findings": [],
+      "component": "Security"
+    },
+    {
+      "name": "Mobile native identifiers",
+      "status": "pass",
+      "summary": "Checks app.json for placeholder bundle/package identifiers.",
+      "component": "Security"
+    },
+    {
+      "component": "Performance",
+      "name": "Web build artifact size",
+      "status": "pass",
+      "summary": "6.1 MB in apps/web-app/dist",
+      "details": {
+        "bytes": 6396324
+      }
+    },
+    {
+      "component": "Performance",
+      "name": "Mobile web export artifact size",
+      "status": "pass",
+      "summary": "11.98 MB in apps/mobile-app/dist",
+      "details": {
+        "bytes": 12561327
+      }
+    }
+  ]
+}

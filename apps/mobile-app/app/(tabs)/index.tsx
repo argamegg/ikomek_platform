@@ -54,7 +54,7 @@ function normalizeLanguage(language?: string) {
 function getLocalizedText(item: NewsItem, field: 'title' | 'content', language: string) {
   const normalized = normalizeLanguage(language);
   const localizedField = normalized === 'en' ? `${field}_en` : `${field}_${normalized}`;
-  return String((item as Record<string, unknown>)[localizedField] ?? item[field] ?? '');
+  return String((item as unknown as Record<string, unknown>)[localizedField] ?? item[field] ?? '');
 }
 
 function formatDetailPeriod(start?: string, end?: string) {

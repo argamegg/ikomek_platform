@@ -14,19 +14,17 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "bundleDisplayName": "ikomek109",
       "icon": "./assets/images/app-icon.png",
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.ikomekmobileapp"
+      "bundleIdentifier": "kz.ikomek.mobile"
     },
     "android": {
-      "name": "ikomek109",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/app-icon.png",
         "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.ikomekmobileapp"
+      "package": "kz.ikomek.mobile"
     },
     "web": {
       "bundler": "metro",
@@ -44,7 +42,8 @@
         }
       ],
       "@maplibre/maplibre-react-native",
-      "expo-video"
+      "expo-video",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

@@ -13,7 +13,7 @@ mongo_url = os.environ["MONGO_URL"]
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ["DB_NAME"]]
 
-SECRET_KEY = os.environ.get("JWT_SECRET", "ikomek109-secret-key-2025-secure")
+SECRET_KEY = os.environ["JWT_SECRET"]
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
 EMAIL_VERIFICATION_EXPIRE_MINUTES = int(os.environ.get("EMAIL_VERIFICATION_EXPIRE_MINUTES", "10"))

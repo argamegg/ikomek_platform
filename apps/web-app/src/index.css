@@ -6570,7 +6570,13 @@ button {
   font-weight: 700;
 }
 
+.home-hero__signal-type {
+  background: rgba(255, 107, 0, 0.12);
+  color: var(--primary-strong);
+}
+
 .home-hero__signal-category {
+  background: rgba(15, 23, 42, 0.88);
   color: #fff;
 }
 
@@ -6606,7 +6612,28 @@ button {
   border: 1px solid rgba(255, 107, 0, 0.12);
 }
 
-.home-overview__narrative p {
+.home-overview__narrative-copy {
+  display: grid;
+  gap: 10px;
+}
+
+.home-overview__narrative-copy span {
+  color: var(--primary-strong);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.home-overview__narrative-copy h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(1.6rem, 2.4vw, 2.35rem);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+}
+
+.home-overview__narrative-copy p {
   margin: 0;
   font-size: 1.08rem;
   line-height: 1.75;
@@ -6615,16 +6642,23 @@ button {
 
 .home-overview__metrics {
   display: grid;
-  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .home-overview__metrics div {
   display: grid;
-  gap: 6px;
+  gap: 8px;
+  min-height: 126px;
+  padding: 18px;
+  align-content: space-between;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(15, 23, 42, 0.06);
 }
 
 .home-overview__metrics strong {
-  font-size: 2rem;
+  font-size: clamp(2rem, 3vw, 2.7rem);
   line-height: 1;
 }
 
@@ -6643,6 +6677,7 @@ button {
   flex-direction: column;
   justify-content: flex-start;
   gap: 14px;
+  min-height: 100%;
   padding: 24px;
   border-radius: 28px;
   background: #fff;
@@ -7142,12 +7177,52 @@ button {
   border-radius: 24px;
   background: rgba(255, 255, 255, 0.86);
   border: 1px solid rgba(15, 23, 42, 0.08);
+  pointer-events: auto;
 }
 
-.home-map-preview__focus small {
+.home-map-preview__focus-header,
+.home-map-preview__focus-meta,
+.home-map-preview__focus-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.home-map-preview__focus-header div {
+  display: grid;
+  gap: 3px;
+}
+
+.home-map-preview__focus small,
+.home-map-preview__focus-header span {
   color: var(--text-faint);
   text-transform: uppercase;
   letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.home-map-preview__focus-close {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: pointer;
+  transition:
+    background 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.home-map-preview__focus-close:hover {
+  transform: translateY(-1px);
+  background: #e2e8f0;
+  color: #0f172a;
 }
 
 .home-map-preview__focus strong {
@@ -7158,6 +7233,44 @@ button {
 .home-map-preview__focus p {
   margin: 0;
   color: var(--text-soft);
+}
+
+.home-map-preview__focus-meta {
+  align-items: center;
+}
+
+.home-map-preview__focus-meta > span {
+  color: var(--text-faint);
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.home-map-preview__focus-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.home-map-preview__focus-actions a {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 12px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.86rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.home-map-preview__focus-actions p {
+  color: #64748b;
+  font-size: 0.84rem;
+  line-height: 1.45;
 }
 
 .home-map-preview__canvas .map-card {
@@ -7209,6 +7322,20 @@ button {
 .home-how__step-body {
   display: grid;
   gap: 10px;
+}
+
+.home-how__step-meta {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 9px 12px;
+  border-radius: 999px;
+  background: #fff4ec;
+  color: var(--primary-strong);
+  font-size: 0.86rem;
+  font-weight: 800;
 }
 
 .home-cta {
@@ -8375,6 +8502,16 @@ button {
 
   .home-hero__signal-top {
     align-items: flex-start;
+  }
+
+  .home-overview__metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .home-how__step-meta {
+    width: 100%;
+    align-items: flex-start;
+    border-radius: 16px;
   }
 
   .home-news__type-block {

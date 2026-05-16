@@ -95,6 +95,7 @@ const resources = {
         stats: {
           requests: "Public city reports on the map",
           alerts: "Live city alerts",
+          inProgress: "Requests in progress",
           categories: "Service categories",
         },
         overview: {
@@ -102,9 +103,15 @@ const resources = {
           title: "One platform powering requests, response and city coordination.",
           description:
             "A shared city workspace for residents, operators, and administrators.",
+          boardEyebrow: "Live workload",
+          boardTitle: "What is happening in the city right now",
           narrative:
-            "Requests, map visibility, alerts and service delivery move inside one continuous workflow.",
+            "The homepage now shows the operational picture directly: how many reports are waiting, how many are already being handled, and how many have been resolved.",
           visibleIssues: "Live city issue stream",
+          pendingMetric: "Waiting for review",
+          inProgressMetric: "In operator work",
+          closedMetric: "Resolved requests",
+          categoriesMetric: "Service routes",
           cardOneEyebrow: "Shared data",
           cardOneTitle: "All city workflows on one backend.",
           cardOneBody:
@@ -113,6 +120,10 @@ const resources = {
           cardTwoTitle: "Fast action from report to resolution.",
           cardTwoBody:
             "City teams collaborate through a shared queue instead of disconnected touchpoints.",
+          cardThreeEyebrow: "Public visibility",
+          cardThreeTitle: "The city map stays open for viewing.",
+          cardThreeBody:
+            "Guests can inspect public reports and hotspots, while contact, edits, and personal actions remain role-based.",
         },
         statsSection: {
           eyebrow: "City metrics",
@@ -124,19 +135,29 @@ const resources = {
           sharedQueue: "Web and mobile share the same live service queue.",
           categories: "Categories",
           alerts: "Alerts",
+          inProgress: "In progress",
           issueStream: "Shared issue stream",
           disruptions: "Priority notices and incidents",
+          inProgressDetail: "Already accepted by operators",
           syncedCategories: "Service categories synced with backend",
           liveIssuePulse: "Live city pulse",
           mapPoints: "{{count}} points on the map",
           alertsCount: "{{count}} alerts",
+          inProgressCount: "{{count}} in progress",
           selectedIssue: "Selected issue",
+          publicRequest: "Public request",
+          requestId: "#{{id}}",
+          closeSelected: "Close selected issue",
+          openDetails: "Open details",
+          signInToAct: "Sign in to act",
+          authenticatedHint: "Open the full request to view the timeline, chat, and available role actions.",
+          guestHint: "Guest mode is view-only: sign in to create, contact, or manage requests.",
         },
         newsPreview: {
-          eyebrow: "News and alerts",
-          title: "See city updates, closures and urgent notices at a glance.",
+          eyebrow: "City updates",
+          title: "Useful city updates without losing the request workflow.",
           description:
-            "This feed helps residents instantly understand what changed, where it matters, and why.",
+            "Search official announcements, service changes, and city posts while the main page stays focused on requests.",
           locationFallback: "Astana",
         },
         alertsStory: {
@@ -245,25 +266,29 @@ const resources = {
         },
         mapPreview: {
           eyebrow: "Map preview",
-          title: "A wide city map block with premium framing instead of a plain admin rectangle.",
+          title: "A compact city map preview with only the actions needed here.",
           description:
-            "Explore issue concentration, status distribution, and the latest selected request in a section that feels like a product showcase.",
+            "Click a marker to inspect a short public card. Signed-in users can continue to the full request; guests stay in read-only mode.",
         },
         how: {
           eyebrow: "How it works",
-          title: "Each stage reveals progressively so the whole journey reads like a single flow.",
+          title: "From signal to resolution, every step has a clear owner and visible status.",
           stepOneTitle: "Citizen reports the issue",
           stepOneBody:
             "A resident submits a request with category, location, photos, and details from mobile or web.",
+          stepOneMeta: "Category, address, media, and request ID",
           stepTwoTitle: "Operators triage and assign",
           stepTwoBody:
             "Call center staff review incoming reports, update status, and coordinate the proper response path.",
+          stepTwoMeta: "Status, priority, department, and internal notes",
           stepThreeTitle: "City services resolve",
           stepThreeBody:
             "The request progresses through shared statuses with comments, notes, and supporting communication.",
+          stepThreeMeta: "Operator comments and service coordination",
           stepFourTitle: "Resident sees the result",
           stepFourBody:
             "The same person who reported the issue can track updates and close the loop with confidence.",
+          stepFourMeta: "Public status, personal cabinet, and final resolution",
         },
         cta: {
           badge: "Report a city issue",
@@ -1146,6 +1171,7 @@ const resources = {
         stats: {
           requests: "Общественные заявки на карте",
           alerts: "Живые городские алерты",
+          inProgress: "Заявки в работе",
           categories: "Категории услуг",
         },
         overview: {
@@ -1153,9 +1179,15 @@ const resources = {
           title: "Одна платформа для заявок, реакции и городской координации.",
           description:
             "Общее рабочее пространство для жителей, операторов и администрации.",
+          boardEyebrow: "Живая нагрузка",
+          boardTitle: "Что происходит в городе прямо сейчас",
           narrative:
-            "Заявки, карта, алерты и выполнение движутся в одном непрерывном потоке.",
+            "Главная теперь сразу показывает рабочую картину: сколько обращений ожидают, сколько уже в обработке и сколько закрыто.",
           visibleIssues: "Живой поток городских заявок",
+          pendingMetric: "Ожидают проверки",
+          inProgressMetric: "В работе у оператора",
+          closedMetric: "Решенные обращения",
+          categoriesMetric: "Маршруты служб",
           cardOneEyebrow: "Общие данные",
           cardOneTitle: "Все городские процессы на одном backend.",
           cardOneBody:
@@ -1164,6 +1196,10 @@ const resources = {
           cardTwoTitle: "Быстрый переход к решению.",
           cardTwoBody:
             "Городские команды работают через одну очередь, а не разрозненные интерфейсы.",
+          cardThreeEyebrow: "Публичный просмотр",
+          cardThreeTitle: "Карта города открыта для просмотра.",
+          cardThreeBody:
+            "Гости могут изучать публичные обращения и проблемные точки, а контакт, изменение и личные действия остаются по ролям.",
         },
         statsSection: {
           eyebrow: "Городские метрики",
@@ -1176,19 +1212,29 @@ const resources = {
             "Веб и мобильное приложение используют одну очередь заявок и общий городской поток.",
           categories: "Категории",
           alerts: "Алерты",
+          inProgress: "В работе",
           issueStream: "Общий поток заявок",
           disruptions: "Приоритетные уведомления и инциденты",
+          inProgressDetail: "Уже приняты оператором",
           syncedCategories: "Категории услуг синхронизированы с backend",
           liveIssuePulse: "Живой пульс города",
           mapPoints: "{{count}} точек на карте",
           alertsCount: "{{count}} алертов",
+          inProgressCount: "{{count}} в работе",
           selectedIssue: "Выбранная проблема",
+          publicRequest: "Публичное обращение",
+          requestId: "#{{id}}",
+          closeSelected: "Закрыть выбранную проблему",
+          openDetails: "Открыть детали",
+          signInToAct: "Войти для действий",
+          authenticatedHint: "Откройте полную заявку, чтобы увидеть таймлайн, чат и доступные действия роли.",
+          guestHint: "Гостевой режим только для просмотра: войдите, чтобы создавать, контактировать или управлять заявками.",
         },
         newsPreview: {
-          eyebrow: "Новости и уведомления",
-          title: "Смотрите обновления города, перекрытия и срочные сообщения одним взглядом.",
+          eyebrow: "Городские обновления",
+          title: "Полезные городские сообщения без потери фокуса на обращениях.",
           description:
-            "Лента помогает быстро понять, что изменилось, где и почему это важно.",
+            "Ищите официальные объявления, изменения сервисов и городские публикации, пока главная остается сосредоточенной на заявках.",
           locationFallback: "Астана",
         },
         alertsStory: {
@@ -1297,25 +1343,29 @@ const resources = {
         },
         mapPreview: {
           eyebrow: "Превью карты",
-          title: "Широкий городской блок карты с премиальной подачей вместо обычного админского прямоугольника.",
+          title: "Компактное превью карты с нужными действиями прямо здесь.",
           description:
-            "Изучайте концентрацию проблем, распределение статусов и последнюю выбранную заявку в секции, которая ощущается как продуктовая витрина.",
+            "Нажмите на маркер, чтобы посмотреть короткую публичную карточку. Авторизованные пользователи могут перейти в полную заявку, гости остаются в режиме просмотра.",
         },
         how: {
           eyebrow: "Как это работает",
-          title: "Каждый этап раскрывается постепенно, чтобы весь путь читался как единый поток.",
+          title: "От сигнала до решения: у каждого этапа есть владелец и видимый статус.",
           stepOneTitle: "Житель сообщает о проблеме",
           stepOneBody:
             "Житель отправляет заявку с категорией, локацией, фотографиями и деталями через мобильное приложение или веб.",
+          stepOneMeta: "Категория, адрес, медиа и ID заявки",
           stepTwoTitle: "Операторы обрабатывают и назначают",
           stepTwoBody:
             "Сотрудники call-центра просматривают входящие заявки, обновляют статус и координируют правильный путь реагирования.",
+          stepTwoMeta: "Статус, приоритет, отдел и внутренние заметки",
           stepThreeTitle: "Городские службы решают",
           stepThreeBody:
             "Заявка проходит через общие статусы с комментариями, заметками и сопроводительной коммуникацией.",
+          stepThreeMeta: "Комментарии оператора и координация служб",
           stepFourTitle: "Житель видит результат",
           stepFourBody:
             "Тот же человек, который сообщил о проблеме, может отслеживать обновления и уверенно закрыть цикл.",
+          stepFourMeta: "Публичный статус, личный кабинет и итоговое решение",
         },
         cta: {
           badge: "Сообщите о проблеме",
@@ -2201,6 +2251,7 @@ const resources = {
         stats: {
           requests: "Картадағы ашық мәселелер",
           alerts: "Белсенді ескертулер",
+          inProgress: "Жұмыстағы өтінімдер",
           categories: "Қызмет санаттары",
         },
         overview: {
@@ -2208,9 +2259,15 @@ const resources = {
           title: "Өтініштер, әрекет және қала үйлестіруі үшін бір платформа.",
           description:
             "Тұрғындар, операторлар және әкімшілік үшін ортақ жұмыс кеңістігі.",
+          boardEyebrow: "Жанды жүктеме",
+          boardTitle: "Қалада қазір не болып жатыр",
           narrative:
-            "Өтінімдер, карта, ескертулер және қызмет көрсету бір үздіксіз ағынға енеді.",
+            "Басты бет жұмыс көрінісін бірден көрсетеді: қанша өтінім күтуде, қаншасы өңделуде және қаншасы жабылды.",
           visibleIssues: "Қалалық өтінімдердің шынайы ағыны",
+          pendingMetric: "Тексеруді күтуде",
+          inProgressMetric: "Оператор жұмысында",
+          closedMetric: "Шешілген өтінімдер",
+          categoriesMetric: "Қызмет бағыттары",
           cardOneEyebrow: "Ортақ дерек",
           cardOneTitle: "Барлық қала процесстері бір backend-та.",
           cardOneBody:
@@ -2219,6 +2276,10 @@ const resources = {
           cardTwoTitle: "Хабарламадан шешімге дейін жылдам орындалу.",
           cardTwoBody:
             "Қала командалары жеке беттер емес, ортақ кезек арқылы ынтымақтасады.",
+          cardThreeEyebrow: "Қоғамдық қарау",
+          cardThreeTitle: "Қала картасы қарауға ашық.",
+          cardThreeBody:
+            "Қонақтар ашық өтінімдер мен проблемалық нүктелерді қарай алады, ал байланысу, өзгерту және жеке әрекеттер рөлдерге байланысты қалады.",
         },
         statsSection: {
           eyebrow: "Қала метрикалары",
@@ -2231,19 +2292,29 @@ const resources = {
             "Веб пен мобильді қосымша бір өтінім кезегін және бір қалалық контент ағынын пайдаланады.",
           categories: "Санаттар",
           alerts: "Ескертулер",
+          inProgress: "Жұмыста",
           issueStream: "Қалалық өтінімдердің ортақ ағыны",
           disruptions: "Басым хабарламалар мен үзілістер",
+          inProgressDetail: "Операторлар қабылдаған",
           syncedCategories: "Қызмет санаттары backend-пен синхрондалған",
           liveIssuePulse: "Қалалық өтінімдер пульсі",
           mapPoints: "Карта нүктелері: {{count}}",
           alertsCount: "Ескертулер: {{count}}",
+          inProgressCount: "Жұмыста: {{count}}",
           selectedIssue: "Таңдалған мәселе",
+          publicRequest: "Ашық өтінім",
+          requestId: "#{{id}}",
+          closeSelected: "Таңдалған мәселені жабу",
+          openDetails: "Мәліметті ашу",
+          signInToAct: "Әрекет үшін кіру",
+          authenticatedHint: "Толық өтінімді ашып, таймлайнды, чатты және рөлге қолжетімді әрекеттерді көріңіз.",
+          guestHint: "Қонақ режимі тек қарауға арналған: өтінім жасау, байланысу немесе басқару үшін кіріңіз.",
         },
         newsPreview: {
-          eyebrow: "Жаңалықтар мен ескертулер",
-          title: "Қалалық өзгерістерді, жабылуларды және шұғыл хабарламаларды тез көріңіз.",
+          eyebrow: "Қалалық жаңартулар",
+          title: "Өтінімдер ағымынан алыстамай пайдалы қалалық хабарламаларды көріңіз.",
           description:
-            "Бұл таспа тұрғындарға не өзгергенін, қай жерде екенін және неге маңызды екенін жылдам түсінуге көмектеседі.",
+            "Ресми хабарландыруларды, қызмет өзгерістерін және қалалық жарияланымдарды іздеңіз, ал басты бет өтінімдерге бағытталған күйде қалады.",
           locationFallback: "Астана",
         },
         alertsStory: {
@@ -2352,25 +2423,29 @@ const resources = {
         },
         mapPreview: {
           eyebrow: "Карта алдын ала қарауы",
-          title: "Кәдімгі админ тікбұрышының орнына премиум пішімделген кең қалалық карта блогы.",
+          title: "Қажетті әрекеттері бар ықшам карта алдын ала қарауы.",
           description:
-            "Өнім көрмесіндей сезілетін бөлімде мәселе шоғырын, статус үлестірімін және соңғы таңдалған өтінімді зерттеңіз.",
+            "Маркерді басып, қысқа ашық карточканы қараңыз. Авторизацияланған пайдаланушылар толық өтінімге өте алады, қонақтар тек қарайды.",
         },
         how: {
           eyebrow: "Қалай жұмыс істейді",
-          title: "Барлық жол бір ағым болып оқылуы үшін әр кезең біртіндеп ашылады.",
+          title: "Сигналдан шешімге дейін: әр кезеңнің иесі және көрінетін статусы бар.",
           stepOneTitle: "Тұрғын мәселені хабарлайды",
           stepOneBody:
             "Тұрғын мобильді қосымша не веб арқылы санат, орын, фото және толық мәліметпен өтінім жібереді.",
+          stepOneMeta: "Санат, мекенжай, медиа және өтінім ID",
           stepTwoTitle: "Операторлар сұрыптап, тағайындайды",
           stepTwoBody:
             "Call-орталық қызметкерлері кіріс өтінімдерді қарап, статусын жаңартып, дұрыс әрекет жолын үйлестіреді.",
+          stepTwoMeta: "Статус, басымдық, бөлім және ішкі жазбалар",
           stepThreeTitle: "Қалалық қызметтер шешеді",
           stepThreeBody:
             "Өтінім ортақ статустар, пікірлер, ескертпелер және сүйемелдеуші байланыс арқылы алға жылжиды.",
+          stepThreeMeta: "Оператор пікірлері және қызметтерді үйлестіру",
           stepFourTitle: "Тұрғын нәтижені көреді",
           stepFourBody:
             "Мәселені хабарлаған сол адам жаңартуларды бақылап, циклді сенімді түрде жаба алады.",
+          stepFourMeta: "Ашық статус, жеке кабинет және соңғы шешім",
         },
         cta: {
           badge: "Мәселе туралы хабарлау",
