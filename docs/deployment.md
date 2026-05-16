@@ -44,6 +44,8 @@ Docker context: ./apps/backend
 Health check path: /api/
 ```
 
+If Render is already configured with the default Dockerfile path, the root `Dockerfile` also builds the backend from `apps/backend`.
+
 Required Render env vars:
 
 ```env
