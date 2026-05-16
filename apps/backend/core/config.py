@@ -11,7 +11,9 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 load_dotenv(ROOT_DIR / ".env")
 
 mongo_url = os.environ["MONGO_URL"]
-mongo_client_options = {}
+mongo_client_options = {
+    "serverSelectionTimeoutMS": int(os.environ.get("MONGO_SERVER_SELECTION_TIMEOUT_MS", "10000")),
+}
 mongo_tls_ca_file = os.environ.get("MONGO_TLS_CA_FILE", "").strip()
 
 if mongo_tls_ca_file:

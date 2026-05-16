@@ -1,6 +1,8 @@
+import asyncio
 import logging
 
 from fastapi import APIRouter, FastAPI
+from pymongo.errors import PyMongoError
 from starlette.middleware.cors import CORSMiddleware
 
 from core.config import CORS_ORIGINS, CORS_ORIGIN_REGEX, client, db
@@ -30,15 +32,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
-
-    print("Server started successfully")
-
-
-@app.on_event("startup")
-async def ensure_indexes():
+async def create_indexes():
     await db.requests.create_index(
         [("created_at", -1)],
         name="requests_created_at_desc_index",
@@ -63,3 +57,40 @@ async def ensure_indexes():
         [("request_id", 1), ("created_at", 1)],
         name="messages_request_created_index",
     )
+
+
+async def ensure_indexes_with_retries():
+    max_attempts = 3
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            await create_indexes()
+            logger.info("MongoDB indexes are ready.")
+            return
+        except PyMongoError as exc:
+            logger.warning(
+                "MongoDB index creation failed on attempt %s/%s: %s",
+                attempt,
+                max_attempts,
+                exc,
+            )
+
+        if attempt < max_attempts:
+            await asyncio.sleep(5 * attempt)
+
+    logger.error(
+        "MongoDB indexes were not created after %s attempts. "
+        "The API stays online, but database-backed endpoints can fail until MongoDB is reachable.",
+        max_attempts,
+    )
+
+
+@app.on_event("shutdown")
+async def shutdown_db_client():
+    client.close()
+
+
+@app.on_event("startup")
+async def schedule_index_creation():
+    asyncio.create_task(ensure_indexes_with_retries())
+    logger.info("Server startup complete; MongoDB index creation scheduled.")
