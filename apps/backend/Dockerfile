@@ -8,7 +8,7 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends build-essential gcc \
   && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.prod.txt .
+COPY apps/backend/requirements.prod.txt .
 RUN python -m venv /opt/venv \
   && /opt/venv/bin/pip install --upgrade pip \
   && /opt/venv/bin/pip install -r requirements.prod.txt
@@ -26,7 +26,7 @@ RUN addgroup --system app && adduser --system --ingroup app app
 
 COPY --from=builder /opt/venv /opt/venv
 
-COPY . .
+COPY apps/backend/ .
 
 USER app
 

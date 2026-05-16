@@ -40,11 +40,11 @@ Manual Render settings:
 Service type: Web Service
 Runtime: Docker
 Dockerfile path: ./apps/backend/Dockerfile
-Docker context: ./apps/backend
+Docker context: .
 Health check path: /api/
 ```
 
-If Render is already configured with the default Dockerfile path, the root `Dockerfile` also builds the backend from `apps/backend`.
+The root `Dockerfile` also builds the same backend, so Render can use either `Dockerfile` or `apps/backend/Dockerfile` as long as the Docker context is the repo root.
 
 Required Render env vars:
 
@@ -73,7 +73,7 @@ GEMINI_API_KEY=
 Backend Docker build:
 
 ```bash
-docker build -t ikomek-backend:latest -f apps/backend/Dockerfile apps/backend
+docker build -t ikomek-backend:latest -f apps/backend/Dockerfile .
 docker run --rm -p 8001:8001 --env-file apps/backend/.env ikomek-backend:latest
 ```
 
