@@ -41,7 +41,7 @@ export function Header({
           size="sm"
           className={cn("topbar__menu topbar__menu--mobile", mobileSidebarOpen && "topbar__menu--hidden")}
           onClick={onToggleMobileSidebar}
-          aria-label="Toggle navigation"
+          aria-label={t("shell.toggleNavigation")}
         >
           {mobileSidebarOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
         </Button>

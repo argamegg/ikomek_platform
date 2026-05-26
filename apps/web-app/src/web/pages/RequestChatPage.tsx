@@ -61,7 +61,7 @@ export function RequestChatPage() {
       setMessage("");
       setAttachment(null);
       await queryClient.invalidateQueries({ queryKey: requestQueryKey });
-      toast.success("Message sent");
+      toast.success(t("chat.sent"));
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   });
@@ -82,7 +82,7 @@ export function RequestChatPage() {
                   <p>{item.message}</p>
                   {item.attachmentUrl ? (
                     <a href={item.attachmentUrl} target="_blank" rel="noreferrer">
-                      {item.attachmentLabel || "Attachment"}
+                      {item.attachmentLabel || t("common.attachment")}
                     </a>
                   ) : null}
                 </div>
@@ -100,7 +100,7 @@ export function RequestChatPage() {
               }}
             >
               <Textarea
-                label="Message"
+                label={t("chat.message")}
                 rows={8}
                 placeholder={t("chat.placeholder")}
                 value={message}
@@ -108,7 +108,7 @@ export function RequestChatPage() {
               />
               <label className="upload-inline">
                 <Paperclip size={16} />
-                <span>{attachment?.name ?? "Attach image"}</span>
+                <span>{attachment?.name ?? t("common.attachImage")}</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -122,7 +122,7 @@ export function RequestChatPage() {
           </Card>
         </div>
       ) : (
-        <EmptyState title="Chat is unavailable" description="Only the request author, operators, and admins can use request chat." />
+        <EmptyState title={t("chat.unavailableTitle")} description={t("chat.unavailableDescription")} />
       )}
     </div>
   );

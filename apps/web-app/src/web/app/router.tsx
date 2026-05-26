@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { AppShell } from "../components/layout/AppShell";
 import { platformApi, queryKeys } from "../services/platformApi";
 import { AuthPage } from "../pages/AuthPage";
@@ -19,10 +20,12 @@ import { AdminPage } from "../pages/AdminPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 
 function GuardFallback() {
+  const { t } = useTranslation();
+
   return (
     <div className="guard-fallback">
       <div className="loading-orb" />
-      <p>Preparing your workspace…</p>
+      <p>{t("shell.preparing")}</p>
     </div>
   );
 }
