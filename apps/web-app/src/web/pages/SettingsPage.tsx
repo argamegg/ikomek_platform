@@ -23,6 +23,12 @@ const languageOptions: Array<{ value: Locale; label: string; hint: string }> = [
   { value: "en", label: "English", hint: "EN" },
 ];
 
+function normalizeLocale(locale: string): Locale {
+  if (locale.startsWith("kz") || locale.startsWith("kk")) return "kz";
+  if (locale.startsWith("en")) return "en";
+  return "ru";
+}
+
 export default function SettingsPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -32,7 +38,7 @@ export default function SettingsPage() {
     queryFn: platformApi.getCurrentUser,
   });
   const currentUser = currentUserQuery.data;
-  const [selectedLanguage, setSelectedLanguage] = useState<Locale>("ru");
+  const [selectedLanguage, setSelectedLanguage] = useState<Locale>(() => normalizeLocale(i18n.language));
   const [passwordForm, setPasswordForm] = useState<PasswordForm>({
     currentPassword: "",
     newPassword: "",
@@ -40,10 +46,8 @@ export default function SettingsPage() {
   });
 
   useEffect(() => {
-    if (currentUser?.language) {
-      setSelectedLanguage(currentUser.language);
-    }
-  }, [currentUser?.language]);
+    setSelectedLanguage(normalizeLocale(i18n.language));
+  }, [i18n.language]);
 
   const languageMutation = useMutation({
     mutationFn: platformApi.updateLanguage,
