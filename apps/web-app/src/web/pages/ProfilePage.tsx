@@ -45,6 +45,8 @@ const ACCENT = "#ff6b35";
 const MONTH_WINDOW = 6;
 const SAVED_LOCATION_TYPES: SavedLocationType[] = ["home", "work", "study", "family", "other"];
 const AVATAR_CROP_SIZE = 512;
+const NAME_INPUT_PATTERN = /^[\p{L}\s]*$/u;
+const NAME_INPUT_CLEANUP_PATTERN = /[^\p{L}\s]/gu;
 
 type StatKey = "total" | "closed" | "inProgress" | "pending";
 type ProfileFormState = {
@@ -207,6 +209,14 @@ function splitProfileName(name: string | undefined) {
     firstName: parts[0] ?? "",
     lastName: parts.slice(1).join(" "),
   };
+}
+
+function sanitizeProfileNameInput(value: string) {
+  return value.replace(NAME_INPUT_CLEANUP_PATTERN, "").replace(/\s{2,}/g, " ");
+}
+
+function sanitizeBirthDateInput(value: string) {
+  return value.replace(/[^\d-]/g, "");
 }
 
 function cropAvatarImage(crop: AvatarCropState) {
@@ -499,6 +509,28 @@ export function ProfilePage() {
       setProfileNameError(false);
     }
     setProfileForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function handleProfileNameInput(key: "firstName" | "lastName", value: string) {
+    updateProfileForm(key, sanitizeProfileNameInput(value));
+  }
+
+  function handleProfileNameBeforeInput(event: FormEvent<HTMLInputElement>) {
+    const data = (event.nativeEvent as InputEvent).data;
+    if (data && !NAME_INPUT_PATTERN.test(data)) {
+      event.preventDefault();
+    }
+  }
+
+  function handleBirthDateInput(value: string) {
+    updateProfileForm("birthDate", sanitizeBirthDateInput(value));
+  }
+
+  function handleBirthDateBeforeInput(event: FormEvent<HTMLInputElement>) {
+    const data = (event.nativeEvent as InputEvent).data;
+    if (data && /\D/.test(data)) {
+      event.preventDefault();
+    }
   }
 
   function handleAvatarChange(file: File | undefined) {
@@ -967,7 +999,8 @@ export function ProfilePage() {
                   <span>{t("cabinet.profileEditor.firstName")}</span>
                   <input
                     value={profileForm.firstName}
-                    onChange={(event) => updateProfileForm("firstName", event.target.value)}
+                    onBeforeInput={handleProfileNameBeforeInput}
+                    onChange={(event) => handleProfileNameInput("firstName", event.target.value)}
                     autoComplete="given-name"
                   />
                 </label>
@@ -975,7 +1008,8 @@ export function ProfilePage() {
                   <span>{t("cabinet.profileEditor.lastName")}</span>
                   <input
                     value={profileForm.lastName}
-                    onChange={(event) => updateProfileForm("lastName", event.target.value)}
+                    onBeforeInput={handleProfileNameBeforeInput}
+                    onChange={(event) => handleProfileNameInput("lastName", event.target.value)}
                     autoComplete="family-name"
                   />
                 </label>
@@ -1002,7 +1036,9 @@ export function ProfilePage() {
                   <input
                     type="date"
                     value={profileForm.birthDate}
-                    onChange={(event) => updateProfileForm("birthDate", event.target.value)}
+                    inputMode="numeric"
+                    onBeforeInput={handleBirthDateBeforeInput}
+                    onChange={(event) => handleBirthDateInput(event.target.value)}
                   />
                 </label>
                 </div>
