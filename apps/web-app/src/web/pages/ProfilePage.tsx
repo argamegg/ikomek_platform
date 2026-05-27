@@ -47,8 +47,8 @@ const ACCENT = "#ff6b35";
 const MONTH_WINDOW = 6;
 const SAVED_LOCATION_TYPES: SavedLocationType[] = ["home", "work", "study", "family", "other"];
 const AVATAR_CROP_SIZE = 512;
-const NAME_INPUT_PATTERN = /^[\p{L}\s]*$/u;
-const NAME_INPUT_CLEANUP_PATTERN = /[^\p{L}\s]/gu;
+const NAME_INPUT_PATTERN = /^[\p{L}\s'-]*$/u;
+const NAME_INPUT_CLEANUP_PATTERN = /[^\p{L}\s'-]/gu;
 
 type StatKey = "total" | "closed" | "inProgress" | "pending";
 type ProfileFormState = {
@@ -601,7 +601,7 @@ export function ProfilePage() {
 
   function handleBirthDateBeforeInput(event: FormEvent<HTMLInputElement>) {
     const data = (event.nativeEvent as InputEvent).data;
-    if (data && /\D/.test(data)) {
+    if (data && !/^[\d-]+$/.test(data)) {
       event.preventDefault();
     }
   }
