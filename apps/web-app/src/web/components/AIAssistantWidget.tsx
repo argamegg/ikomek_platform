@@ -11,50 +11,6 @@ type AssistantMessage = AIAssistantChatMessage & {
   actions?: AIAssistantAction[];
 };
 
-type AssistantCopy = {
-  label: string;
-  title: string;
-  subtitle: string;
-  greeting: string;
-  placeholder: string;
-  empty: string;
-  send: string;
-  configured: string;
-};
-
-const COPY: Record<Locale, AssistantCopy> = {
-  ru: {
-    label: "AI ассистент",
-    title: "AI ассистент",
-    subtitle: "Помогает с заявками, статусами и навигацией",
-    greeting: "Здравствуйте! Я помогу разобраться с iKOMEK 109, заявками, новостями и статусами.",
-    placeholder: "Напишите вопрос...",
-    empty: "Спросите, как создать заявку или где посмотреть статус.",
-    send: "Отправить",
-    configured: "Gemini API key не настроен",
-  },
-  kz: {
-    label: "AI ассистент",
-    title: "AI ассистент",
-    subtitle: "Өтінімдер, мәртебелер және навигация бойынша көмектеседі",
-    greeting: "Сәлеметсіз бе! Мен iKOMEK 109, өтінімдер, жаңалықтар және мәртебелер бойынша көмектесемін.",
-    placeholder: "Сұрағыңызды жазыңыз...",
-    empty: "Өтінім жасау немесе мәртебені көру туралы сұраңыз.",
-    send: "Жіберу",
-    configured: "Gemini API key бапталмаған",
-  },
-  en: {
-    label: "AI assistant",
-    title: "AI assistant",
-    subtitle: "Helps with requests, statuses, and navigation",
-    greeting: "Hi! I can help you use iKOMEK 109, city requests, news, and request statuses.",
-    placeholder: "Ask a question...",
-    empty: "Ask how to create a request or check a status.",
-    send: "Send",
-    configured: "Gemini API key is not configured",
-  },
-};
-
 function getLocale(language: string): Locale {
   if (language.startsWith("kz") || language.startsWith("kk")) {
     return "kz";
@@ -66,16 +22,15 @@ function getLocale(language: string): Locale {
 }
 
 export function AIAssistantWidget() {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const locale = getLocale(i18n.language);
-  const copy = COPY[locale];
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [configured, setConfigured] = useState(true);
   const [messages, setMessages] = useState<AssistantMessage[]>([
-    { role: "assistant", content: copy.greeting },
+    { role: "assistant", content: t("aiAssistant.greeting") },
   ]);
   const listRef = useRef<HTMLDivElement | null>(null);
 
@@ -91,9 +46,9 @@ export function AIAssistantWidget() {
       if (current.length !== 1 || current[0].role !== "assistant") {
         return current;
       }
-      return [{ role: "assistant", content: copy.greeting }];
+      return [{ role: "assistant", content: t("aiAssistant.greeting") }];
     });
-  }, [copy.greeting]);
+  }, [t, i18n.language]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -125,7 +80,7 @@ export function AIAssistantWidget() {
         ...current,
         {
           role: "assistant",
-          content: "Не удалось получить ответ. Проверьте backend и настройки AI.",
+          content: t("aiAssistant.failed"),
         },
       ]);
     } finally {
@@ -147,7 +102,7 @@ export function AIAssistantWidget() {
         {open ? (
           <motion.section
             className="ai-assistant__panel"
-            aria-label={copy.title}
+            aria-label={t("aiAssistant.title")}
             initial={{ opacity: 0, scale: 0.85, y: 16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.85, y: 16 }}
@@ -159,15 +114,15 @@ export function AIAssistantWidget() {
               <MessageCircle size={20} />
             </span>
             <span>
-              <strong>{copy.title}</strong>
-              <small>{configured ? copy.subtitle : copy.configured}</small>
+              <strong>{t("aiAssistant.title")}</strong>
+              <small>{configured ? t("aiAssistant.subtitle") : t("aiAssistant.configured")}</small>
             </span>
-            <button type="button" onClick={() => setOpen(false)} aria-label="Close AI assistant">
+            <button type="button" onClick={() => setOpen(false)} aria-label={t("aiAssistant.close")}>
               <X size={18} />
             </button>
           </header>
           <div className="ai-assistant__messages" ref={listRef}>
-            {messages.length === 0 ? <p className="ai-assistant__empty">{copy.empty}</p> : null}
+            {messages.length === 0 ? <p className="ai-assistant__empty">{t("aiAssistant.empty")}</p> : null}
             {messages.map((message, index) => (
               <article
                 className={`ai-assistant__message ai-assistant__message--${message.role}`}
@@ -200,10 +155,10 @@ export function AIAssistantWidget() {
             <input
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder={copy.placeholder}
+              placeholder={t("aiAssistant.placeholder")}
               maxLength={2000}
             />
-            <button type="submit" disabled={sendDisabled} aria-label={copy.send}>
+            <button type="submit" disabled={sendDisabled} aria-label={t("common.send")}>
               <Send size={17} />
             </button>
           </form>
@@ -214,8 +169,8 @@ export function AIAssistantWidget() {
         type="button"
         className={`ai-assistant__toggle${open ? " ai-assistant__toggle--open" : ""}`}
         onClick={() => setOpen((value) => !value)}
-        aria-label={copy.label}
-        title={copy.label}
+        aria-label={t("aiAssistant.label")}
+        title={t("aiAssistant.label")}
       >
         <MessageCircle className="ai-assistant__toggle-icon ai-assistant__toggle-icon--message" size={24} />
         <X className="ai-assistant__toggle-icon ai-assistant__toggle-icon--close" size={24} />

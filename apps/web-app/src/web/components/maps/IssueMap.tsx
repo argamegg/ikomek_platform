@@ -1,5 +1,6 @@
 import type { CivicRequest, MapMode } from "../../../types/platform";
 import { useMapLibreRequestMap } from "../../../components/map/useMapLibreRequestMap";
+import { useTranslation } from "react-i18next";
 
 type IssueMapProps = {
   requests: CivicRequest[];
@@ -10,6 +11,7 @@ type IssueMapProps = {
 };
 
 export function IssueMap({ requests, currentUserId, mode, onSelectRequest, focusRequestId }: IssueMapProps) {
+  const { t } = useTranslation();
   const { containerRef, zoomIn, zoomOut, locateUser } = useMapLibreRequestMap({
     requests,
     currentUserId,
@@ -35,21 +37,21 @@ export function IssueMap({ requests, currentUserId, mode, onSelectRequest, focus
         <button
           type="button"
           onClick={zoomIn}
-          aria-label="Zoom in"
+          aria-label={t("common.zoomIn")}
         >
           +
         </button>
         <button
           type="button"
           onClick={zoomOut}
-          aria-label="Zoom out"
+          aria-label={t("common.zoomOut")}
         >
           −
         </button>
         <button
           type="button"
           onClick={locateUser}
-          aria-label="Locate me"
+          aria-label={t("common.locateMe")}
         >
           ⌖
         </button>

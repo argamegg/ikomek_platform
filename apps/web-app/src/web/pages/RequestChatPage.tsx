@@ -141,6 +141,7 @@ export function RequestChatPage() {
       setAttachment(null);
       queryClient.setQueryData<RequestMessage[]>(messagesQueryKey, (current) => mergeMessages(current, sentMessage));
       queryClient.invalidateQueries({ queryKey: queryKeys.request(requestId) });
+      toast.success(t("chat.sent"));
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   });

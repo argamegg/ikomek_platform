@@ -130,7 +130,7 @@ export function Sidebar({
             type="button"
             className="sidebar__collapse-button"
             onClick={onToggleSidebar}
-            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={isCollapsed ? t("shell.expandSidebar") : t("shell.collapseSidebar")}
           >
             {isCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
           </button>
@@ -140,7 +140,7 @@ export function Sidebar({
             type="button"
             className="sidebar__collapse-button sidebar__collapse-button--mobile"
             onClick={onCloseMobile}
-            aria-label="Close navigation"
+            aria-label={t("shell.closeNavigation")}
           >
             <PanelLeftClose size={18} />
           </button>

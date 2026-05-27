@@ -10,8 +10,8 @@ export function NotFoundPage() {
   return (
     <Card className="section-card">
       <EmptyState
-        title="Page not found"
-        description="This route is not part of the iKOMEK web workspace."
+        title={t("notFound.title")}
+        description={t("notFound.description")}
         action={
           <Link to="/">
             <Button>{t("nav.home")}</Button>

@@ -1,5 +1,6 @@
 import { useEffect, useEffectEvent, useRef } from "react";
 import maplibregl from "maplibre-gl";
+import { useTranslation } from "react-i18next";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { REQUEST_MAP_STYLE } from "../../../components/map/requestMapConfig";
 import { ASTANA_CENTER_LNG, ASTANA_CENTER_LAT } from "../../lib/geoFence";
@@ -17,6 +18,7 @@ type LocationPickerMapProps = {
 const DEFAULT_CENTER: [number, number] = [ASTANA_CENTER_LNG, ASTANA_CENTER_LAT];
 
 export function LocationPickerMap({ coordinate, onCoordinateChange }: LocationPickerMapProps) {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
@@ -121,14 +123,14 @@ export function LocationPickerMap({ coordinate, onCoordinateChange }: LocationPi
         <button
           type="button"
           onClick={zoomIn}
-          aria-label="Zoom in"
+          aria-label={t("common.zoomIn")}
         >
           +
         </button>
         <button
           type="button"
           onClick={zoomOut}
-          aria-label="Zoom out"
+          aria-label={t("common.zoomOut")}
         >
           −
         </button>
