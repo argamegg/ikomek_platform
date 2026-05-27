@@ -55,6 +55,7 @@ export default function LocationScreen() {
   const [selectedSavedLocationId, setSelectedSavedLocationId] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isLocating, setIsLocating] = useState(false);
+  const [hasLocationPermission, setHasLocationPermission] = useState(false);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isSavingLocation, setIsSavingLocation] = useState(false);
   const [saveForm, setSaveForm] = useState({ label: '', type: 'home' as SavedLocationType });
@@ -95,6 +96,7 @@ export default function LocationScreen() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === 'granted') {
+        setHasLocationPermission(true);
         const location = await Location.getCurrentPositionAsync({});
         const { latitude, longitude } = location.coords;
 
@@ -102,6 +104,8 @@ export default function LocationScreen() {
         setCoordinates({ lat: latitude, lng: longitude });
         mapRef.current?.centerOnCoordinate(longitude, latitude, 16);
         await reverseGeocode(latitude, longitude);
+      } else {
+        setHasLocationPermission(false);
       }
     } catch (error) {
       console.error('Location error:', error);
@@ -121,6 +125,14 @@ export default function LocationScreen() {
 
   useEffect(() => {
     void fetchSavedLocations();
+    void Location.getForegroundPermissionsAsync()
+      .then(({ status }) => {
+        setHasLocationPermission(status === 'granted');
+      })
+      .catch(() => {
+        setHasLocationPermission(false);
+      });
+
     return () => {
       if (reverseGeocodeTimeoutRef.current) {
         clearTimeout(reverseGeocodeTimeoutRef.current);
@@ -227,6 +239,7 @@ export default function LocationScreen() {
           onCoordinateChange={handleCoordinateChange}
           onLocateMePress={() => void getCurrentLocation()}
           isLocating={isLocating}
+          showUserLocation={hasLocationPermission}
         />
         
         {isLoading && (

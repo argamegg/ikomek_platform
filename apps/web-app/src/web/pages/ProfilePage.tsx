@@ -35,7 +35,9 @@ import { OperatorStats } from "../../components/OperatorStats";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { EmptyState } from "../components/ui/EmptyState";
+import { LocationPickerMap } from "../components/maps/LocationPickerMap";
 import { formatDate, getStatusTone } from "../lib/format";
+import { ASTANA_CENTER_LAT, ASTANA_CENTER_LNG } from "../lib/geoFence";
 import { localizeRequestProblemType, localizeRequestStatus } from "../lib/requestMeta";
 import { getErrorMessage, platformApi, queryKeys } from "../services/platformApi";
 import { applyLoggedOutQueryState } from "../lib/querySession";
@@ -45,8 +47,8 @@ const ACCENT = "#ff6b35";
 const MONTH_WINDOW = 6;
 const SAVED_LOCATION_TYPES: SavedLocationType[] = ["home", "work", "study", "family", "other"];
 const AVATAR_CROP_SIZE = 512;
-const NAME_INPUT_PATTERN = /^[\p{L}\s]*$/u;
-const NAME_INPUT_CLEANUP_PATTERN = /[^\p{L}\s]/gu;
+const NAME_INPUT_PATTERN = /^[\p{L}\s'-]*$/u;
+const NAME_INPUT_CLEANUP_PATTERN = /[^\p{L}\s'-]/gu;
 
 type StatKey = "total" | "closed" | "inProgress" | "pending";
 type ProfileFormState = {
@@ -112,6 +114,10 @@ function getInitials(name: string) {
     .join("")
     .slice(0, 2)
     .toUpperCase();
+}
+
+function hasUsableCoordinate(lat: number, lng: number) {
+  return Number.isFinite(lat) && Number.isFinite(lng) && !(Math.abs(lat) < 0.000001 && Math.abs(lng) < 0.000001);
 }
 
 function getAverageClosingDays(requests: CivicRequest[]) {
@@ -303,6 +309,9 @@ export function ProfilePage() {
     lat: "",
     lng: "",
   });
+  const [savedMapCoordinate, setSavedMapCoordinate] = useState<{ lat: number; lng: number } | null>(null);
+  const [savedGeocodeHint, setSavedGeocodeHint] = useState("");
+  const [isSavedGeocoding, setIsSavedGeocoding] = useState(false);
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
   const [avatarCrop, setAvatarCrop] = useState<AvatarCropState | null>(null);
   const avatarDragRef = useRef<AvatarDragState | null>(null);
@@ -396,6 +405,66 @@ export function ProfilePage() {
   );
   const memberSince = formatMemberSince(currentUser?.createdAt, requests.at(-1)?.createdAt, locale);
   const userRoleLabel = currentUser ? t(`roles.${currentUser.primaryRole}`, currentUser.primaryRole) : "";
+
+  const resetSavedForm = () => {
+    setSavedForm({ label: "", type: "home", address: "", lat: "", lng: "" });
+    setSavedMapCoordinate(null);
+    setSavedGeocodeHint("");
+  };
+
+  const applySavedMapCoordinate = (coordinate: { lat: number; lng: number }, hint?: string) => {
+    setSavedMapCoordinate(coordinate);
+    setSavedForm((current) => ({
+      ...current,
+      lat: coordinate.lat.toFixed(6),
+      lng: coordinate.lng.toFixed(6),
+    }));
+    setSavedGeocodeHint(hint ?? t("cabinet.saved.mapHint"));
+  };
+
+  const handleSavedCoordinateInput = (field: "lat" | "lng", value: string) => {
+    const nextForm = { ...savedForm, [field]: value };
+    setSavedForm(nextForm);
+
+    const lat = Number(nextForm.lat);
+    const lng = Number(nextForm.lng);
+    if (hasUsableCoordinate(lat, lng)) {
+      setSavedMapCoordinate({ lat, lng });
+      setSavedGeocodeHint(t("cabinet.saved.mapHint"));
+    }
+  };
+
+  const findSavedAddressOnMap = async () => {
+    const address = savedForm.address.trim();
+    setIsSavedGeocoding(true);
+
+    try {
+      if (!address) {
+        applySavedMapCoordinate(
+          { lat: ASTANA_CENTER_LAT, lng: ASTANA_CENTER_LNG },
+          t("cabinet.saved.mapFallback"),
+        );
+        return;
+      }
+
+      const [suggestion] = await searchAstanaAddresses(address, i18n.resolvedLanguage ?? "ru");
+      if (!suggestion || !hasUsableCoordinate(suggestion.lat, suggestion.lng)) {
+        applySavedMapCoordinate(
+          { lat: ASTANA_CENTER_LAT, lng: ASTANA_CENTER_LNG },
+          t("cabinet.saved.mapFallback"),
+        );
+        return;
+      }
+
+      applySavedMapCoordinate(
+        { lat: suggestion.lat, lng: suggestion.lng },
+        t("cabinet.saved.approximateFound"),
+      );
+    } finally {
+      setIsSavedGeocoding(false);
+    }
+  };
+
   const createSavedLocationMutation = useMutation({
     mutationFn: async () => {
       const label = savedForm.label.trim();
@@ -407,9 +476,13 @@ export function ProfilePage() {
         throw new Error(t("cabinet.saved.formRequired"));
       }
 
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      if (!hasUsableCoordinate(lat, lng)) {
         const [suggestion] = await searchAstanaAddresses(address, i18n.resolvedLanguage ?? "ru");
-        if (!suggestion) {
+        if (!suggestion || !hasUsableCoordinate(suggestion.lat, suggestion.lng)) {
+          applySavedMapCoordinate(
+            { lat: ASTANA_CENTER_LAT, lng: ASTANA_CENTER_LNG },
+            t("cabinet.saved.mapFallback"),
+          );
           throw new Error(t("cabinet.saved.addressNotFound"));
         }
         lat = suggestion.lat;
@@ -427,7 +500,7 @@ export function ProfilePage() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.savedLocations });
-      setSavedForm({ label: "", type: "home", address: "", lat: "", lng: "" });
+      resetSavedForm();
       setSavedFormOpen(false);
       toast.success(t("cabinet.saved.created"));
     },
@@ -528,7 +601,7 @@ export function ProfilePage() {
 
   function handleBirthDateBeforeInput(event: FormEvent<HTMLInputElement>) {
     const data = (event.nativeEvent as InputEvent).data;
-    if (data && /\D/.test(data)) {
+    if (data && !/^[\d-]+$/.test(data)) {
       event.preventDefault();
     }
   }
@@ -855,15 +928,48 @@ export function ProfilePage() {
                 <span>{t("cabinet.saved.address")}</span>
                 <input
                   value={savedForm.address}
-                  onChange={(event) => setSavedForm((current) => ({ ...current, address: event.target.value }))}
+                  onChange={(event) => {
+                    setSavedForm((current) => ({
+                      ...current,
+                      address: event.target.value,
+                      lat: "",
+                      lng: "",
+                    }));
+                    setSavedMapCoordinate(null);
+                    setSavedGeocodeHint("");
+                  }}
                   placeholder={t("cabinet.saved.addressPlaceholder")}
                 />
               </label>
+              <div className="cabinet-saved-form__actions">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  iconLeft={<MapPinned size={16} />}
+                  onClick={() => void findSavedAddressOnMap()}
+                  disabled={isSavedGeocoding}
+                >
+                  {isSavedGeocoding ? t("cabinet.saved.findingAddress") : t("cabinet.saved.findOnMap")}
+                </Button>
+                <p>{savedGeocodeHint || t("cabinet.saved.coordinatesHint")}</p>
+              </div>
+              {savedMapCoordinate ? (
+                <div className="cabinet-saved-form__map">
+                  <div className="cabinet-saved-form__map-title">
+                    <strong>{t("cabinet.saved.mapTitle")}</strong>
+                    <span>{t("cabinet.saved.mapHint")}</span>
+                  </div>
+                  <LocationPickerMap
+                    coordinate={savedMapCoordinate}
+                    onCoordinateChange={(coordinate) => applySavedMapCoordinate(coordinate)}
+                  />
+                </div>
+              ) : null}
               <label>
                 <span>{t("cabinet.saved.latitude")}</span>
                 <input
                   value={savedForm.lat}
-                  onChange={(event) => setSavedForm((current) => ({ ...current, lat: event.target.value }))}
+                  onChange={(event) => handleSavedCoordinateInput("lat", event.target.value)}
                   placeholder="51.1694"
                   inputMode="decimal"
                 />
@@ -872,12 +978,11 @@ export function ProfilePage() {
                 <span>{t("cabinet.saved.longitude")}</span>
                 <input
                   value={savedForm.lng}
-                  onChange={(event) => setSavedForm((current) => ({ ...current, lng: event.target.value }))}
+                  onChange={(event) => handleSavedCoordinateInput("lng", event.target.value)}
                   placeholder="71.4149"
                   inputMode="decimal"
                 />
               </label>
-              <p className="cabinet-saved-form__hint">{t("cabinet.saved.coordinatesHint")}</p>
               <Button
                 type="submit"
                 disabled={createSavedLocationMutation.isPending}

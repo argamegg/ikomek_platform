@@ -18,6 +18,8 @@ node_modules/
 
 # Testing
 /coverage
+.pytest_cache/
+test_reports/predeploy/*.log
 
 # Next.js
 /.next/
@@ -97,4 +99,3 @@ android-sdk/ -e
 !**/.env.example
 
 .metro-cache/
-

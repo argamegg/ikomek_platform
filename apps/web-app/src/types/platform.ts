@@ -97,10 +97,12 @@ export type RequestStatusHistoryItem = {
 
 export type RequestMessage = {
   id: string;
+  senderId?: string;
   senderRole: UserRole;
   senderName: string;
   message: string;
   timestamp: string;
+  attachmentType?: string;
   attachmentLabel?: string;
   attachmentUrl?: string;
   isOwn?: boolean;
