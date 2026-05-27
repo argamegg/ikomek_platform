@@ -35,6 +35,60 @@ export function formatDate(value: string, locale: Locale = "en") {
   }).format(new Date(value));
 }
 
+const ADDRESS_REPLACEMENTS: Record<Locale, Array<[RegExp, string]>> = {
+  en: [
+    [/Достық көшесі/gi, "Dostyq Street"],
+    [/Есіл ауданы/gi, "Esil district"],
+    [/Астана/gi, "Astana"],
+    [/Қазақстан/gi, "Kazakhstan"],
+  ],
+  ru: [
+    [/\bLandmark\b/gi, "Ориентир"],
+    [/Достық көшесі/gi, "улица Достык"],
+    [/\bDostyq Street\b/gi, "улица Достык"],
+    [/\bEsil district\b/gi, "район Есиль"],
+    [/\bAlmaty district\b/gi, "район Алматы"],
+    [/\bSaryarka district\b/gi, "район Сарыарка"],
+    [/\bBaikonyr district\b/gi, "район Байконыр"],
+    [/\bAstana\b/gi, "Астана"],
+    [/\bKazakhstan\b/gi, "Казахстан"],
+  ],
+  kz: [
+    [/\bLandmark\b/gi, "Бағдар"],
+    [/\bDostyq Street\b/gi, "Достық көшесі"],
+    [/\bEsil district\b/gi, "Есіл ауданы"],
+    [/\bAlmaty district\b/gi, "Алматы ауданы"],
+    [/\bSaryarka district\b/gi, "Сарыарқа ауданы"],
+    [/\bBaikonyr district\b/gi, "Байқоңыр ауданы"],
+    [/\bAstana\b/gi, "Астана"],
+    [/\bKazakhstan\b/gi, "Қазақстан"],
+  ],
+};
+
+function normalizeAddressLocale(locale: Locale | string): Locale {
+  if (locale.startsWith("ru")) return "ru";
+  if (locale.startsWith("kk") || locale.startsWith("kz")) return "kz";
+  return "en";
+}
+
+export function formatAddress(value: string | undefined | null, locale: Locale | string = "en") {
+  if (!value) {
+    return "—";
+  }
+
+  const displayLocale = normalizeAddressLocale(locale);
+
+  const withoutPostalCode = value
+    .replace(/\b[A-Z]\d{2}[A-Z]\d[A-Z]\d\b,?\s*/g, "")
+    .replace(/\s+,/g, ",")
+    .replace(/,\s*,/g, ",");
+
+  return ADDRESS_REPLACEMENTS[displayLocale].reduce(
+    (address, [pattern, replacement]) => address.replace(pattern, replacement),
+    withoutPostalCode,
+  ).replace(/\s{2,}/g, " ").replace(/,\s*$/g, "").trim();
+}
+
 export function formatRelativeTime(value: string, locale: Locale = "en") {
   if (!value) {
     return "—";

@@ -822,6 +822,9 @@ const resources = {
         sewage: {
           pipe: "Pipe problem",
           blockage: "Blockage",
+          wear: "Pipe wear",
+          overflow: "Overflow",
+          odor: "Odor issue",
           infrastructure: "Aged infrastructure",
           rain: "Heavy rain",
           maintenance: "Needs maintenance",
@@ -1968,6 +1971,9 @@ const resources = {
         sewage: {
           pipe: "Проблема с трубой",
           blockage: "Засор",
+          wear: "Износ трубы",
+          overflow: "Переполнение",
+          odor: "Проблема с запахом",
           infrastructure: "Изношенная инфраструктура",
           rain: "Сильный дождь",
           maintenance: "Требуется обслуживание",
@@ -3113,6 +3119,9 @@ const resources = {
         sewage: {
           pipe: "Құбыр мәселесі",
           blockage: "Бітелу",
+          wear: "Құбырдың тозуы",
+          overflow: "Тасу",
+          odor: "Иіс мәселесі",
           infrastructure: "Тозған инфрақұрылым",
           rain: "Қатты жаңбыр",
           maintenance: "Қызмет көрсету қажет",

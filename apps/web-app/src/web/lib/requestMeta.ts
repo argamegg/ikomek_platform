@@ -143,6 +143,9 @@ const REASONS: Record<string, RequestOption[]> = {
   sewage: [
     { id: 'pipe', legacyLabels: ['Pipe problem'] },
     { id: 'blockage', legacyLabels: ['Blockage'] },
+    { id: 'wear', legacyLabels: ['Pipe wear'] },
+    { id: 'overflow', legacyLabels: ['Overflow'] },
+    { id: 'odor', legacyLabels: ['Odor issue'] },
     { id: 'infrastructure', legacyLabels: ['Old infrastructure'] },
     { id: 'rain', legacyLabels: ['Heavy rain'] },
     { id: 'maintenance', legacyLabels: ['Needs maintenance'] },
@@ -213,6 +216,7 @@ const resolveOptionId = (options: RequestOption[], value?: string | null) => {
   if (!target) return '';
   const match = options.find((option) => {
     if (normalize(option.id) === target) return true;
+    if (target.endsWith(`-${normalize(option.id)}`)) return true;
     return option.legacyLabels?.some((label) => normalize(label) === target);
   });
   return match?.id || value || '';
@@ -260,7 +264,16 @@ export const localizeRequestProblemType = (
   t: TranslationFn,
 ) => {
   const id = resolveOptionId(getProblemOptions(categoryId), problemType);
-  return translate(t, `problemTypes.${getRequestCategoryConfig(categoryId).id}.${id}`, prettify(problemType));
+  const category = getRequestCategoryConfig(categoryId);
+  const localizedProblemType = translate(t, `problemTypes.${category.id}.${id}`, prettify(problemType));
+  const fallback = prettify(problemType);
+
+  if (localizedProblemType !== fallback) {
+    return localizedProblemType;
+  }
+
+  const reasonId = resolveOptionId(getReasonOptions(categoryId), problemType);
+  return translate(t, `reasons.${category.id}.${reasonId}`, fallback);
 };
 
 export const localizeRequestReason = (

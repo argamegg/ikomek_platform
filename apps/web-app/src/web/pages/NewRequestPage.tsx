@@ -29,9 +29,9 @@ import {
   searchAstanaAddresses,
   type GeocodedAddressSuggestion,
 } from "../lib/locationGeocoding";
+import { localizeRequestCategory, localizeRequestReason } from "../lib/requestMeta";
 
 const EMPTY_VALUE = "—";
-const MIN_DESCRIPTION_LENGTH = 10;
 const STEP_ORDER = ["location", "type", "description", "media", "review"] as const;
 const SAVED_LOCATION_TYPES: SavedLocationType[] = ["home", "work", "study", "family", "other"];
 
@@ -104,6 +104,10 @@ export function NewRequestPage() {
   );
   const selectedCategory = categories.find((category) => category.id === form.categoryId) ?? null;
   const selectedReason = filteredReasons.find((reason) => reason.id === form.reasonId) ?? null;
+  const selectedCategoryLabel = selectedCategory ? localizeRequestCategory(selectedCategory.id, t) : "";
+  const selectedReasonLabel = selectedReason
+    ? localizeRequestReason(form.categoryId, selectedReason.id || selectedReason.name, t)
+    : "";
   const selectedSavedLocation = savedLocations.find((location) => location.id === form.savedLocationId) ?? null;
   const latitude = form.lat.trim() ? Number(form.lat) : null;
   const longitude = form.lng.trim() ? Number(form.lng) : null;
@@ -125,8 +129,6 @@ export function NewRequestPage() {
       : isOutsideAstanaZone
         ? t("newRequest.outOfZone")
         : null;
-  const descriptionIsValid = form.description.trim().length >= MIN_DESCRIPTION_LENGTH;
-
   const placeSuggestions = useMemo(() => {
     const collected = selectedReason?.placeOptions?.length
       ? selectedReason.placeOptions
@@ -171,7 +173,7 @@ export function NewRequestPage() {
 
   const locationStepValid = Boolean(form.address.trim()) && !locationError;
   const typeStepValid = Boolean(form.categoryId && form.reasonId);
-  const descriptionStepValid = descriptionIsValid;
+  const descriptionStepValid = true;
   const mediaStepPassable = true;
   const allRequiredStepsValid = locationStepValid && typeStepValid && descriptionStepValid;
 
@@ -194,14 +196,8 @@ export function NewRequestPage() {
       fields.push(t("newRequest.missingFields.reason"));
     }
 
-    if (!form.description.trim()) {
-      fields.push(t("newRequest.missingFields.description"));
-    } else if (!descriptionIsValid) {
-      fields.push(t("newRequest.descriptionTooShort"));
-    }
-
     return fields;
-  }, [descriptionIsValid, form.address, form.categoryId, form.description, form.reasonId, locationError, t]);
+  }, [form.address, form.categoryId, form.reasonId, locationError, t]);
 
   const stepMeta = useMemo(
     () => [
@@ -271,15 +267,15 @@ export function NewRequestPage() {
     return {
       id: "request-preview",
       citizenId: "preview",
-      title: selectedReason?.name ?? selectedCategory?.name ?? t("newRequest.summaryMapTitle"),
+      title: selectedReasonLabel || selectedCategoryLabel || t("newRequest.summaryMapTitle"),
       address: form.address || t("newRequest.summaryMapTitle"),
       districtId: selectedSavedLocation?.districtId ?? "",
       point: { lat: latitude, lng: longitude },
       place: form.place || EMPTY_VALUE,
       categoryId: form.categoryId || "preview",
-      categoryName: selectedCategory?.name,
+      categoryName: selectedCategoryLabel,
       reasonId: form.reasonId || "",
-      reasonName: selectedReason?.name,
+      reasonName: selectedReasonLabel,
       description: form.description || t("newRequest.summaryMapEmpty"),
       status: "pending",
       statusLabel: t("newRequest.summaryStatusDraft"),
@@ -301,8 +297,8 @@ export function NewRequestPage() {
     form.reasonId,
     latitude,
     longitude,
-    selectedCategory?.name,
-    selectedReason?.name,
+    selectedCategoryLabel,
+    selectedReasonLabel,
     selectedSavedLocation?.districtId,
     t,
   ]);
@@ -579,6 +575,15 @@ export function NewRequestPage() {
     return t(`newRequest.placeOptions.${option}`, { defaultValue: option.replace(/_/g, " ") });
   }
 
+  function getPlaceInputValue() {
+    if (!form.place) return "";
+    return placeSuggestions.includes(form.place) ? getPlaceOptionLabel(form.place) : form.place;
+  }
+
+  function isPlaceOptionSelected(option: string) {
+    return form.place === option || form.place === getPlaceOptionLabel(option);
+  }
+
   useEffect(() => {
     if (addressInputSourceRef.current !== "manual") {
       return;
@@ -645,10 +650,6 @@ export function NewRequestPage() {
         return locationError ?? t("newRequest.stepErrors.location");
       case "type":
         return t("newRequest.stepErrors.type");
-      case "description":
-        return !form.description.trim()
-          ? t("newRequest.stepErrors.descriptionRequired")
-          : t("newRequest.stepErrors.descriptionLength", { count: MIN_DESCRIPTION_LENGTH });
       case "review":
         return t("newRequest.stepErrors.review");
       default:
@@ -883,7 +884,7 @@ export function NewRequestPage() {
               }
             >
               <span className="request-flow-choice__badge">{category.code.toUpperCase().slice(0, 3)}</span>
-              <strong>{category.name}</strong>
+              <strong>{localizeRequestCategory(category.id || category.name, t)}</strong>
             </button>
           ))}
         </div>
@@ -905,7 +906,7 @@ export function NewRequestPage() {
                 className={`request-flow-chip${form.reasonId === reason.id ? " is-selected" : ""}`}
                 onClick={() => updateForm("reasonId", reason.id)}
               >
-                {reason.name}
+                {localizeRequestReason(form.categoryId, reason.id || reason.name, t)}
               </button>
             ))}
           </div>
@@ -924,7 +925,7 @@ export function NewRequestPage() {
                 <button
                   key={option}
                   type="button"
-                  className={`request-flow-chip${form.place === option ? " is-selected" : ""}`}
+                  className={`request-flow-chip${isPlaceOptionSelected(option) ? " is-selected" : ""}`}
                   onClick={() => updateForm("place", option)}
                 >
                   {getPlaceOptionLabel(option)}
@@ -953,7 +954,7 @@ export function NewRequestPage() {
         <Input
           label={t("newRequest.place")}
           placeholder={t("newRequest.placePlaceholder")}
-          value={form.place}
+          value={getPlaceInputValue()}
           onChange={(event) => updateForm("place", event.target.value)}
           helper={t("newRequest.placeHelper")}
           required
@@ -963,16 +964,8 @@ export function NewRequestPage() {
           rows={7}
           placeholder={t("newRequest.descriptionPlaceholder")}
           helper={t("newRequest.descriptionHelper")}
-          error={
-            shouldShowValidation && !descriptionIsValid
-              ? (!form.description.trim()
-                  ? t("newRequest.stepErrors.descriptionRequired")
-                  : t("newRequest.stepErrors.descriptionLength", { count: MIN_DESCRIPTION_LENGTH }))
-              : undefined
-          }
           value={form.description}
           onChange={(event) => updateForm("description", event.target.value)}
-          required
         />
       </>
     );
@@ -1246,11 +1239,11 @@ export function NewRequestPage() {
               </div>
               <div>
                 <span>{t("newRequest.summaryItems.category")}</span>
-                <strong>{selectedCategory?.name || EMPTY_VALUE}</strong>
+                <strong>{selectedCategoryLabel || EMPTY_VALUE}</strong>
               </div>
               <div>
                 <span>{t("newRequest.summaryItems.reason")}</span>
-                <strong>{selectedReason?.name || EMPTY_VALUE}</strong>
+                <strong>{selectedReasonLabel || EMPTY_VALUE}</strong>
               </div>
               <div>
                 <span>{t("newRequest.summaryItems.files")}</span>

@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import type { CivicRequest, NewsItem } from "../../types/platform";
+import type { CivicRequest, Locale, NewsItem } from "../../types/platform";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { Card } from "../components/ui/Card";
@@ -28,7 +28,7 @@ import { Modal } from "../components/ui/Modal";
 import { Skeleton } from "../components/ui/Skeleton";
 import { Input } from "../components/ui/Input";
 import { IssueMap } from "../components/maps/IssueMap";
-import { formatRelativeTime, getStatusTone } from "../lib/format";
+import { formatAddress, formatRelativeTime, getStatusTone } from "../lib/format";
 import { categoryKeyMap, formatNewsDate, formatNewsPeriod, typeKeyMap } from "../lib/normalizers";
 import { localizeRequestCategory, localizeRequestProblemType, localizeRequestStatus } from "../lib/requestMeta";
 import {
@@ -70,8 +70,15 @@ function CountUpNumber({ value }: { value: number }) {
   return <span ref={ref}>{displayValue}</span>;
 }
 
+function normalizeLocale(language: string): Locale {
+  if (language.startsWith("ru")) return "ru";
+  if (language.startsWith("kk") || language.startsWith("kz")) return "kz";
+  return "en";
+}
+
 export function HomePage() {
   const { t, i18n } = useTranslation();
+  const locale = normalizeLocale(i18n.language);
   const safeT = useCallback((key: string, fallback: string, options?: Record<string, unknown>) => {
     const value = t(key, { defaultValue: fallback, ...(options ?? {}) });
     return typeof value === "string" && value.trim().length > 0 ? value : fallback;
@@ -661,7 +668,7 @@ export function HomePage() {
                     </span>
                   </div>
                   <strong>{localizeRequestProblemType(request.categoryId || request.categoryName, request.title, t)}</strong>
-                  <span>{request.address}</span>
+                  <span>{formatAddress(request.address, locale)}</span>
                 </motion.article>
               ))}
             </div>
@@ -1049,7 +1056,7 @@ export function HomePage() {
                   ) : null}
                 </div>
                 <strong>{localizeRequestProblemType(previewRequest.categoryId || previewRequest.categoryName, previewRequest.title, t)}</strong>
-                <p>{previewRequest.address}</p>
+                <p>{formatAddress(previewRequest.address, locale)}</p>
                 <div className="home-map-preview__focus-meta">
                   <Badge tone={getStatusTone(previewRequest.status)}>
                     {previewRequest.statusLabel

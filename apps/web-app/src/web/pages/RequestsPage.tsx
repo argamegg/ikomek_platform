@@ -17,9 +17,10 @@ import { useTranslation } from "react-i18next";
 import type { CivicRequest, Locale, RequestPriority, RequestStatus } from "../../types/platform";
 import { Badge } from "../components/ui/Badge";
 import { EmptyState } from "../components/ui/EmptyState";
-import { formatDate, getPriorityBadgeClass, getStatusTone } from "../lib/format";
+import { formatAddress, formatDate, getPriorityBadgeClass, getStatusTone } from "../lib/format";
 import {
   localizeRequestDescription,
+  localizeRequestCategory,
   localizeRequestPriority,
   localizeRequestProblemType,
   localizeRequestStatus,
@@ -248,7 +249,7 @@ export function RequestsPage() {
           <select value={category} onChange={(event) => setCategory(event.target.value)}>
             <option value="all">{t("requests.allCategories")}</option>
             {categories.map((item) => (
-              <option key={item.id} value={item.id}>{item.name}</option>
+              <option key={item.id} value={item.id}>{localizeRequestCategory(item.id || item.name, t)}</option>
             ))}
           </select>
         </label>
@@ -305,7 +306,7 @@ export function RequestsPage() {
               <div className="request-tile__meta">
                 <span>
                   <MapPin size={15} />
-                  {request.address}
+                  {formatAddress(request.address, locale)}
                 </span>
                 <span>{formatDate(request.updatedAt || request.createdAt, locale)}</span>
               </div>

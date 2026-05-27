@@ -36,7 +36,7 @@ import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { EmptyState } from "../components/ui/EmptyState";
 import { LocationPickerMap } from "../components/maps/LocationPickerMap";
-import { formatDate, getStatusTone } from "../lib/format";
+import { formatAddress, formatDate, getStatusTone } from "../lib/format";
 import { ASTANA_CENTER_LAT, ASTANA_CENTER_LNG } from "../lib/geoFence";
 import { localizeRequestProblemType, localizeRequestStatus } from "../lib/requestMeta";
 import { getErrorMessage, platformApi, queryKeys } from "../services/platformApi";
@@ -853,7 +853,7 @@ export function ProfilePage() {
                   <span className="cabinet-recent-item__icon">{statusIcon(request.status)}</span>
                   <span className="cabinet-recent-item__content">
                     <strong>{localizeRequestProblemType(request.categoryId || request.categoryName, request.title, t)}</strong>
-                    <small className="cabinet-recent-item__meta-line">📍 {request.address}</small>
+                    <small className="cabinet-recent-item__meta-line">📍 {formatAddress(request.address, locale)}</small>
                     <small className="cabinet-recent-item__meta-line">🕐 {formatDate(request.updatedAt || request.createdAt, locale)}</small>
                     <small className="cabinet-recent-item__meta-line">
                       💬 {t("cabinet.recent.category")}: {request.categoryName || localizeRequestProblemType(request.categoryId, request.title, t)}

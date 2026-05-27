@@ -21,9 +21,10 @@ import { Button } from "../components/ui/Button";
 import { EmptyState } from "../components/ui/EmptyState";
 import { Input, Select, Textarea } from "../components/ui/Input";
 import { Modal } from "../components/ui/Modal";
-import { formatDate, getPriorityBadgeClass, getStatusTone } from "../lib/format";
+import { formatAddress, formatDate, getPriorityBadgeClass, getStatusTone } from "../lib/format";
 import {
   localizeRequestDescription,
+  localizeRequestCategory,
   localizeRequestPriority,
   localizeRequestProblemType,
   localizeRequestStatus,
@@ -283,7 +284,7 @@ export function OperatorPage() {
           <select value={category} onChange={(event) => setCategory(event.target.value)}>
             <option value="all">{t("requests.allCategories")}</option>
             {categories.map((item) => (
-              <option key={item.id} value={item.id}>{item.name}</option>
+              <option key={item.id} value={item.id}>{localizeRequestCategory(item.id || item.name, t)}</option>
             ))}
           </select>
         </label>
@@ -340,7 +341,7 @@ export function OperatorPage() {
               <div className="request-tile__meta">
                 <span>
                   <MapPin size={15} />
-                  {request.address}
+                  {formatAddress(request.address, locale)}
                 </span>
                 <span>{formatDate(request.updatedAt || request.createdAt, locale)}</span>
               </div>
@@ -393,7 +394,7 @@ export function OperatorPage() {
         open={Boolean(selectedRequest)}
         onClose={closeUpdateModal}
         title={selectedRequest ? localizeRequestProblemType(selectedRequest.categoryId || selectedRequest.categoryName, selectedRequest.title, t) : t("operator.update")}
-        description={selectedRequest?.address}
+        description={formatAddress(selectedRequest?.address, locale)}
       >
         {selectedRequest ? (
           <form

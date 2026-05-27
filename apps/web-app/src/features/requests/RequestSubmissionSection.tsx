@@ -1,9 +1,11 @@
 import { type FormEvent, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { Copy } from "../../App";
 import { requestFlowSteps } from "../../data/platformData";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { SectionHeading } from "../../components/ui/SectionHeading";
+import { localizeRequestCategory, localizeRequestPlaceType, localizeRequestReason } from "../../web/lib/requestMeta";
 import type {
   RequestCategory,
   RequestReason,
@@ -36,6 +38,7 @@ export function RequestSubmissionSection({
   reasons,
   onSubmit,
 }: RequestSubmissionSectionProps) {
+  const { t } = useTranslation();
   const [status, setStatus] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState({
@@ -145,7 +148,7 @@ export function RequestSubmissionSection({
             >
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
-                  {category.name}
+                  {localizeRequestCategory(category.id || category.name, t)}
                 </option>
               ))}
             </select>
@@ -159,7 +162,7 @@ export function RequestSubmissionSection({
             >
               {filteredReasons.map((reason) => (
                 <option key={reason.id} value={reason.id}>
-                  {reason.name}
+                  {localizeRequestReason(form.categoryId, reason.id || reason.name, t)}
                 </option>
               ))}
             </select>
@@ -178,7 +181,7 @@ export function RequestSubmissionSection({
                 .filter((value, index, items) => items.indexOf(value) === index)
                 .map((place) => (
                   <option key={place} value={place}>
-                    {place}
+                    {localizeRequestPlaceType(place, t)}
                   </option>
                 ))}
             </select>
@@ -210,7 +213,6 @@ export function RequestSubmissionSection({
               value={form.description}
               onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
               rows={5}
-              required
             />
           </label>
           <label className="form-field form-field--full">
