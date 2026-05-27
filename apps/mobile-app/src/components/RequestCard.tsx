@@ -40,6 +40,8 @@ const PRIORITY_COLORS = {
   high: { background: '#FEE2E2', text: '#DC2626', border: '#FCA5A5' },
 } as const;
 
+const formatRequestId = (id?: string | null) => (id ? `#${id.slice(0, 8)}` : '#—');
+
 interface RequestCardProps {
   request: Request;
   onPress: () => void;
@@ -70,6 +72,7 @@ export const RequestCard = ({ request, onPress }: RequestCardProps) => {
         <View style={styles.headerText}>
           <Text style={styles.problemType} numberOfLines={1}>{problem}</Text>
           <Text style={styles.category}>{category}</Text>
+          <Text style={styles.requestId}>{formatRequestId(request.id)}</Text>
         </View>
         <View style={styles.badges}>
           <StatusBadge status={request.status} size="small" />
@@ -155,6 +158,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#8E8E93',
     marginTop: 2
+  },
+  requestId: {
+    fontSize: 11,
+    color: '#94A3B8',
+    fontWeight: '800',
+    marginTop: 3
   },
   content: {
     gap: 6,

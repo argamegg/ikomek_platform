@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>iKOMEK Predeploy Test Report</title>
+  <style>
+    :root { color-scheme: light; --ink:#16211f; --muted:#63706c; --line:#d8e0dc; --bg:#f7faf8; --card:#fff; --pass:#147d47; --warn:#a86300; --fail:#b42318; --skip:#59636e; }
+    body { margin:0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:var(--ink); background:var(--bg); }
+    header { padding:32px clamp(18px, 4vw, 56px); background:#163a36; color:white; }
+    h1 { margin:0 0 10px; font-size:clamp(28px, 4vw, 48px); letter-spacing:0; }
+    h2 { margin:32px 0 14px; font-size:24px; }
+    h3 { margin:0; font-size:17px; }
+    main { padding:24px clamp(18px, 4vw, 56px) 56px; }
+    .summary { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
+    .summary span, .pill { border-radius:999px; padding:7px 11px; font-weight:700; font-size:13px; background:rgba(255,255,255,.14); }
+    .overall { display:inline-flex; margin-top:12px; padding:8px 12px; border:1px solid rgba(255,255,255,.35); border-radius:6px; font-weight:800; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px; }
+    .overview { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:24px; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:8px 24px 18px; box-shadow:0 8px 22px rgba(17,35,31,.06); }
+    .overview ul { margin:0; padding-left:20px; color:var(--muted); line-height:1.55; }
+    .overview li { margin:8px 0; }
+    .check { background:var(--card); border:1px solid var(--line); border-left:6px solid var(--skip); border-radius:8px; padding:16px; box-shadow:0 8px 22px rgba(17,35,31,.06); min-width:0; }
+    .check.pass { border-left-color:var(--pass); } .check.warn { border-left-color:var(--warn); } .check.fail { border-left-color:var(--fail); } .check.skip { border-left-color:var(--skip); }
+    .check-head { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+    .check.pass .pill { color:var(--pass); background:#e8f6ee; } .check.warn .pill { color:var(--warn); background:#fff3df; } .check.fail .pill { color:var(--fail); background:#ffedea; } .check.skip .pill { color:var(--skip); background:#edf0f2; }
+    p { color:var(--muted); line-height:1.5; }
+    .meta { color:#71807b; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; overflow-wrap:anywhere; }
+    details { margin-top:12px; } summary { cursor:pointer; font-weight:700; }
+    pre { max-height:420px; overflow:auto; background:#101917; color:#d9eee7; padding:14px; border-radius:6px; font-size:12px; line-height:1.45; white-space:pre-wrap; }
+    footer { color:var(--muted); margin-top:28px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>iKOMEK Predeploy Test Report</h1>
+    <div>Generated: 2026-05-16T07:48:38+05:00</div>
+    <div class="overall">Overall: WARN</div>
+    <div class="summary">
+      <span>PASS 13</span><span>WARN 1</span><span>FAIL 0</span><span>SKIP 0</span>
+    </div>
+  </header>
+  <main>
+    
+    <section class="overview">
+      <div>
+        <h2>Обзор тестирования</h2>
+        <p>Этот отчет показывает готовность проекта iKOMEK к деплою по трем частям системы: backend API, web frontend и mobile app. Проверки объединяют функциональные smoke-тесты, production-сборку, TypeScript/ESLint-контроль, аудит зависимостей, статический security scan и базовую оценку размера артефактов.</p>
+        <p>Смысл набора проверок: поймать ошибки до выката, подтвердить что критичные API-контракты не сломаны, зависимости не содержат известных уязвимостей, приложения собираются в production-режиме, а мобильный проект соответствует требованиям Expo SDK.</p>
+        <ul>
+          <li><strong>Backend:</strong> pytest проверяет безопасность helper-функций, JWT-protected API contract и структуру маршрутов; pip check и pip-audit проверяют совместимость и уязвимости Python-зависимостей.</li>
+          <li><strong>Web:</strong> ESLint и production build подтверждают качество React/TypeScript-кода и готовность Vite-сборки; npm audit ищет известные уязвимости JavaScript-пакетов.</li>
+          <li><strong>Mobile:</strong> Expo lint, TypeScript и Expo doctor проверяют React Native/Expo проект, конфигурацию SDK и типовую корректность; npm audit проверяет мобильные зависимости.</li>
+          <li><strong>Security:</strong> dependency audit ищет CVE/advisories, secret-pattern scan подсвечивает потенциальные секреты и дефолтные ключи, которые нужно проверить перед production.</li>
+          <li><strong>Performance:</strong> размер build/export артефактов помогает заранее увидеть слишком тяжелые сборки и риск медленной загрузки.</li>
+        </ul>
+      </div>
+      <div>
+        <h2>Test Overview</h2>
+        <p>This report summarizes deployment readiness for the iKOMEK project across the backend API, web frontend, and mobile app. The suite combines functional smoke tests, production builds, TypeScript/ESLint validation, dependency vulnerability audits, static security scanning, and basic artifact-size checks.</p>
+        <p>The purpose is to catch deployment blockers before release, confirm that critical API contracts still work, verify that dependencies have no known vulnerabilities, ensure production builds are valid, and validate that the mobile project matches Expo SDK expectations.</p>
+        <ul>
+          <li><strong>Backend:</strong> pytest validates security-sensitive helpers, JWT-protected API contracts, and route structure; pip check and pip-audit verify Python dependency consistency and vulnerabilities.</li>
+          <li><strong>Web:</strong> ESLint and production build validate React/TypeScript quality and Vite deployment readiness; npm audit checks JavaScript packages for known advisories.</li>
+          <li><strong>Mobile:</strong> Expo lint, TypeScript, and Expo doctor validate the React Native/Expo app, SDK configuration, and type correctness; npm audit checks mobile dependencies.</li>
+          <li><strong>Security:</strong> dependency audits search for CVEs/advisories, while the secret-pattern scan highlights possible secrets and default keys that need review before production.</li>
+          <li><strong>Performance:</strong> build/export artifact sizes help identify heavy bundles and possible slow-load risks early.</li>
+        </ul>
+      </div>
+    </section>
+    
+    <section><h2>Backend</h2><div class='grid'>
+                <article class="check pass">
+                  <div class="check-head">
+                    <h3>Backend pytest security/API contract</h3>
+                    <span class="pill">PASS</span>
+                  </div>
+                  <p>Python backend predeploy check.</p>
+                  <div class="meta">/Users/argame/Documents/ikomek-project/apps/backend/venv/bin/python -m pytest tests/backend -q 2.84s</div>
+                  <details><summary>Details</summary><pre>............                                                             [100%]
+=============================== warnings summary ===============================
+apps/backend/venv/lib/python3.12/site-packages/passlib/utils/__init__.py:854
+  /Users/argame/Documents/ikomek-project/apps/backend/venv/lib/python3.12/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: &#x27;crypt&#x27; is deprecated and slated for removal in Python 3.13
+    from crypt import crypt as _crypt
+
+apps/backend/server.py:33
+  /Users/argame/Documents/ikomek-project/apps/backend/server.py:33: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    @app.on_event(&quot;shutdown&quot;)
+
+apps/backend/venv/lib/python3.12/site-packages/fastapi/applications.py:4598
+apps/backend/venv/lib/python3.12/site-packages/fastapi/applications.py:4598
+  /Users/argame/Documents/ikomek-project/apps/backend/venv/lib/python3.12/site-packages/fastapi/applications.py:4598: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    return self.router.on_event(event_type)  # ty: ignore[deprecated]
+
+apps/backend/server.py:40
+  /Users/argame/Documents/ikomek-project/apps/backend/server.py:40: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    @app.on_event(&quot;startup&quot;)
+
+tests/backend/test_predeploy_security.py::test_seconds_until_never_returns_negative_values
+  /Users/argame/Documents/ikomek-project/tests/backend/test_predeploy_security.py:68: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    assert seconds_until(datetime.utcnow() - timedelta(minutes=1)) == 0
+
+tests/backend/test_predeploy_security.py::test_seconds_until_never_returns_negative_values
+tests/backend/test_predeploy_security.py::test_seconds_until_never_returns_negative_values
+  /Users/argame/Documents/ikomek-project/apps/backend/helpers.py:50: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return datetime.utcnow()
+
+tests/backend/test_predeploy_security.py::test_seconds_until_never_returns_negative_values
+  /Users/argame/Documents/ikomek-project/tests/backend/test_predeploy_security.py:70: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    assert seconds_until(datetime.utcnow() + timedelta(seconds=5)) in range(0, 6)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+12 passed, 9 warnings in 1.53s</pre></details>
+                </article>
+                
+                <article class="check pass">
+                  <div class="check-head">
+                    <h3>Backend dependency consistency</h3>
+                    <span class="pill">PASS</span>
+                  </div>
+                  <p>Python backend predeploy check.</p>
+                  <div class="meta">/Users/argame/Documents/ikomek-project/apps/backend/venv/bin/python -m pip check 0.42s</div>
+                  <details><summary>Details</summary><pre>No broken requirements found.</pre></details>
+                </article>
+                </div></section><section><h2>Web</h2><div class='grid'>
+                <article class="check pass">
+                  <div class="check-head">
+                    <h3>Web lint</h3>
+                    <span class="pill">PASS</span>
+                  </div>
+                  <p>Frontend predeploy check.</p>
+                  <div class="meta">npm run lint 10.1s</div>
+                  <details><summary>Details</summary><pre>&gt; ikomek-web-app@0.0.0 lint
+&gt; eslint .
+
+
+/Users/argame/Documents/ikomek-project/apps/web-app/src/web/components/maps/LocationPickerMap.tsx
+  85:7  warning  Functions returned from `useEffectEvent` must not be included in the dependency array. Remove `emitCoordinateChange` from the list  react-hooks/exhaustive-deps
+
+/Users/argame/Documents/ikomek-project/apps/web-app/src/web/pages/AdminPage.tsx
+  82:6  warning  React Hook useEffect has a missing dependency: &#x27;updateParams&#x27;. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/argame/Documents/ikomek-project/apps/web-app/src/web/pages/MapPage.tsx
+  396:67  warning  React Hook useMemo has a missing dependency: &#x27;dateRange&#x27;. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  433:5   warning  React Hook useMemo has a missing dependency: &#x27;dateRange&#x27;. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  502:5   warning  React Hook useMemo has a missing dependency: &#x27;dateRange&#x27;. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/argame/Documents/ikomek-project/apps/web-app/src/web/pages/NewRequestPage.tsx
+  640:6  warning  React Hook useEffect has a missing dependency: &#x27;updateLocationForm&#x27;. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/argame/Documents/ikomek-project/apps/web-app/src/web/pages/NewsPage.tsx
+  105:6  warning  React Hook useEffect has a missing dependency: &#x27;updateParams&#x27;. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/argame/Documents/ikomek-project/apps/web-app/src/web/pages/OperatorPage.tsx
+  107:9  warning  The &#x27;requests&#x27; logical expression could make the dependencies of useMemo Hook (at line 111) change on every render. To fix this, wrap the initialization of &#x27;requests&#x27; in its own useMemo() Hook  react-hooks/exhaustive-deps
+  107:9  warning  The &#x27;requests&#x27; logical expression could make the dependencies of useMemo Hook (at line 133) change on every render. To fix this, wrap the initialization of &#x27;requests&#x27; in its own useMemo() Hook  react-hooks/exhaustive-deps
+  107:9  warning  The &#x27;requests&#x27; logical expression could make the dependencies of useMemo Hook (at line 140) change on every render. To fix this, wrap the initialization of &#x27;requests&#x27; in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+✖ 10 problems (0 errors, 10 warnings)</pre></details>
+                </article>
+                
+                <article class="check pass">
+                  <div class="check-head">
+                    <h3>Web production build</h3>
+                    <span class="pill">PASS</span>
+                  </div>
+                  <p>Frontend predeploy check.</p>
+                  <div class="meta">npm run build 9.17s</div>
+                  <details><summary>Details</summary><pre>&gt; ikomek-web-app@0.0.0 build
+&gt; tsc -b &amp;&amp; vite build
+
+vite v8.0.13 building client environment for production...
+[2K
+transforming...✓ 2857 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                     0.49 kB │ gzip:   0.34 kB
+dist/assets/background-laptop-BlyAuq7f.webp       234.50 kB
+dist/assets/background-mobile-DYvYTDwW.webp       263.92 kB
+dist/assets/background-fhd-D_R0Jz_B.webp          295.75 kB
+dist/assets/background-tablet-C8izk1Xf.webp       310.71 kB
+dist/assets/background-2k-BQWCylqS.webp           450.04 kB
+dist/assets/background-ultrawide-CwrlE-97.webp    464.27 kB
+dist/assets/background-4k-D7vmP1Hm.webp           805.77 kB
+dist/assets/index-Bh1JZFr0.css                    200.05 kB │ gzip:  33.93 kB
+dist/assets/index-BWzCIL-t.js                   2,253.95 kB │ gzip: 636.81 kB
+
+✓ built in 1.04s
+
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.</pre></details>
+                </article>
+                </div></section><section><h2>Mobile</h2><div class='grid'>
+                <article class="check pass">
+                  <div class="check-head">
+                    <h3>Mobile lint</h3>
+                    <span class="pill">PASS</span>
+                  </div>
+                  <p>Mobile predeploy check.</p>
+                  <div class="meta">npm run lint 2.51s</div>
+                  <details><summary>Details</summary><pre>&gt; ikomek109@1.0.0 lint
+&gt; expo lint
+
+env: load .env
+env: export EXPO_PUBLIC_BACKEND_URL
+
+/Users/argame/Documents/ikomek-project/apps/mobile-app/app/index.tsx
+  38:6  warning  React Hook useEffect has a missing dependency: &#x27;router&#x27;. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/argame/Documents/ikomek-project/apps/mobile-app/src/context/AuthContext.tsx
+   81:6   warning  React Hook useEffect has a missing dependency: &#x27;loadStoredAuth&#x27;. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  115:18  warning  &#x27;error&#x27; is defined but never used                                                                                  @typescript-eslint/no-unused-vars
+
+/Users/argame/Documents/ikomek-project/apps/mobile-app/src/i18n/index.ts
+  7:1  warning  Caution: `i18n` also has a named export `use`. Check if you meant to write `import {use} from &#x27;i18next&#x27;` instead  import/no-named-as-default-member
+
+/Users/argame/Documents/ikomek-project/apps/mobile-app/src/utils/api.ts
+  244:21  warning  Array type using &#x27;Array&lt;T&gt;&#x27; is forbidden. Use &#x27;T[]&#x27; instead  @typescript-eslint/array-type
+  245:20  warning  Array type using &#x27;Array&lt;T&gt;&#x27; is forbidden. Use &#x27;T[]&#x27; instead  @typescript-eslint/array-type
+  262:19  warning  Array type using &#x27;Array&lt;T&gt;&#x27; is forbidden. Use &#x27;T[]&#x27; instead  @typescript-eslint/array-type
+  263:21  warning  Array type using &#x27;Array&lt;T&gt;&#x27; is forbidden. Use &#x27;T[]&#x27; instead  @typescript-eslint/array-type
+  264:23  warning  Array type using &#x27;Array&lt;T&gt;&#x27; is forbidden. Use &#x27;T[]&#x27; instead  @typescript-eslint/array-type
+
+✖ 9 problems (0 errors, 9 warnings)
+  0 errors and 5 warnings potentially fixable with the `--fix` option.</pre></details>
+                </article>
+                
+                <article class="check pass">
+                  <div class="check-head">
+                    <h3>Mobile TypeScript</h3>
+                    <span class="pill">PASS</span>
+                  </div>
+                  <p>Mobile predeploy check.</p>
+                  <div class="meta">npx tsc --noEmit 5.59s</div>
+                  <details><summary>Details</summary><pre>&quot;&quot;</pre></details>
+                </article>
+                
+                <article class="check warn">
+                  <div class="check-head">
+                    <h3>Mobile Expo doctor</h3>
+                    <span class="pill">WARN</span>
+                  </div>
+                  <p>Expo doctor passed runtime/package checks; native folders are present, so app.json changes must be synced by prebuild or manually.</p>
+                  <div class="meta">npx expo-doctor 6.35s</div>
+                  <details><summary>Details</summary><pre>env: load .env
+env: export EXPO_PUBLIC_BACKEND_URL
+Running 17 checks on your project...
+16/17 checks passed. 1 checks failed. Possible issues detected:
+Use the --verbose flag to see more details about passed checks.
+
+✖ Check for app config fields that may not be synced in a non-CNG project
+This project contains native project folders but also has native configuration properties in app.json, indicating it is configured to use Prebuild. When the android/ios folders are present, if you don&#x27;t run prebuild in your build pipeline, the following properties will not be synced: orientation, icon, splash, scheme, userInterfaceStyle, ios, android, plugins, androidStatusBar. 
+
+
+
+1 check failed, indicating possible issues with the project.</pre></details>
+                </article>
+                </div></section><section><h2>Security</h2><div class='grid'>
+                <article class="check pass">
+                  <div class="check-head">
+                    <h3>Backend dependency vulnerability audit</h3>
+                    <span class="pill">PASS</span>
+                  </div>
+                  <p>Scans backend Python dependencies for known vulnerabilities.</p>
+                  <div class="meta">/Users/argame/Documents/ikomek-project/apps/backend/venv/bin/python -m pip_audit -r /Users/argame/Documents/ikomek-project/apps/backend/requirements.txt -f json 20.48s</div>
+                  <details><summary>Details</summary><pre>{&quot;dependencies&quot;: [{&quot;name&quot;: &quot;uvicorn&quot;, &quot;version&quot;: &quot;0.25.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;bcrypt&quot;, &quot;version&quot;: &quot;4.0.1&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;fastapi&quot;, &quot;version&quot;: &quot;0.136.1&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;boto3&quot;, &quot;version&quot;: &quot;1.43.9&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;botocore&quot;, &quot;version&quot;: &quot;1.43.9&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;python-dateutil&quot;, &quot;version&quot;: &quot;2.9.0.post0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;jmespath&quot;, &quot;version&quot;: &quot;1.1.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;s3transfer&quot;, &quot;version&quot;: &quot;0.17.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;urllib3&quot;, &quot;version&quot;: &quot;2.7.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;requests-oauthlib&quot;, &quot;version&quot;: &quot;2.0.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;cryptography&quot;, &quot;version&quot;: &quot;48.0.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;python-dotenv&quot;, &quot;version&quot;: &quot;1.2.2&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;pymongo&quot;, &quot;version&quot;: &quot;4.17.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;dnspython&quot;, &quot;version&quot;: &quot;2.8.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;pydantic&quot;, &quot;version&quot;: &quot;2.13.4&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;pydantic-core&quot;, &quot;version&quot;: &quot;2.46.4&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;email-validator&quot;, &quot;version&quot;: &quot;2.3.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;pyjwt&quot;, &quot;version&quot;: &quot;2.12.1&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;passlib&quot;, &quot;version&quot;: &quot;1.7.4&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;tzdata&quot;, &quot;version&quot;: &quot;2026.2&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;motor&quot;, &quot;version&quot;: &quot;3.7.1&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;pytest&quot;, &quot;version&quot;: &quot;9.0.3&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;pluggy&quot;, &quot;version&quot;: &quot;1.6.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;black&quot;, &quot;version&quot;: &quot;26.3.1&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;pytokens&quot;, &quot;version&quot;: &quot;0.4.1&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;isort&quot;, &quot;version&quot;: &quot;8.0.1&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;flake8&quot;, &quot;version&quot;: &quot;7.3.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;mccabe&quot;, &quot;version&quot;: &quot;0.7.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;pycodestyle&quot;, &quot;version&quot;: &quot;2.14.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;pyflakes&quot;, &quot;version&quot;: &quot;3.4.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;mypy&quot;, &quot;version&quot;: &quot;2.1.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;ast-serialize&quot;, &quot;version&quot;: &quot;0.4.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;python-jose&quot;, &quot;version&quot;: &quot;3.5.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;rsa&quot;, &quot;version&quot;: &quot;4.9.1&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;requests&quot;, &quot;version&quot;: &quot;2.34.2&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;charset-normalizer&quot;, &quot;version&quot;: &quot;3.4.7&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;idna&quot;, &quot;version&quot;: &quot;3.15&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;pandas&quot;, &quot;version&quot;: &quot;3.0.3&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;numpy&quot;, &quot;version&quot;: &quot;2.4.5&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;python-multipart&quot;, &quot;version&quot;: &quot;0.0.28&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;jq&quot;, &quot;version&quot;: &quot;1.11.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;typer&quot;, &quot;version&quot;: &quot;0.25.1&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;httpx&quot;, &quot;version&quot;: &quot;0.28.1&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;httpcore&quot;, &quot;version&quot;: &quot;1.0.9&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;langdetect&quot;, &quot;version&quot;: &quot;1.0.9&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;annotated-doc&quot;, &quot;version&quot;: &quot;0.0.4&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;annotated-types&quot;, &quot;version&quot;: &quot;0.7.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;certifi&quot;, &quot;version&quot;: &quot;2026.4.22&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;cffi&quot;, &quot;version&quot;: &quot;2.0.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;click&quot;, &quot;version&quot;: &quot;8.3.3&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;ecdsa&quot;, &quot;version&quot;: &quot;0.19.2&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;h11&quot;, &quot;version&quot;: &quot;0.16.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;iniconfig&quot;, &quot;version&quot;: &quot;2.3.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;librt&quot;, &quot;version&quot;: &quot;0.11.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;mypy-extensions&quot;, &quot;version&quot;: &quot;1.1.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;oauthlib&quot;, &quot;version&quot;: &quot;3.3.1&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;pathspec&quot;, &quot;version&quot;: &quot;1.1.1&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;platformdirs&quot;, &quot;version&quot;: &quot;4.9.6&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;pyasn1&quot;, &quot;version&quot;: &quot;0.6.3&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;pygments&quot;, &quot;version&quot;: &quot;2.20.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;rich&quot;, &quot;version&quot;: &quot;15.0.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;markdown-it-py&quot;, &quot;version&quot;: &quot;4.2.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;mdurl&quot;, &quot;version&quot;: &quot;0.1.2&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;shellingham&quot;, &quot;version&quot;: &quot;1.5.4&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;six&quot;, &quot;version&quot;: &quot;1.17.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;starlette&quot;, &quot;version&quot;: &quot;1.0.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;anyio&quot;, &quot;version&quot;: &quot;4.13.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;typing-extensions&quot;, &quot;version&quot;: &quot;4.15.0&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;typing-inspection&quot;, &quot;version&quot;: &quot;0.4.2&quot;, &quot;vulns&quot;: []}, {&quot;name&quot;: &quot;pycparser&quot;, &quot;version&quot;: &quot;3.0&quot;, &quot;vulns&quot;: []}], &quot;fixes&quot;: []}
+
+No known vulnerabilities found</pre></details>
+                </article>
+                
+                <article class="check pass">
+                  <div class="check-head">
+                    <h3>Web npm audit</h3>
+                    <span class="pill">PASS</span>
+                  </div>
+                  <p>npm audit vulnerabilities: {&#x27;info&#x27;: 0, &#x27;low&#x27;: 0, &#x27;moderate&#x27;: 0, &#x27;high&#x27;: 0, &#x27;critical&#x27;: 0, &#x27;total&#x27;: 0}</p>
+                  <div class="meta">npm audit --json 1.18s</div>
+                  <details><summary>Details</summary><pre>{
+  &quot;auditReportVersion&quot;: 2,
+  &quot;vulnerabilities&quot;: {},
+  &quot;metadata&quot;: {
+    &quot;vulnerabilities&quot;: {
+      &quot;info&quot;: 0,
+      &quot;low&quot;: 0,
+      &quot;moderate&quot;: 0,
+      &quot;high&quot;: 0,
+      &quot;critical&quot;: 0,
+      &quot;total&quot;: 0
+    },
+    &quot;dependencies&quot;: {
+      &quot;prod&quot;: 120,
+      &quot;dev&quot;: 193,
+      &quot;optional&quot;: 32,
+      &quot;peer&quot;: 1,
+      &quot;peerOptional&quot;: 0,
+      &quot;total&quot;: 313
+    }
+  }
+}</pre></details>
+                </article>
+                
+                <article class="check pass">
+                  <div class="check-head">
+                    <h3>Mobile npm audit</h3>
+                    <span class="pill">PASS</span>
+                  </div>
+                  <p>npm audit vulnerabilities: {&#x27;info&#x27;: 0, &#x27;low&#x27;: 0, &#x27;moderate&#x27;: 0, &#x27;high&#x27;: 0, &#x27;critical&#x27;: 0, &#x27;total&#x27;: 0}</p>
+                  <div class="meta">npm audit --json 1.48s</div>
+                  <details><summary>Details</summary><pre>{
+  &quot;auditReportVersion&quot;: 2,
+  &quot;vulnerabilities&quot;: {},
+  &quot;metadata&quot;: {
+    &quot;vulnerabilities&quot;: {
+      &quot;info&quot;: 0,
+      &quot;low&quot;: 0,
+      &quot;moderate&quot;: 0,
+      &quot;high&quot;: 0,
+      &quot;critical&quot;: 0,
+      &quot;total&quot;: 0
+    },
+    &quot;dependencies&quot;: {
+      &quot;prod&quot;: 812,
+      &quot;dev&quot;: 224,
+      &quot;optional&quot;: 47,
+      &quot;peer&quot;: 0,
+      &quot;peerOptional&quot;: 0,
+      &quot;total&quot;: 1058
+    }
+  }
+}</pre></details>
+                </article>
+                
+                <article class="check pass">
+                  <div class="check-head">
+                    <h3>Repository secret-pattern scan</h3>
+                    <span class="pill">PASS</span>
+                  </div>
+                  <p>0 potential finding(s)</p>
+                  <div class="meta"> </div>
+                  <details><summary>Details</summary><pre>&quot;&quot;</pre></details>
+                </article>
+                
+                <article class="check pass">
+                  <div class="check-head">
+                    <h3>Mobile native identifiers</h3>
+                    <span class="pill">PASS</span>
+                  </div>
+                  <p>Checks app.json for placeholder bundle/package identifiers.</p>
+                  <div class="meta"> </div>
+                  <details><summary>Details</summary><pre>&quot;&quot;</pre></details>
+                </article>
+                </div></section><section><h2>Performance</h2><div class='grid'>
+                <article class="check pass">
+                  <div class="check-head">
+                    <h3>Web build artifact size</h3>
+                    <span class="pill">PASS</span>
+                  </div>
+                  <p>6.1 MB in apps/web-app/dist</p>
+                  <div class="meta"> </div>
+                  <details><summary>Details</summary><pre>{
+  &quot;bytes&quot;: 6396324
+}</pre></details>
+                </article>
+                
+                <article class="check pass">
+                  <div class="check-head">
+                    <h3>Mobile web export artifact size</h3>
+                    <span class="pill">PASS</span>
+                  </div>
+                  <p>11.98 MB in apps/mobile-app/dist</p>
+                  <div class="meta"> </div>
+                  <details><summary>Details</summary><pre>{
+  &quot;bytes&quot;: 12561327
+}</pre></details>
+                </article>
+                </div></section>
+    <footer>Raw JSON and command logs are saved next to this HTML file.</footer>
+  </main>
+</body>
+</html>

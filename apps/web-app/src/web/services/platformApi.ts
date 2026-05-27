@@ -1,5 +1,5 @@
 import axios from "axios";
-import { apiConfig } from "../../config/api";
+import { apiConfig, buildWsPath } from "../../config/api";
 import type {
   AuthLoginInput,
   AuthRegistrationChallenge,
@@ -140,6 +140,7 @@ export const queryKeys = {
   myRequests: ["my-requests"] as const,
   allRequests: (status?: RequestStatus) => ["all-requests", status ?? "all"] as const,
   request: (requestId: string) => ["request", requestId] as const,
+  requestMessages: (requestId: string) => ["request-messages", requestId] as const,
   metrics: ["metrics"] as const,
   operatorStats: ["operator-stats"] as const,
   adminStats: ["admin-stats"] as const,
@@ -337,6 +338,10 @@ async function getAccessibleRequests(status?: RequestStatus) {
 }
 
 export const platformApi = {
+  normalizeIncomingMessage(payload: unknown): RequestMessage {
+    return normalizeMessage(payload);
+  },
+
   async login(payload: AuthLoginInput) {
     const response = await platformClient.post(apiConfig.endpoints.login, payload);
     const normalized = normalizeAuthResponse(response.data);
@@ -541,6 +546,24 @@ export const platformApi = {
     }
   },
 
+  async getRequestMessages(requestId: string): Promise<RequestMessage[]> {
+    const response = await platformClient.get(
+      resolvePath(apiConfig.endpoints.requestMessages, { requestId }),
+    );
+    return normalizeList(response.data, normalizeMessage);
+  },
+
+  getRequestMessagesSocketUrl(requestId: string) {
+    const token = session.getToken();
+    if (!token) {
+      return null;
+    }
+
+    const path = resolvePath(apiConfig.endpoints.requestMessages, { requestId });
+    const apiPrefix = apiConfig.wsBaseUrl.replace(/\/+$/, "").endsWith("/api") ? "" : "/api";
+    return buildWsPath(`${apiPrefix}${path}/ws?token=${encodeURIComponent(token)}`);
+  },
+
   async createRequest(payload: RequestCreateInput): Promise<CivicRequest> {
     const photos = await Promise.all(payload.attachments.map((file) => fileToDataUrl(file)));
     const reasonLabel = findReasonLabel(payload.reasonId);
@@ -581,9 +604,15 @@ export const platformApi = {
   },
 
   async postRequestMessage(requestId: string, payload: RequestMessageInput): Promise<RequestMessage> {
+    const attachmentUrl = payload.attachment ? await fileToDataUrl(payload.attachment) : undefined;
     const response = await platformClient.post(
       resolvePath(apiConfig.endpoints.requestMessages, { requestId }),
-      { content: payload.message },
+      {
+        content: payload.message,
+        attachment_url: attachmentUrl,
+        attachment_label: payload.attachment?.name,
+        attachment_type: payload.attachment?.type?.startsWith("image/") ? "image" : "file",
+      },
     );
     return normalizeMessage(response.data);
   },

@@ -1,12 +1,14 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Animated,
   View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity,
-  ActivityIndicator, Modal, PanResponder, Pressable, ScrollView, TextInput, Alert, useWindowDimensions,
+  ActivityIndicator, Image, Modal, PanResponder, Pressable, ScrollView, TextInput, Alert, useWindowDimensions,
   KeyboardAvoidingView, Platform
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { apiService, type Category, type Request, type Message, type RequestPriority } from '../../src/utils/api';
@@ -33,6 +35,22 @@ const STATS_GAP = 8;
 
 type PriorityFilter = RequestPriority | null;
 type SortMode = 'newest' | 'oldest' | 'priority';
+type ChatAttachment = {
+  uri: string;
+  dataUrl: string;
+  label: string;
+  type: 'image';
+};
+
+function mergeMessages(current: Message[], incoming: Message) {
+  if (current.some((message) => message.id === incoming.id)) {
+    return current;
+  }
+
+  return [...current, incoming].sort(
+    (first, second) => new Date(first.created_at).getTime() - new Date(second.created_at).getTime(),
+  );
+}
 
 function getRequestActivityTime(request: Request) {
   const updated = new Date(request.updated_at || '').getTime();
@@ -271,6 +289,7 @@ export default function OperatorDashboard() {
   const [selected, setSelected] = useState<Request | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
+  const [chatAttachment, setChatAttachment] = useState<ChatAttachment | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [statusDraft, setStatusDraft] = useState<Request['status']>('in_progress');
   const [priorityDraft, setPriorityDraft] = useState<RequestPriority>('medium');
@@ -278,6 +297,7 @@ export default function OperatorDashboard() {
   const [operatorNotes, setOperatorNotes] = useState('');
   const [resolutionNotes, setResolutionNotes] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+  const chatSocketRef = useRef<WebSocket | null>(null);
 
   const fetchRequests = useCallback(async () => {
     try {
@@ -330,6 +350,7 @@ export default function OperatorDashboard() {
 
   const openDetail = async (req: Request) => {
     setSelected(req);
+    setChatAttachment(null);
     setStatusDraft(req.status);
     setPriorityDraft(getPriorityValue(req.priority));
     setAssignedDepartment(req.assigned_department || '');
@@ -342,10 +363,42 @@ export default function OperatorDashboard() {
     setSelected(null);
     setMessages([]);
     setNewMessage('');
+    setChatAttachment(null);
     setAssignedDepartment('');
     setOperatorNotes('');
     setResolutionNotes('');
   };
+
+  useEffect(() => {
+    if (!selected) return undefined;
+
+    let isCancelled = false;
+    let socket: WebSocket | null = null;
+
+    AsyncStorage.getItem('token').then((token) => {
+      if (!token || isCancelled) return;
+      socket = new WebSocket(apiService.getMessageSocketUrl(selected.id, token));
+      chatSocketRef.current = socket;
+      socket.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload?.type === 'message' && payload.message) {
+            setMessages((current) => mergeMessages(current, payload.message as Message));
+          }
+        } catch (error) {
+          console.warn('Unable to parse chat socket message', error);
+        }
+      };
+    });
+
+    return () => {
+      isCancelled = true;
+      socket?.close();
+      if (chatSocketRef.current === socket) {
+        chatSocketRef.current = null;
+      }
+    };
+  }, [selected]);
 
   const saveRequestUpdate = async () => {
     if (!selected) return;
@@ -371,13 +424,45 @@ export default function OperatorDashboard() {
     finally { setIsUpdating(false); }
   };
 
+  const pickChatMedia = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: false,
+      quality: 0.7,
+      base64: true,
+    });
+
+    const asset = result.canceled ? null : result.assets[0];
+    if (!asset?.base64) {
+      return;
+    }
+
+    setChatAttachment({
+      uri: asset.uri,
+      dataUrl: `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}`,
+      label: asset.fileName || 'image.jpg',
+      type: 'image',
+    });
+  };
+
   const sendMessage = async () => {
-    if (!newMessage.trim() || !selected || isSending) return;
+    if ((!newMessage.trim() && !chatAttachment) || !selected || isSending) return;
     setIsSending(true);
     try {
-      const res = await apiService.sendMessage(selected.id, newMessage.trim());
-      setMessages([...messages, res.data]);
+      const res = await apiService.sendMessage(selected.id, {
+        content: newMessage.trim(),
+        attachment_url: chatAttachment?.dataUrl,
+        attachment_label: chatAttachment?.label,
+        attachment_type: chatAttachment?.type,
+      });
+      setMessages((current) => mergeMessages(current, res.data));
       setNewMessage('');
+      setChatAttachment(null);
     } catch {} finally { setIsSending(false); }
   };
 
@@ -624,12 +709,31 @@ export default function OperatorDashboard() {
                   <Text style={styles.msgSender}>{msg.sender_name || (msg.sender_type === 'operator' ? t('auth.operator') : t('operator.citizen'))}</Text>
                   <Text style={[styles.msgText, msg.sender_type === 'operator' && { color: '#FFF' }]}>{msg.content}</Text>
                   <Text style={[styles.msgTime, msg.sender_type === 'operator' && { color: 'rgba(255,255,255,0.7)' }]}>{format(new Date(msg.created_at), 'HH:mm')}</Text>
+                  {msg.attachment_url ? (
+                    <Image source={{ uri: msg.attachment_url }} style={styles.msgImage} />
+                  ) : null}
                 </View>
               ))}
             </ScrollView>
+            {chatAttachment ? (
+              <View style={styles.pendingAttachment}>
+                <Image source={{ uri: chatAttachment.uri }} style={styles.pendingAttachmentImage} />
+                <Text style={styles.pendingAttachmentText} numberOfLines={1}>{chatAttachment.label}</Text>
+                <TouchableOpacity onPress={() => setChatAttachment(null)} style={styles.pendingAttachmentRemove}>
+                  <Ionicons name="close" size={16} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+            ) : null}
             <View style={[styles.msgInputRow, { paddingBottom: insets.bottom || 16 }]}>
+              <TouchableOpacity style={styles.attachButton} onPress={pickChatMedia}>
+                <Ionicons name="image-outline" size={21} color={ORANGE} />
+              </TouchableOpacity>
               <TextInput style={styles.msgInput} value={newMessage} onChangeText={setNewMessage} placeholder={t('operator.replyPlaceholder')} placeholderTextColor="#C7C7CC" multiline />
-              <TouchableOpacity style={[styles.sendBtn, (!newMessage.trim() || isSending) && { opacity: 0.5 }]} onPress={sendMessage} disabled={!newMessage.trim() || isSending}>
+              <TouchableOpacity
+                style={[styles.sendBtn, ((!newMessage.trim() && !chatAttachment) || isSending) && { opacity: 0.5 }]}
+                onPress={sendMessage}
+                disabled={(!newMessage.trim() && !chatAttachment) || isSending}
+              >
                 <Ionicons name="send" size={20} color="#FFF" />
               </TouchableOpacity>
             </View>
@@ -883,7 +987,56 @@ const styles = StyleSheet.create({
   msgSender: { fontSize: 11, fontWeight: '600', color: '#8E8E93', marginBottom: 4 },
   msgText: { fontSize: 15, lineHeight: 20, color: '#1C1C1E' },
   msgTime: { fontSize: 11, color: '#8E8E93', marginTop: 4, textAlign: 'right' },
+  msgImage: {
+    width: 210,
+    height: 150,
+    borderRadius: 14,
+    marginTop: 8,
+    backgroundColor: 'rgba(0,0,0,0.08)',
+  },
+  pendingAttachment: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: `${ORANGE}30`,
+    backgroundColor: `${ORANGE}10`,
+    padding: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  pendingAttachmentImage: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: '#E5E7EB',
+  },
+  pendingAttachmentText: {
+    flex: 1,
+    color: '#1C1C1E',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  pendingAttachmentRemove: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#FFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   msgInputRow: { flexDirection: 'row', padding: 16, borderTopWidth: 1, borderTopColor: '#F2F2F7', alignItems: 'flex-end', gap: 12 },
+  attachButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFF7F0',
+    borderWidth: 1,
+    borderColor: `${ORANGE}35`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   msgInput: { flex: 1, backgroundColor: '#F2F2F7', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, fontSize: 16, maxHeight: 100, color: '#1C1C1E' },
   sendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center' },
 });

@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import * as Location from 'expo-location';
 import { useTranslation } from 'react-i18next';
 import type { MapPoint } from '../utils/api';
 
@@ -8,6 +9,10 @@ let MapLibre: typeof import('@maplibre/maplibre-react-native') | null = null;
 try {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   MapLibre = require('@maplibre/maplibre-react-native');
+  MapLibre?.Logger.setLogCallback((log) => (
+    log.tag === 'Mbgl-HttpRequest' &&
+    log.message.startsWith('Request failed due to a permanent error: Canceled')
+  ));
 } catch (error) {
   console.warn('MapLibre native module is unavailable. Open the app in a development build.', error);
 }
@@ -57,6 +62,27 @@ export function RequestsMap({
   const { t } = useTranslation();
   const cameraRef = useRef<any>(null);
   const shapeSourceRef = useRef<any>(null);
+  const [canShowUserLocation, setCanShowUserLocation] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    Location.getForegroundPermissionsAsync()
+      .then(({ status }) => {
+        if (isMounted) {
+          setCanShowUserLocation(status === 'granted');
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setCanShowUserLocation(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const pointFeatureCollection = useMemo(
     () => ({
@@ -285,7 +311,9 @@ export function RequestsMap({
         }}
       />
 
-      <MapLibre.UserLocation visible renderMode="normal" />
+      {canShowUserLocation ? (
+        <MapLibre.UserLocation visible renderMode="normal" />
+      ) : null}
 
       <MapLibre.ShapeSource
         ref={shapeSourceRef}

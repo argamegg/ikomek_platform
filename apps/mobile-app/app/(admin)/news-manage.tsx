@@ -326,14 +326,23 @@ export default function NewsManageScreen() {
           <View style={styles.newsTop}>
             <View style={styles.newsTopLeft}>
               <View style={[styles.newsTypePill, { backgroundColor: `${primaryMeta.color}14` }]}>
-                <MaterialCommunityIcons name={primaryMeta.icon} size={14} color={primaryMeta.color} />
+                <MaterialCommunityIcons
+                  name={primaryMeta.icon as keyof typeof MaterialCommunityIcons.glyphMap}
+                  size={14}
+                  color={primaryMeta.color}
+                />
                 <Text style={[styles.newsTypeText, { color: primaryMeta.color }]}>
                   {t(typeKeyMap[primaryType] ?? primaryType)}
                 </Text>
               </View>
               {statusMeta ? (
                 <View style={[styles.translationBadge, { backgroundColor: statusMeta.backgroundColor }]}>
-                  <MaterialCommunityIcons name={statusMeta.icon} size={15} color={statusMeta.color} style={styles.translationIcon} />
+                  <MaterialCommunityIcons
+                    name={statusMeta.icon as keyof typeof MaterialCommunityIcons.glyphMap}
+                    size={15}
+                    color={statusMeta.color}
+                    style={styles.translationIcon}
+                  />
                   <Text style={[styles.translationBadgeText, { color: statusMeta.color }]}>
                     {t(`news.translationStatus.${statusMeta.key}`)}
                   </Text>

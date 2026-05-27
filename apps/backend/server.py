@@ -1,7 +1,10 @@
+import asyncio
 import logging
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Request
+from pymongo.errors import PyMongoError
 from starlette.middleware.cors import CORSMiddleware
+from starlette.responses import JSONResponse
 
 from core.config import CORS_ORIGINS, CORS_ORIGIN_REGEX, client, db
 from routes import ROUTERS
@@ -30,15 +33,39 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
-
-    print("Server started successfully")
+@app.get("/api/health")
+async def health_check():
+    return {"status": "ok", "service": "iKOMEK 109"}
 
 
-@app.on_event("startup")
-async def ensure_indexes():
+@app.get("/api/health/db")
+async def database_health_check():
+    try:
+        await db.command("ping")
+    except PyMongoError as exc:
+        logger.warning("MongoDB health check failed: %s", exc)
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "error",
+                "service": "mongodb",
+                "detail": "Database is temporarily unavailable",
+            },
+        )
+
+    return {"status": "ok", "service": "mongodb"}
+
+
+@app.exception_handler(PyMongoError)
+async def mongo_exception_handler(request: Request, exc: PyMongoError):
+    logger.exception("MongoDB request failed for %s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Database is temporarily unavailable"},
+    )
+
+
+async def create_indexes():
     await db.requests.create_index(
         [("created_at", -1)],
         name="requests_created_at_desc_index",
@@ -59,3 +86,44 @@ async def ensure_indexes():
         [("user_id", 1), ("created_at", -1)],
         name="saved_locations_user_created_index",
     )
+    await db.messages.create_index(
+        [("request_id", 1), ("created_at", 1)],
+        name="messages_request_created_index",
+    )
+
+
+async def ensure_indexes_with_retries():
+    max_attempts = 3
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            await create_indexes()
+            logger.info("MongoDB indexes are ready.")
+            return
+        except PyMongoError as exc:
+            logger.warning(
+                "MongoDB index creation failed on attempt %s/%s: %s",
+                attempt,
+                max_attempts,
+                exc,
+            )
+
+        if attempt < max_attempts:
+            await asyncio.sleep(5 * attempt)
+
+    logger.error(
+        "MongoDB indexes were not created after %s attempts. "
+        "The API stays online, but database-backed endpoints can fail until MongoDB is reachable.",
+        max_attempts,
+    )
+
+
+@app.on_event("shutdown")
+async def shutdown_db_client():
+    client.close()
+
+
+@app.on_event("startup")
+async def schedule_index_creation():
+    asyncio.create_task(ensure_indexes_with_retries())
+    logger.info("Server startup complete; MongoDB index creation scheduled.")

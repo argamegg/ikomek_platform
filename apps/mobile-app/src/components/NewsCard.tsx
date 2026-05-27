@@ -28,7 +28,7 @@ function getLocalizedText(item: NewsItem, field: 'title' | 'content', language: 
       ? 'ru'
       : 'en';
   const localizedField = normalized === 'en' ? field : `${field}_${normalized}`;
-  return String((item as Record<string, unknown>)[localizedField] ?? item[field] ?? '');
+  return String((item as unknown as Record<string, unknown>)[localizedField] ?? item[field] ?? '');
 }
 
 function formatDateLabel(value: string) {

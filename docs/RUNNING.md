@@ -24,7 +24,7 @@ Create `apps/backend/.env`:
 ```env
 MONGO_URL=mongodb://localhost:27017
 DB_NAME=ikomek_db
-JWT_SECRET=ikomek109-secret-key-2025-secure
+JWT_SECRET=replace-with-a-long-random-production-secret
 SMTP_HOST=localhost
 SMTP_PORT=1025
 SMTP_USERNAME=

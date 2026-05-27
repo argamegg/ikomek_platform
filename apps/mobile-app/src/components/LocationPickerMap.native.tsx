@@ -20,6 +20,10 @@ let MapLibre: typeof import('@maplibre/maplibre-react-native') | null = null;
 try {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   MapLibre = require('@maplibre/maplibre-react-native');
+  MapLibre?.Logger.setLogCallback((log) => (
+    log.tag === 'Mbgl-HttpRequest' &&
+    log.message.startsWith('Request failed due to a permanent error: Canceled')
+  ));
 } catch (error) {
   console.warn('MapLibre native module is unavailable. Open the app in a development build.', error);
 }
@@ -60,10 +64,11 @@ type LocationPickerMapProps = {
   onMapReady: () => void;
   onLocateMePress: () => void;
   isLocating: boolean;
+  showUserLocation?: boolean;
 };
 
 export const LocationPickerMap = forwardRef<LocationPickerMapRef, LocationPickerMapProps>(
-  ({ onCoordinateChange, onMapReady, onLocateMePress, isLocating }, ref) => {
+  ({ onCoordinateChange, onMapReady, onLocateMePress, isLocating, showUserLocation = false }, ref) => {
     const { t } = useTranslation();
     const cameraRef = useRef<any>(null);
     const mapRef = useRef<any>(null);
@@ -143,7 +148,9 @@ export const LocationPickerMap = forwardRef<LocationPickerMapRef, LocationPicker
           onRegionDidChange={handleRegionDidChange}
         >
           <MapLibre.Camera ref={cameraRef} defaultSettings={defaultCamera} />
-          <MapLibre.UserLocation visible renderMode="normal" />
+          {showUserLocation ? (
+            <MapLibre.UserLocation visible renderMode="normal" />
+          ) : null}
         </MapLibre.MapView>
 
         <View pointerEvents="none" style={styles.centerMarker}>
