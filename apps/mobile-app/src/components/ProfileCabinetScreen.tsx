@@ -34,6 +34,10 @@ const ORANGE = '#FF6B00';
 const BLUE = '#007AFF';
 const GREEN = '#34C759';
 const AMBER = '#FF9500';
+const PROFILE_NAME_CHAR_PATTERN = /^[A-Za-zА-Яа-яЁёӘәҒғҚқҢңӨөҰұҮүҺһІі]$/;
+const PROFILE_NAME_PATTERN = /^[A-Za-zА-Яа-яЁёӘәҒғҚқҢңӨөҰұҮүҺһІі]+$/;
+const KZ_PHONE_PATTERN = /^7\d{10}$/;
+const MIN_BIRTH_DATE = '1900-01-01';
 
 type MonthlyItem = { month: string; count: number };
 type RecentItem = {
@@ -53,6 +57,7 @@ type ProfileEditForm = {
   birthDate: string;
   avatarUrl: string;
 };
+type ProfileFormErrors = Partial<Record<'firstName' | 'lastName' | 'phone' | 'birthDate', string>>;
 
 const GENDER_OPTIONS = ['male', 'female'] as const;
 
@@ -72,6 +77,43 @@ function splitName(name?: string) {
     firstName: parts[0] || '',
     lastName: parts.slice(1).join(' '),
   };
+}
+
+function sanitizeProfileName(value: string) {
+  return Array.from(value).filter((char) => PROFILE_NAME_CHAR_PATTERN.test(char)).join('');
+}
+
+function normalizeKzPhoneInput(value: string) {
+  const digits = value.replace(/\D/g, '');
+  const normalized = digits.length === 11 && digits.startsWith('8') ? `7${digits.slice(1)}` : digits;
+  return normalized.slice(0, 11);
+}
+
+function formatBirthDateInput(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 4) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
+}
+
+function isValidBirthDate(value: string) {
+  if (!value) return true;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || value < MIN_BIRTH_DATE) return false;
+
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return false;
+
+  const [year, month, day] = value.split('-').map(Number);
+  const isCalendarDate =
+    date.getFullYear() === year &&
+    date.getMonth() + 1 === month &&
+    date.getDate() === day;
+
+  if (!isCalendarDate) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return date <= today;
 }
 
 function getMonthKey(date: Date) {
@@ -166,6 +208,7 @@ export function ProfileCabinetScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileErrors, setProfileErrors] = useState<ProfileFormErrors>({});
   const [profileForm, setProfileForm] = useState<ProfileEditForm>({
     firstName: '',
     lastName: '',
@@ -244,18 +287,37 @@ export function ProfileCabinetScreen() {
   const openProfileEditor = () => {
     const name = splitName(user?.full_name);
     setProfileForm({
-      firstName: name.firstName,
-      lastName: name.lastName,
-      phone: user?.phone || '',
+      firstName: sanitizeProfileName(name.firstName),
+      lastName: sanitizeProfileName(name.lastName),
+      phone: normalizeKzPhoneInput(user?.phone || ''),
       gender: user?.gender || '',
-      birthDate: user?.birth_date || '',
+      birthDate: formatBirthDateInput(user?.birth_date || ''),
       avatarUrl: user?.avatar_url || '',
     });
+    setProfileErrors({});
     setIsProfileEditorOpen(true);
   };
 
   const updateProfileForm = <K extends keyof ProfileEditForm>(key: K, value: ProfileEditForm[K]) => {
-    setProfileForm((current) => ({ ...current, [key]: value }));
+    const nextValue = (
+      key === 'firstName' || key === 'lastName'
+        ? sanitizeProfileName(value)
+        : key === 'phone'
+          ? normalizeKzPhoneInput(value)
+          : key === 'birthDate'
+            ? formatBirthDateInput(value)
+            : value
+    ) as ProfileEditForm[K];
+
+    if (key === 'firstName' || key === 'lastName' || key === 'phone' || key === 'birthDate') {
+      setProfileErrors((current) => {
+        const next = { ...current };
+        delete next[key as keyof ProfileFormErrors];
+        return next;
+      });
+    }
+
+    setProfileForm((current) => ({ ...current, [key]: nextValue }));
   };
 
   const pickAvatar = async () => {
@@ -281,21 +343,46 @@ export function ProfileCabinetScreen() {
   const saveProfile = async () => {
     const firstName = profileForm.firstName.trim();
     const lastName = profileForm.lastName.trim();
+    const phone = normalizeKzPhoneInput(profileForm.phone);
+    const birthDate = profileForm.birthDate.trim();
     const fullName = `${firstName} ${lastName}`.trim();
+    const nextErrors: ProfileFormErrors = {};
 
-    if (!firstName || !lastName) {
-      Alert.alert(t('common.error'), t('profile.nameRequired'));
+    if (!firstName) {
+      nextErrors.firstName = t('profile.nameRequired');
+    } else if (!PROFILE_NAME_PATTERN.test(firstName)) {
+      nextErrors.firstName = t('profile.nameLettersOnly');
+    }
+
+    if (!lastName) {
+      nextErrors.lastName = t('profile.nameRequired');
+    } else if (!PROFILE_NAME_PATTERN.test(lastName)) {
+      nextErrors.lastName = t('profile.nameLettersOnly');
+    }
+
+    if (phone && !KZ_PHONE_PATTERN.test(phone)) {
+      nextErrors.phone = t('profile.phoneInvalid');
+    }
+
+    if (!isValidBirthDate(birthDate)) {
+      nextErrors.birthDate = t('profile.birthDateInvalid');
+    }
+
+    if (Object.keys(nextErrors).length) {
+      setProfileErrors(nextErrors);
+      Alert.alert(t('common.error'), Object.values(nextErrors)[0] || t('profile.profileSaveError'));
       return;
     }
 
+    setProfileErrors({});
     setIsSavingProfile(true);
     try {
       await updateProfile({
         fullName,
-        phone: profileForm.phone.trim(),
+        phone,
         displayName: fullName,
         gender: profileForm.gender || undefined,
-        birthDate: profileForm.birthDate.trim(),
+        birthDate,
         avatarUrl: profileForm.avatarUrl,
       });
       setIsProfileEditorOpen(false);
@@ -570,20 +657,26 @@ export function ProfileCabinetScreen() {
                     <TextInput
                       value={profileForm.firstName}
                       onChangeText={(value) => updateProfileForm('firstName', value)}
-                      style={styles.editorInput}
+                      style={[styles.editorInput, profileErrors.firstName && styles.editorInputError]}
                       placeholder={t('profile.firstName')}
                       placeholderTextColor="#94A3B8"
+                      autoCapitalize="words"
+                      maxLength={40}
                     />
+                    {profileErrors.firstName ? <Text style={styles.editorError}>{profileErrors.firstName}</Text> : null}
                   </View>
                   <View style={styles.editorField}>
                     <Text style={styles.editorLabel}>{t('profile.lastName')}</Text>
                     <TextInput
                       value={profileForm.lastName}
                       onChangeText={(value) => updateProfileForm('lastName', value)}
-                      style={styles.editorInput}
+                      style={[styles.editorInput, profileErrors.lastName && styles.editorInputError]}
                       placeholder={t('profile.lastName')}
                       placeholderTextColor="#94A3B8"
+                      autoCapitalize="words"
+                      maxLength={40}
                     />
+                    {profileErrors.lastName ? <Text style={styles.editorError}>{profileErrors.lastName}</Text> : null}
                   </View>
                 </View>
 
@@ -592,11 +685,14 @@ export function ProfileCabinetScreen() {
                   <TextInput
                     value={profileForm.phone}
                     onChangeText={(value) => updateProfileForm('phone', value)}
-                    style={styles.editorInput}
-                    placeholder="+7"
+                    style={[styles.editorInput, profileErrors.phone && styles.editorInputError]}
+                    placeholder="77001234567"
                     placeholderTextColor="#94A3B8"
-                    keyboardType="phone-pad"
+                    keyboardType="number-pad"
+                    textContentType="telephoneNumber"
+                    maxLength={11}
                   />
+                  {profileErrors.phone ? <Text style={styles.editorError}>{profileErrors.phone}</Text> : null}
                 </View>
 
                 <View style={styles.editorField}>
@@ -629,10 +725,13 @@ export function ProfileCabinetScreen() {
                   <TextInput
                     value={profileForm.birthDate}
                     onChangeText={(value) => updateProfileForm('birthDate', value)}
-                    style={styles.editorInput}
+                    style={[styles.editorInput, profileErrors.birthDate && styles.editorInputError]}
                     placeholder="YYYY-MM-DD"
                     placeholderTextColor="#94A3B8"
+                    keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'number-pad'}
+                    maxLength={10}
                   />
+                  {profileErrors.birthDate ? <Text style={styles.editorError}>{profileErrors.birthDate}</Text> : null}
                 </View>
               </ScrollView>
 
@@ -741,6 +840,8 @@ const styles = StyleSheet.create({
   editorField: { flex: 1, gap: 8 },
   editorLabel: { color: '#0F172A', fontSize: 13, fontWeight: '800' },
   editorInput: { minHeight: 52, borderRadius: 16, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#FFF', paddingHorizontal: 14, color: '#0F172A', fontSize: 15, fontWeight: '700' },
+  editorInputError: { borderColor: '#EF4444', backgroundColor: '#FEF2F2' },
+  editorError: { color: '#DC2626', fontSize: 12, fontWeight: '800' },
   genderRow: { flexDirection: 'row', gap: 10 },
   genderChip: { flex: 1, minHeight: 46, borderRadius: 16, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10 },
   genderChipActive: { borderColor: ORANGE, backgroundColor: '#FFF3EC' },

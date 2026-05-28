@@ -798,9 +798,7 @@ export const platformApi = {
       birth_date: payload.birthDate,
       avatar_url: payload.avatarUrl,
     };
-    await platformClient.put("/auth/profile", profilePayload, {
-      params: profilePayload,
-    });
+    await platformClient.put("/auth/profile", profilePayload);
     await platformClient.put("/auth/language", { language: payload.language });
     return (await platformApi.getCurrentUser()) as User;
   },

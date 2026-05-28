@@ -1,5 +1,6 @@
 import logging
-from datetime import timedelta
+import re
+from datetime import date, datetime, timedelta
 from typing import Optional
 import uuid
 
@@ -41,6 +42,42 @@ from schemas import (
 )
 
 router = APIRouter()
+
+PROFILE_NAME_RE = re.compile(r"^[A-Za-zА-Яа-яЁёӘәҒғҚқҢңӨөҰұҮүҺһІі]+$")
+KZ_PHONE_RE = re.compile(r"^7\d{10}$")
+MIN_BIRTH_DATE = date(1900, 1, 1)
+
+
+def validate_profile_full_name(full_name: str) -> str:
+    normalized = " ".join(full_name.strip().split())
+    parts = normalized.split(" ")
+    if len(parts) < 2:
+        raise HTTPException(status_code=400, detail="Enter first and last name")
+    if any(not PROFILE_NAME_RE.fullmatch(part) for part in parts):
+        raise HTTPException(status_code=400, detail="First and last name must contain letters only")
+    return normalized
+
+
+def normalize_profile_phone(phone: str) -> str:
+    digits = re.sub(r"\D", "", phone.strip())
+    if len(digits) == 11 and digits.startswith("8"):
+        digits = f"7{digits[1:]}"
+    if digits and not KZ_PHONE_RE.fullmatch(digits):
+        raise HTTPException(status_code=400, detail="Phone must be a Kazakhstan number: 11 digits starting with 7")
+    return digits
+
+
+def validate_profile_birth_date(birth_date: str) -> str:
+    normalized = birth_date.strip()
+    if not normalized:
+        return ""
+    try:
+        parsed = datetime.strptime(normalized, "%Y-%m-%d").date()
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail="Birth date must use YYYY-MM-DD format") from error
+    if parsed < MIN_BIRTH_DATE or parsed > date.today():
+        raise HTTPException(status_code=400, detail="Birth date is out of allowed range")
+    return normalized
 
 # ================================
 # AUTH ENDPOINTS
@@ -281,10 +318,17 @@ async def update_profile(
     else:
         avatar_url = None
 
+    if full_name is not None:
+        full_name = validate_profile_full_name(full_name)
+    if phone is not None:
+        phone = normalize_profile_phone(phone)
+    if birth_date is not None:
+        birth_date = validate_profile_birth_date(birth_date)
+
     update_data = {}
-    if full_name:
+    if full_name is not None:
         update_data["full_name"] = full_name
-    if phone:
+    if phone is not None:
         update_data["phone"] = phone
     if display_name is not None:
         update_data["display_name"] = display_name
