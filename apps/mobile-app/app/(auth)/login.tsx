@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  View, Text, TextInput, TouchableOpacity, StyleSheet, Image,
   KeyboardAvoidingView, Platform, ScrollView, Alert, ActivityIndicator
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -59,7 +59,14 @@ export default function LoginScreen() {
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 40 }]} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
-          <View style={styles.logo}><Text style={styles.logoText}>109</Text></View>
+          <View style={styles.logoFrame}>
+            <Image
+              source={require('../../assets/images/app-icon.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+              accessibilityLabel="iKOMEK 109"
+            />
+          </View>
           <Text style={styles.title}>{t('auth.signInTitle')}</Text>
           <Text style={styles.subtitle}>{t('auth.signInSubtitle')}</Text>
         </View>
@@ -116,8 +123,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   scrollContent: { flexGrow: 1, padding: 24 },
   header: { alignItems: 'center', marginBottom: 40 },
-  logo: { width: 80, height: 80, borderRadius: 20, backgroundColor: ORANGE, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
-  logoText: { color: '#FFF', fontSize: 28, fontWeight: 'bold' },
+  logoFrame: { width: 144, height: 108, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  logoImage: { width: 176, height: 176 },
   title: { fontSize: 28, fontWeight: 'bold', color: '#1C1C1E', marginBottom: 8 },
   subtitle: { fontSize: 16, color: '#475569', fontWeight: '500' },
   form: { flex: 1 },
