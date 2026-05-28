@@ -5,13 +5,14 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Modal,
+  PanResponder,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,7 +27,17 @@ import {
 } from '../src/components/LocationPickerMap';
 import { useAuth } from '../src/context/AuthContext';
 import { apiService, SavedLocation } from '../src/utils/api';
-import { ASTANA_CENTER_LAT, ASTANA_CENTER_LNG } from '../src/utils/geoFence';
+import {
+  ASTANA_CENTER_LAT,
+  ASTANA_CENTER_LNG,
+  getDistanceToAstanaKm,
+  isWithinAstanaRequestZone,
+} from '../src/utils/geoFence';
+import {
+  hasUsableCoordinate,
+  resolveAstanaAddress,
+  reverseGeocodeAstanaPoint,
+} from '../src/utils/locationGeocoding';
 
 const ORANGE = '#FF6B00';
 
@@ -47,68 +58,6 @@ const LANGUAGES = [
   { code: 'en', name: 'English', flag: '🇬🇧' },
 ];
 
-type AddressLookupResult = {
-  latitude: number;
-  longitude: number;
-  label: string;
-};
-
-function hasUsableCoordinate(latitude: number, longitude: number) {
-  return Number.isFinite(latitude)
-    && Number.isFinite(longitude)
-    && !(Math.abs(latitude) < 0.000001 && Math.abs(longitude) < 0.000001);
-}
-
-async function resolveAstanaAddress(address: string, language: string): Promise<AddressLookupResult | null> {
-  const normalizedAddress = address.trim();
-  if (!normalizedAddress) return null;
-
-  const lowerAddress = normalizedAddress.toLowerCase();
-  const query = lowerAddress.includes('астана') || lowerAddress.includes('astana')
-    ? normalizedAddress
-    : `${normalizedAddress}, Астана, Казахстан`;
-
-  try {
-    const params = new URLSearchParams({
-      q: query,
-      format: 'json',
-      limit: '1',
-      addressdetails: '1',
-      'accept-language': language || 'ru',
-    });
-    const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`);
-    if (response.ok) {
-      const [result] = await response.json();
-      const latitude = Number(result?.lat);
-      const longitude = Number(result?.lon);
-      if (hasUsableCoordinate(latitude, longitude)) {
-        return {
-          latitude,
-          longitude,
-          label: result.display_name || query,
-        };
-      }
-    }
-  } catch (error) {
-    console.warn('Nominatim address lookup failed:', error);
-  }
-
-  try {
-    const [result] = await Location.geocodeAsync(query);
-    if (result && hasUsableCoordinate(result.latitude, result.longitude)) {
-      return {
-        latitude: result.latitude,
-        longitude: result.longitude,
-        label: query,
-      };
-    }
-  } catch (error) {
-    console.warn('Expo address lookup failed:', error);
-  }
-
-  return null;
-}
-
 export default function SettingsScreen() {
   const { t, i18n } = useTranslation();
   const { user, logout, updateLanguage, isCitizen } = useAuth();
@@ -120,6 +69,7 @@ export default function SettingsScreen() {
   const [isSavingAddress, setIsSavingAddress] = useState(false);
   const [isFindingAddress, setIsFindingAddress] = useState(false);
   const [isAddressLocating, setIsAddressLocating] = useState(false);
+  const [isResolvingAddress, setIsResolvingAddress] = useState(false);
   const [showAddressMap, setShowAddressMap] = useState(false);
   const [addressMapHint, setAddressMapHint] = useState('');
   const [addressForm, setAddressForm] = useState({
@@ -130,6 +80,15 @@ export default function SettingsScreen() {
     longitude: '',
   });
   const addressMapRef = useRef<LocationPickerMapRef>(null);
+  const reverseGeocodeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reverseGeocodeAbortRef = useRef<AbortController | null>(null);
+  const addressMapReadyCoordinateRef = useRef<LocationPickerCoordinate | null>(null);
+  const addressModalScrollYRef = useRef(0);
+  const addressMapLatitude = Number(addressForm.latitude);
+  const addressMapLongitude = Number(addressForm.longitude);
+  const addressMapCoordinate = hasUsableCoordinate(addressMapLatitude, addressMapLongitude)
+    ? { lat: addressMapLatitude, lng: addressMapLongitude }
+    : null;
 
   const fetchLocations = useCallback(async () => {
     try {
@@ -146,6 +105,13 @@ export default function SettingsScreen() {
     }
   }, [fetchLocations, isCitizen]);
 
+  useEffect(() => () => {
+    if (reverseGeocodeTimeoutRef.current) {
+      clearTimeout(reverseGeocodeTimeoutRef.current);
+    }
+    reverseGeocodeAbortRef.current?.abort();
+  }, []);
+
   const deleteLocation = async (id: string) => {
     try {
       await apiService.deleteSavedLocation(id);
@@ -156,6 +122,13 @@ export default function SettingsScreen() {
   };
 
   const resetAddressForm = () => {
+    if (reverseGeocodeTimeoutRef.current) {
+      clearTimeout(reverseGeocodeTimeoutRef.current);
+    }
+    reverseGeocodeAbortRef.current?.abort();
+    reverseGeocodeAbortRef.current = null;
+    setIsResolvingAddress(false);
+    addressMapReadyCoordinateRef.current = null;
     setAddressForm({
       label: '',
       type: 'home',
@@ -167,9 +140,20 @@ export default function SettingsScreen() {
     setAddressMapHint('');
   };
 
+  const getAddressZoneHint = useCallback((latitude: number, longitude: number, fallback?: string) => {
+    if (isWithinAstanaRequestZone(latitude, longitude)) {
+      return fallback ?? t('locations.mapHint');
+    }
+
+    return t('locations.outOfZone', {
+      distance: Math.round(getDistanceToAstanaKm(latitude, longitude)),
+    });
+  }, [t]);
+
   const applyAddressCoordinate = useCallback((latitude: number, longitude: number, hint?: string) => {
     const nextLatitude = Number.isFinite(latitude) ? latitude : ASTANA_CENTER_LAT;
     const nextLongitude = Number.isFinite(longitude) ? longitude : ASTANA_CENTER_LNG;
+    addressMapReadyCoordinateRef.current = { lat: nextLatitude, lng: nextLongitude };
 
     setAddressForm((current) => ({
       ...current,
@@ -177,15 +161,17 @@ export default function SettingsScreen() {
       longitude: nextLongitude.toFixed(6),
     }));
     setShowAddressMap(true);
-    setAddressMapHint(hint ?? t('locations.mapHint'));
+    setAddressMapHint(getAddressZoneHint(nextLatitude, nextLongitude, hint));
     requestAnimationFrame(() => {
       addressMapRef.current?.centerOnCoordinate(nextLongitude, nextLatitude, 16);
     });
-  }, [t]);
+  }, [getAddressZoneHint]);
 
   const findAddressOnMap = useCallback(async () => {
     const address = addressForm.address.trim();
     Keyboard.dismiss();
+    reverseGeocodeAbortRef.current?.abort();
+    setIsResolvingAddress(false);
 
     if (!address) {
       applyAddressCoordinate(ASTANA_CENTER_LAT, ASTANA_CENTER_LNG, t('locations.mapFallback'));
@@ -200,6 +186,7 @@ export default function SettingsScreen() {
         return;
       }
 
+      setAddressForm((current) => ({ ...current, address: result.label || address }));
       applyAddressCoordinate(result.latitude, result.longitude, t('locations.approximateFound'));
     } finally {
       setIsFindingAddress(false);
@@ -224,27 +211,65 @@ export default function SettingsScreen() {
   }, [applyAddressCoordinate, t]);
 
   const handleAddressMapReady = useCallback(() => {
-    const latitude = Number(addressForm.latitude);
-    const longitude = Number(addressForm.longitude);
+    const coordinate = addressMapReadyCoordinateRef.current;
     addressMapRef.current?.centerOnCoordinate(
-      Number.isFinite(longitude) ? longitude : ASTANA_CENTER_LNG,
-      Number.isFinite(latitude) ? latitude : ASTANA_CENTER_LAT,
-      Number.isFinite(latitude) && Number.isFinite(longitude) ? 16 : 12,
+      coordinate?.lng ?? ASTANA_CENTER_LNG,
+      coordinate?.lat ?? ASTANA_CENTER_LAT,
+      coordinate ? 16 : 12,
     );
-  }, [addressForm.latitude, addressForm.longitude]);
+  }, []);
 
   const handleAddressMapChange = useCallback(({ lat, lng }: LocationPickerCoordinate) => {
+    const nextLatitude = lat.toFixed(6);
+    const nextLongitude = lng.toFixed(6);
+    addressMapReadyCoordinateRef.current = { lat, lng };
     setAddressForm((current) => ({
       ...current,
-      latitude: lat.toFixed(6),
-      longitude: lng.toFixed(6),
+      latitude: nextLatitude,
+      longitude: nextLongitude,
     }));
-    setAddressMapHint(t('locations.mapHint'));
-  }, [t]);
+    setAddressMapHint(getAddressZoneHint(lat, lng));
+    if (reverseGeocodeTimeoutRef.current) {
+      clearTimeout(reverseGeocodeTimeoutRef.current);
+    }
+    reverseGeocodeAbortRef.current?.abort();
+    setIsResolvingAddress(true);
+    reverseGeocodeTimeoutRef.current = setTimeout(() => {
+      const controller = new AbortController();
+      reverseGeocodeAbortRef.current = controller;
+
+      void reverseGeocodeAstanaPoint(lat, lng, i18n.language, controller.signal)
+        .then((nextAddress) => {
+          if (!nextAddress.trim()) return;
+          setAddressForm((current) => ({
+            ...current,
+            address: current.latitude === nextLatitude && current.longitude === nextLongitude
+              ? nextAddress
+              : current.address,
+          }));
+        })
+        .catch((error: unknown) => {
+          if (
+            error &&
+            typeof error === 'object' &&
+            'name' in error &&
+            (error as { name?: string }).name === 'AbortError'
+          ) {
+            return;
+          }
+        })
+        .finally(() => {
+          if (reverseGeocodeAbortRef.current === controller) {
+            reverseGeocodeAbortRef.current = null;
+            setIsResolvingAddress(false);
+          }
+        });
+    }, 300);
+  }, [getAddressZoneHint, i18n.language]);
 
   const saveLocation = async () => {
     const label = addressForm.label.trim();
-    const address = addressForm.address.trim();
+    let address = addressForm.address.trim();
     if (!label || !address) {
       Alert.alert(t('common.error'), t('locations.fillRequired'));
       return;
@@ -264,6 +289,15 @@ export default function SettingsScreen() {
         }
         latitude = result.latitude;
         longitude = result.longitude;
+        address = result.label || address;
+        setAddressForm((current) => ({ ...current, address }));
+      }
+      if (!isWithinAstanaRequestZone(latitude, longitude)) {
+        applyAddressCoordinate(latitude, longitude);
+        Alert.alert(t('common.error'), t('locations.outOfZone', {
+          distance: Math.round(getDistanceToAstanaKm(latitude, longitude)),
+        }));
+        return;
       }
 
       const response = await apiService.createSavedLocation({
@@ -282,6 +316,46 @@ export default function SettingsScreen() {
       setIsSavingAddress(false);
     }
   };
+
+  const closeAddressModal = () => {
+    Keyboard.dismiss();
+    setIsAddressModalOpen(false);
+    resetAddressForm();
+  };
+
+  const requestAddressModalClose = () => {
+    if (isSavingAddress) return;
+
+    Keyboard.dismiss();
+    Alert.alert(
+      t('locations.cancelAddressTitle'),
+      t('locations.cancelAddressMessage'),
+      [
+        {
+          text: t('locations.keepEditing'),
+          style: 'cancel',
+        },
+        {
+          text: t('locations.discardAddress'),
+          style: 'destructive',
+          onPress: closeAddressModal,
+        },
+      ],
+    );
+  };
+
+  const addressModalPanResponder = PanResponder.create({
+    onMoveShouldSetPanResponderCapture: (_, gesture) => (
+      addressModalScrollYRef.current <= 0 &&
+      gesture.dy > 16 &&
+      Math.abs(gesture.dy) > Math.abs(gesture.dx) * 1.2
+    ),
+    onPanResponderRelease: (_, gesture) => {
+      if (gesture.dy > 70 || gesture.vy > 0.75) {
+        requestAddressModalClose();
+      }
+    },
+  });
 
   const handleLanguageChange = async (langCode: string) => {
     await updateLanguage(langCode);
@@ -438,19 +512,33 @@ export default function SettingsScreen() {
         </View>
       </Modal>
 
-      <Modal visible={isAddressModalOpen} transparent animationType="slide" onRequestClose={() => setIsAddressModalOpen(false)}>
+      <Modal visible={isAddressModalOpen} transparent animationType="slide" onRequestClose={requestAddressModalClose}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardAvoidingOverlay}
         >
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-            <View style={styles.langModalOverlay}>
-              <View style={[styles.langModalContent, styles.addressModalContent, { paddingBottom: insets.bottom + 16 }]}>
-                <View style={styles.langModalHandle} />
+          <View style={styles.langModalOverlay}>
+              <Pressable
+                style={StyleSheet.absoluteFill}
+                onPress={requestAddressModalClose}
+                accessibilityRole="button"
+                accessibilityLabel={t('locations.cancelAddressTitle')}
+              />
+              <View
+                style={[styles.langModalContent, styles.addressModalContent, { paddingBottom: insets.bottom + 16 }]}
+                {...addressModalPanResponder.panHandlers}
+              >
+                <View style={styles.modalSwipeHandleArea} {...addressModalPanResponder.panHandlers}>
+                  <View style={[styles.langModalHandle, styles.addressModalHandle]} />
+                </View>
                 <ScrollView
                   showsVerticalScrollIndicator={false}
                   keyboardShouldPersistTaps="handled"
                   keyboardDismissMode="interactive"
+                  scrollEventThrottle={16}
+                  onScroll={(event) => {
+                    addressModalScrollYRef.current = event.nativeEvent.contentOffset.y;
+                  }}
                   contentContainerStyle={styles.addressModalScrollContent}
                 >
                   <Text style={styles.langModalTitle}>{t('locations.addLocation')}</Text>
@@ -485,6 +573,12 @@ export default function SettingsScreen() {
                     style={[styles.addressModalInput, styles.addressModalTextArea]}
                     value={addressForm.address}
                     onChangeText={(address) => {
+                      if (reverseGeocodeTimeoutRef.current) {
+                        clearTimeout(reverseGeocodeTimeoutRef.current);
+                      }
+                      reverseGeocodeAbortRef.current?.abort();
+                      reverseGeocodeAbortRef.current = null;
+                      setIsResolvingAddress(false);
                       setAddressForm((current) => ({
                         ...current,
                         address,
@@ -520,14 +614,31 @@ export default function SettingsScreen() {
                   {showAddressMap ? (
                     <View style={styles.addressPickerCard}>
                       <View style={styles.addressPickerHeader}>
-                        <Text style={styles.addressPickerTitle}>{t('locations.mapTitle')}</Text>
-                        <TouchableOpacity onPress={() => setShowAddressMap(false)} style={styles.addressPickerClose}>
+                        <View style={styles.addressPickerTitleRow}>
+                          {isResolvingAddress ? <ActivityIndicator size="small" color={ORANGE} /> : null}
+                          <Text style={styles.addressPickerTitle}>
+                            {isResolvingAddress ? t('locations.resolvingAddress') : t('locations.mapTitle')}
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          onPress={() => {
+                            if (reverseGeocodeTimeoutRef.current) {
+                              clearTimeout(reverseGeocodeTimeoutRef.current);
+                            }
+                            reverseGeocodeAbortRef.current?.abort();
+                            reverseGeocodeAbortRef.current = null;
+                            setIsResolvingAddress(false);
+                            setShowAddressMap(false);
+                          }}
+                          style={styles.addressPickerClose}
+                        >
                           <Ionicons name="chevron-up" size={18} color="#64748B" />
                         </TouchableOpacity>
                       </View>
                       <View style={styles.addressPickerMap}>
                         <LocationPickerMap
                           ref={addressMapRef}
+                          coordinate={addressMapCoordinate}
                           onCoordinateChange={handleAddressMapChange}
                           onMapReady={handleAddressMapReady}
                           onLocateMePress={locateAddressManually}
@@ -562,18 +673,13 @@ export default function SettingsScreen() {
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.langCloseBtn}
-                    onPress={() => {
-                      Keyboard.dismiss();
-                      setIsAddressModalOpen(false);
-                      resetAddressForm();
-                    }}
+                    onPress={requestAddressModalClose}
                   >
                     <Text style={styles.langCloseText}>{t('common.cancel')}</Text>
                   </TouchableOpacity>
                 </ScrollView>
               </View>
             </View>
-          </TouchableWithoutFeedback>
         </KeyboardAvoidingView>
       </Modal>
     </View>
@@ -611,7 +717,9 @@ const styles = StyleSheet.create({
   langModalContent: { backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
   addressModalContent: { maxHeight: '88%' },
   addressModalScrollContent: { paddingBottom: 12 },
+  modalSwipeHandleArea: { alignItems: 'center', paddingTop: 4, paddingBottom: 20 },
   langModalHandle: { width: 36, height: 4, backgroundColor: '#E5E5EA', borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
+  addressModalHandle: { marginBottom: 0 },
   langModalTitle: { fontSize: 20, fontWeight: '800', color: '#1C1C1E', marginBottom: 16 },
   langOption: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 12, marginBottom: 8, backgroundColor: '#F2F2F7' },
   langOptionActive: { backgroundColor: `${ORANGE}10`, borderWidth: 1, borderColor: ORANGE },
@@ -632,6 +740,7 @@ const styles = StyleSheet.create({
   findAddressText: { color: ORANGE, fontSize: 15, fontWeight: '800' },
   addressPickerCard: { borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#F8FAFC', borderRadius: 18, padding: 10, marginBottom: 12 },
   addressPickerHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  addressPickerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, paddingRight: 8 },
   addressPickerTitle: { color: '#1C1C1E', fontSize: 14, fontWeight: '800' },
   addressPickerClose: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center' },
   addressPickerMap: { height: 230, overflow: 'hidden', borderRadius: 14, backgroundColor: '#E2E8F0', marginBottom: 10 },

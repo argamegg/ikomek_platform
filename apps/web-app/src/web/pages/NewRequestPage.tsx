@@ -325,6 +325,11 @@ export function NewRequestPage() {
       if (!label) {
         throw new Error(t("cabinet.saved.formRequired"));
       }
+      if (!isWithinAstanaRequestZone(latitude, longitude)) {
+        throw new Error(t("cabinet.saved.outOfZone", {
+          distance: Math.round(getDistanceToAstanaKm(latitude, longitude)),
+        }));
+      }
 
       return platformApi.createSavedLocation({
         label,

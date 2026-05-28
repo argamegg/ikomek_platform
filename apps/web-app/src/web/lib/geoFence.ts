@@ -2,7 +2,7 @@ const EARTH_RADIUS_KM = 6371;
 
 export const ASTANA_CENTER_LAT = 51.1282;
 export const ASTANA_CENTER_LNG = 71.4306;
-export const ASTANA_MAX_RADIUS_KM = 60;
+export const ASTANA_MAX_RADIUS_KM = 15;
 
 export function haversineDistanceKm(
   lat1: number,

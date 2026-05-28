@@ -64,21 +64,22 @@ type LocationPickerMapProps = {
   onMapReady: () => void;
   onLocateMePress: () => void;
   isLocating: boolean;
+  coordinate?: LocationPickerCoordinate | null;
   showUserLocation?: boolean;
 };
 
 export const LocationPickerMap = forwardRef<LocationPickerMapRef, LocationPickerMapProps>(
-  ({ onCoordinateChange, onMapReady, onLocateMePress, isLocating, showUserLocation = false }, ref) => {
+  ({ onCoordinateChange, onMapReady, onLocateMePress, isLocating, coordinate = null, showUserLocation = false }, ref) => {
     const { t } = useTranslation();
     const cameraRef = useRef<any>(null);
     const mapRef = useRef<any>(null);
 
     const defaultCamera = useMemo(
       () => ({
-        centerCoordinate: ASTANA_CENTER,
-        zoomLevel: 14,
+        centerCoordinate: coordinate ? [coordinate.lng, coordinate.lat] : ASTANA_CENTER,
+        zoomLevel: coordinate ? 16 : 14,
       }),
-      [],
+      [coordinate?.lat, coordinate?.lng],
     );
 
     const centerOnCoordinate = useCallback((lng: number, lat: number, zoom = 16) => {

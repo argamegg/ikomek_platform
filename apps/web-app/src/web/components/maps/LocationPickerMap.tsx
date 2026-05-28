@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useRef } from "react";
+import { useEffect, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import { useTranslation } from "react-i18next";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -22,9 +22,16 @@ export function LocationPickerMap({ coordinate, onCoordinateChange }: LocationPi
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
-  const emitCoordinateChange = useEffectEvent((nextCoordinate: LocationCoordinate) => {
-    onCoordinateChange(nextCoordinate);
-  });
+  const coordinateRef = useRef<LocationCoordinate | null>(coordinate);
+  const onCoordinateChangeRef = useRef(onCoordinateChange);
+
+  useEffect(() => {
+    coordinateRef.current = coordinate;
+  }, [coordinate]);
+
+  useEffect(() => {
+    onCoordinateChangeRef.current = onCoordinateChange;
+  }, [onCoordinateChange]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) {
@@ -34,8 +41,10 @@ export function LocationPickerMap({ coordinate, onCoordinateChange }: LocationPi
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: REQUEST_MAP_STYLE,
-      center: DEFAULT_CENTER,
-      zoom: 11.8,
+      center: coordinateRef.current
+        ? [coordinateRef.current.lng, coordinateRef.current.lat]
+        : DEFAULT_CENTER,
+      zoom: coordinateRef.current ? 15.5 : 11.8,
       attributionControl: false,
       dragRotate: false,
       touchPitch: false,
@@ -49,9 +58,12 @@ export function LocationPickerMap({ coordinate, onCoordinateChange }: LocationPi
       draggable: true,
     });
     markerRef.current = marker;
+    if (coordinateRef.current) {
+      marker.setLngLat([coordinateRef.current.lng, coordinateRef.current.lat]).addTo(map);
+    }
 
     const handleMapClick = (event: maplibregl.MapMouseEvent) => {
-      emitCoordinateChange({
+      onCoordinateChangeRef.current({
         lat: event.lngLat.lat,
         lng: event.lngLat.lng,
       });
@@ -59,7 +71,7 @@ export function LocationPickerMap({ coordinate, onCoordinateChange }: LocationPi
 
     const handleMarkerDragEnd = () => {
       const lngLat = marker.getLngLat();
-      emitCoordinateChange({
+      onCoordinateChangeRef.current({
         lat: lngLat.lat,
         lng: lngLat.lng,
       });
@@ -84,7 +96,7 @@ export function LocationPickerMap({ coordinate, onCoordinateChange }: LocationPi
       markerRef.current = null;
       mapRef.current = null;
     };
-  }, [emitCoordinateChange]);
+  }, []);
 
   useEffect(() => {
     const map = mapRef.current;

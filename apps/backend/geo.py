@@ -10,10 +10,13 @@ load_dotenv(ROOT_DIR / ".env")
 
 ASTANA_CENTER_LAT = float(os.getenv("ASTANA_CENTER_LAT", "51.1282"))
 ASTANA_CENTER_LNG = float(os.getenv("ASTANA_CENTER_LNG", "71.4306"))
-ASTANA_MAX_RADIUS_KM = float(os.getenv("ASTANA_MAX_RADIUS_KM", "60"))
+ASTANA_MAX_RADIUS_KM = float(os.getenv("ASTANA_MAX_RADIUS_KM", "15"))
 
 REQUEST_OUT_OF_ZONE_ERROR = (
-    "Обращения можно создавать только в Астане и в радиусе до 60 км от города"
+    "Обращения можно создавать только в Астане и в радиусе до 15 км от города"
+)
+SAVED_LOCATION_OUT_OF_ZONE_ERROR = (
+    "Сохраненные адреса можно добавлять только в Астане и в радиусе до 15 км от города"
 )
 
 

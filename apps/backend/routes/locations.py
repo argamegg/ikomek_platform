@@ -3,6 +3,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 
 from core.config import db
+from geo import SAVED_LOCATION_OUT_OF_ZONE_ERROR, is_within_astana_request_zone
 from helpers import get_current_user
 from schemas import ROLE_CITIZEN, SavedLocation, SavedLocationCreate
 
@@ -36,6 +37,8 @@ async def create_saved_location(location: SavedLocationCreate, current_user: dic
     _require_citizen(current_user)
     if location.name not in SAVED_LOCATION_TYPES:
         raise HTTPException(status_code=422, detail="Invalid saved location type")
+    if not is_within_astana_request_zone(location.latitude, location.longitude):
+        raise HTTPException(status_code=422, detail=SAVED_LOCATION_OUT_OF_ZONE_ERROR)
 
     loc_dict = location.dict()
     loc_obj = SavedLocation(user_id=current_user["id"], **loc_dict)

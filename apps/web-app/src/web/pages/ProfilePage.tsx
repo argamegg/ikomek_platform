@@ -19,6 +19,7 @@ import {
   Clock3,
   FileText,
   LogOut,
+  LoaderCircle,
   MapPinned,
   MapPin,
   Pencil,
@@ -37,11 +38,16 @@ import { Button } from "../components/ui/Button";
 import { EmptyState } from "../components/ui/EmptyState";
 import { LocationPickerMap } from "../components/maps/LocationPickerMap";
 import { formatAddress, formatDate, getStatusTone } from "../lib/format";
-import { ASTANA_CENTER_LAT, ASTANA_CENTER_LNG } from "../lib/geoFence";
+import {
+  ASTANA_CENTER_LAT,
+  ASTANA_CENTER_LNG,
+  getDistanceToAstanaKm,
+  isWithinAstanaRequestZone,
+} from "../lib/geoFence";
 import { localizeRequestProblemType, localizeRequestStatus } from "../lib/requestMeta";
 import { getErrorMessage, platformApi, queryKeys } from "../services/platformApi";
 import { applyLoggedOutQueryState } from "../lib/querySession";
-import { searchAstanaAddresses } from "../lib/locationGeocoding";
+import { reverseGeocodeAstanaPoint, searchAstanaAddresses } from "../lib/locationGeocoding";
 
 const ACCENT = "#ff6b35";
 const MONTH_WINDOW = 6;
@@ -352,9 +358,12 @@ export function ProfilePage() {
   const [savedMapCoordinate, setSavedMapCoordinate] = useState<{ lat: number; lng: number } | null>(null);
   const [savedGeocodeHint, setSavedGeocodeHint] = useState("");
   const [isSavedGeocoding, setIsSavedGeocoding] = useState(false);
+  const [isSavedReverseGeocoding, setIsSavedReverseGeocoding] = useState(false);
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
   const [avatarCrop, setAvatarCrop] = useState<AvatarCropState | null>(null);
   const avatarDragRef = useRef<AvatarDragState | null>(null);
+  const savedReverseGeocodeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedReverseGeocodeAbortRef = useRef<AbortController | null>(null);
   const [profileErrors, setProfileErrors] = useState<ProfileFormErrors>({});
   const [profileForm, setProfileForm] = useState<ProfileFormState>({
     firstName: "",
@@ -447,9 +456,24 @@ export function ProfilePage() {
   const userRoleLabel = currentUser ? t(`roles.${currentUser.primaryRole}`, currentUser.primaryRole) : "";
 
   const resetSavedForm = () => {
+    if (savedReverseGeocodeTimeoutRef.current) {
+      clearTimeout(savedReverseGeocodeTimeoutRef.current);
+    }
+    savedReverseGeocodeAbortRef.current?.abort();
+    setIsSavedReverseGeocoding(false);
     setSavedForm({ label: "", type: "home", address: "", lat: "", lng: "" });
     setSavedMapCoordinate(null);
     setSavedGeocodeHint("");
+  };
+
+  const getSavedLocationZoneHint = (coordinate: { lat: number; lng: number }, fallback?: string) => {
+    if (isWithinAstanaRequestZone(coordinate.lat, coordinate.lng)) {
+      return fallback ?? t("cabinet.saved.mapHint");
+    }
+
+    return t("cabinet.saved.outOfZone", {
+      distance: Math.round(getDistanceToAstanaKm(coordinate.lat, coordinate.lng)),
+    });
   };
 
   const applySavedMapCoordinate = (coordinate: { lat: number; lng: number }, hint?: string) => {
@@ -459,7 +483,7 @@ export function ProfilePage() {
       lat: coordinate.lat.toFixed(6),
       lng: coordinate.lng.toFixed(6),
     }));
-    setSavedGeocodeHint(hint ?? t("cabinet.saved.mapHint"));
+    setSavedGeocodeHint(getSavedLocationZoneHint(coordinate, hint));
   };
 
   const handleSavedCoordinateInput = (field: "lat" | "lng", value: string) => {
@@ -469,13 +493,57 @@ export function ProfilePage() {
     const lat = Number(nextForm.lat);
     const lng = Number(nextForm.lng);
     if (hasUsableCoordinate(lat, lng)) {
-      setSavedMapCoordinate({ lat, lng });
-      setSavedGeocodeHint(t("cabinet.saved.mapHint"));
+      const coordinate = { lat, lng };
+      setSavedMapCoordinate(coordinate);
+      setSavedGeocodeHint(getSavedLocationZoneHint(coordinate));
+      scheduleSavedReverseGeocode(lat, lng);
     }
+  };
+
+  function scheduleSavedReverseGeocode(lat: number, lng: number) {
+    savedReverseGeocodeAbortRef.current?.abort();
+    if (savedReverseGeocodeTimeoutRef.current) {
+      clearTimeout(savedReverseGeocodeTimeoutRef.current);
+    }
+
+    setIsSavedReverseGeocoding(true);
+    savedReverseGeocodeTimeoutRef.current = setTimeout(() => {
+      const controller = new AbortController();
+      savedReverseGeocodeAbortRef.current = controller;
+
+      void reverseGeocodeAstanaPoint(lat, lng, i18n.resolvedLanguage ?? "ru", controller.signal)
+        .then((address) => {
+          if (!address.trim()) return;
+          setSavedForm((current) => ({
+            ...current,
+            address,
+            lat: String(lat),
+            lng: String(lng),
+          }));
+        })
+        .catch((error: unknown) => {
+          if (error instanceof DOMException && error.name === "AbortError") return;
+        })
+        .finally(() => {
+          if (savedReverseGeocodeAbortRef.current === controller) {
+            setIsSavedReverseGeocoding(false);
+          }
+        });
+    }, 300);
+  }
+
+  const handleSavedMapCoordinateChange = (coordinate: { lat: number; lng: number }) => {
+    applySavedMapCoordinate(coordinate);
+    scheduleSavedReverseGeocode(coordinate.lat, coordinate.lng);
   };
 
   const findSavedAddressOnMap = async () => {
     const address = savedForm.address.trim();
+    savedReverseGeocodeAbortRef.current?.abort();
+    if (savedReverseGeocodeTimeoutRef.current) {
+      clearTimeout(savedReverseGeocodeTimeoutRef.current);
+    }
+    setIsSavedReverseGeocoding(false);
     setIsSavedGeocoding(true);
 
     try {
@@ -496,9 +564,16 @@ export function ProfilePage() {
         return;
       }
 
+      setSavedForm((current) => ({ ...current, address: suggestion.label || address }));
       applySavedMapCoordinate(
         { lat: suggestion.lat, lng: suggestion.lng },
         t("cabinet.saved.approximateFound"),
+      );
+    } catch (error: unknown) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      applySavedMapCoordinate(
+        { lat: ASTANA_CENTER_LAT, lng: ASTANA_CENTER_LNG },
+        t("cabinet.saved.mapFallback"),
       );
     } finally {
       setIsSavedGeocoding(false);
@@ -508,7 +583,7 @@ export function ProfilePage() {
   const createSavedLocationMutation = useMutation({
     mutationFn: async () => {
       const label = savedForm.label.trim();
-      const address = savedForm.address.trim();
+      let address = savedForm.address.trim();
       let lat = Number(savedForm.lat);
       let lng = Number(savedForm.lng);
 
@@ -527,6 +602,10 @@ export function ProfilePage() {
         }
         lat = suggestion.lat;
         lng = suggestion.lng;
+        address = suggestion.label || address;
+      }
+      if (!isWithinAstanaRequestZone(lat, lng)) {
+        throw new Error(t("cabinet.saved.outOfZone", { distance: Math.round(getDistanceToAstanaKm(lat, lng)) }));
       }
 
       return platformApi.createSavedLocation({
@@ -555,6 +634,7 @@ export function ProfilePage() {
     onError: (error) => toast.error(getErrorMessage(error)),
   });
   const profileDisplayName = `${profileForm.firstName} ${profileForm.lastName}`.trim();
+  const isSavedAddressLookupActive = isSavedGeocoding || isSavedReverseGeocoding;
 
   useEffect(() => {
     if (!profileEditorOpen) return;
@@ -565,6 +645,13 @@ export function ProfilePage() {
       document.body.style.overflow = previousOverflow;
     };
   }, [profileEditorOpen]);
+
+  useEffect(() => () => {
+    if (savedReverseGeocodeTimeoutRef.current) {
+      clearTimeout(savedReverseGeocodeTimeoutRef.current);
+    }
+    savedReverseGeocodeAbortRef.current?.abort();
+  }, []);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -1000,17 +1087,28 @@ export function ProfilePage() {
                 >
                   {isSavedGeocoding ? t("cabinet.saved.findingAddress") : t("cabinet.saved.findOnMap")}
                 </Button>
-                <p>{savedGeocodeHint || t("cabinet.saved.coordinatesHint")}</p>
+                <div className="cabinet-saved-form__lookup-message" aria-live="polite">
+                  {isSavedAddressLookupActive ? (
+                    <span className="cabinet-saved-form__lookup-status">
+                      <LoaderCircle size={16} />
+                      {isSavedGeocoding ? t("cabinet.saved.findingAddress") : t("cabinet.saved.resolvingAddress")}
+                    </span>
+                  ) : (
+                    <p>{savedGeocodeHint || t("cabinet.saved.coordinatesHint")}</p>
+                  )}
+                </div>
               </div>
               {savedMapCoordinate ? (
                 <div className="cabinet-saved-form__map">
                   <div className="cabinet-saved-form__map-title">
                     <strong>{t("cabinet.saved.mapTitle")}</strong>
-                    <span>{t("cabinet.saved.mapHint")}</span>
+                    <span>
+                      {isSavedReverseGeocoding ? t("cabinet.saved.resolvingAddress") : t("cabinet.saved.mapHint")}
+                    </span>
                   </div>
                   <LocationPickerMap
                     coordinate={savedMapCoordinate}
-                    onCoordinateChange={(coordinate) => applySavedMapCoordinate(coordinate)}
+                    onCoordinateChange={handleSavedMapCoordinateChange}
                   />
                 </div>
               ) : null}

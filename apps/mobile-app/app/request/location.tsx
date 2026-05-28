@@ -30,6 +30,7 @@ import {
   getDistanceToAstanaKm,
   isWithinAstanaRequestZone,
 } from '../../src/utils/geoFence';
+import { reverseGeocodeAstanaPoint } from '../../src/utils/locationGeocoding';
 import { apiService, type SavedLocation } from '../../src/utils/api';
 
 const ORANGE = '#FF6B00';
@@ -45,7 +46,7 @@ const LOCATION_ICONS: Record<SavedLocationType, keyof typeof Ionicons.glyphMap> 
 };
 
 export default function LocationScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const params = useLocalSearchParams();
   const categoryId = params.categoryId as string;
   
@@ -62,6 +63,8 @@ export default function LocationScreen() {
   
   const mapRef = useRef<LocationPickerMapRef>(null);
   const reverseGeocodeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestReverseGeocodeKeyRef = useRef('');
+  const selectedLocationCenterRef = useRef<LocationPickerCoordinate | null>(null);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const isWithinAllowedZone = useMemo(
@@ -74,22 +77,19 @@ export default function LocationScreen() {
   );
 
   const reverseGeocode = useCallback(async (lat: number, lng: number) => {
+    const key = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+    latestReverseGeocodeKeyRef.current = key;
     try {
-      const results = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
-      if (results.length > 0) {
-        const loc = results[0];
-        const parts = [
-          loc.street,
-          loc.streetNumber,
-          loc.district,
-          loc.city
-        ].filter(Boolean);
-        setAddress(parts.join(', ') || `${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+      const nextAddress = await reverseGeocodeAstanaPoint(lat, lng, i18n.language);
+      if (latestReverseGeocodeKeyRef.current === key) {
+        setAddress(nextAddress);
       }
     } catch {
-      setAddress(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+      if (latestReverseGeocodeKeyRef.current === key) {
+        setAddress(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+      }
     }
-  }, []);
+  }, [i18n.language]);
 
   const getCurrentLocation = useCallback(async () => {
     setIsLocating(true);
@@ -149,6 +149,16 @@ export default function LocationScreen() {
   const handleCoordinateChange = useCallback(
     ({ lat, lng }: LocationPickerCoordinate) => {
       setCoordinates({ lat, lng });
+      const selectedCenter = selectedLocationCenterRef.current;
+      const isSelectedLocationCenter =
+        selectedCenter &&
+        Math.abs(selectedCenter.lat - lat) < 0.0001 &&
+        Math.abs(selectedCenter.lng - lng) < 0.0001;
+      if (isSelectedLocationCenter) {
+        selectedLocationCenterRef.current = null;
+        return;
+      }
+
       setSelectedSavedLocationId('');
       if (reverseGeocodeTimeoutRef.current) {
         clearTimeout(reverseGeocodeTimeoutRef.current);
@@ -162,6 +172,7 @@ export default function LocationScreen() {
   );
 
   const applySavedLocation = (location: SavedLocation) => {
+    selectedLocationCenterRef.current = { lat: location.latitude, lng: location.longitude };
     setSelectedSavedLocationId(location.id);
     setAddress(location.address);
     setCoordinates({ lat: location.latitude, lng: location.longitude });
@@ -305,23 +316,25 @@ export default function LocationScreen() {
           </Text>
         )}
 
-        <TouchableOpacity
-          style={[styles.saveCurrentButton, (!address || !isWithinAllowedZone) && styles.buttonDisabled]}
-          onPress={() => {
-            setSaveForm((current) => ({
-              ...current,
-              label: current.label || address.split(',')[0]?.trim() || t('locations.labelPlaceholder'),
-            }));
-            setIsSaveModalOpen(true);
-          }}
-          disabled={!address || !isWithinAllowedZone}
-        >
-          <Ionicons name="bookmark-outline" size={18} color={ORANGE} />
-          <View style={styles.saveCurrentCopy}>
-            <Text style={styles.saveCurrentTitle}>{t('locations.saveCurrent')}</Text>
-            <Text style={styles.saveCurrentHint}>{t('locations.saveCurrentHint')}</Text>
-          </View>
-        </TouchableOpacity>
+        {!selectedSavedLocationId ? (
+          <TouchableOpacity
+            style={[styles.saveCurrentButton, (!address || !isWithinAllowedZone) && styles.buttonDisabled]}
+            onPress={() => {
+              setSaveForm((current) => ({
+                ...current,
+                label: current.label || address.split(',')[0]?.trim() || t('locations.labelPlaceholder'),
+              }));
+              setIsSaveModalOpen(true);
+            }}
+            disabled={!address || !isWithinAllowedZone}
+          >
+            <Ionicons name="bookmark-outline" size={18} color={ORANGE} />
+            <View style={styles.saveCurrentCopy}>
+              <Text style={styles.saveCurrentTitle}>{t('locations.saveCurrent')}</Text>
+              <Text style={styles.saveCurrentHint}>{t('locations.saveCurrentHint')}</Text>
+            </View>
+          </TouchableOpacity>
+        ) : null}
         
         <TouchableOpacity
           style={[styles.continueButton, (!address || !isWithinAllowedZone) && styles.buttonDisabled]}
