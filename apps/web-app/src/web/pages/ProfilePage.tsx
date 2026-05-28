@@ -47,8 +47,10 @@ const ACCENT = "#ff6b35";
 const MONTH_WINDOW = 6;
 const SAVED_LOCATION_TYPES: SavedLocationType[] = ["home", "work", "study", "family", "other"];
 const AVATAR_CROP_SIZE = 512;
-const NAME_INPUT_PATTERN = /^[\p{L}\s'-]*$/u;
-const NAME_INPUT_CLEANUP_PATTERN = /[^\p{L}\s'-]/gu;
+const PROFILE_NAME_CHAR_PATTERN = /^[A-Za-zА-Яа-яЁёӘәҒғҚқҢңӨөҰұҮүҺһІі]$/;
+const PROFILE_NAME_PATTERN = /^[A-Za-zА-Яа-яЁёӘәҒғҚқҢңӨөҰұҮүҺһІі]+$/;
+const KZ_PHONE_PATTERN = /^7\d{10}$/;
+const MIN_BIRTH_DATE = "1900-01-01";
 
 type StatKey = "total" | "closed" | "inProgress" | "pending";
 type ProfileFormState = {
@@ -62,6 +64,7 @@ type ProfileFormState = {
   language: Locale;
   notificationsEnabled: boolean;
 };
+type ProfileFormErrors = Partial<Record<"firstName" | "lastName" | "phone" | "birthDate", string>>;
 type AvatarCropState = {
   source: string;
   cropX: number;
@@ -217,12 +220,49 @@ function splitProfileName(name: string | undefined) {
   };
 }
 
-function sanitizeProfileNameInput(value: string) {
-  return value.replace(NAME_INPUT_CLEANUP_PATTERN, "").replace(/\s{2,}/g, " ");
+function sanitizeProfileName(value: string) {
+  return Array.from(value).filter((char) => PROFILE_NAME_CHAR_PATTERN.test(char)).join("");
 }
 
-function sanitizeBirthDateInput(value: string) {
-  return value.replace(/[^\d-]/g, "");
+function normalizeKzPhoneInput(value: string) {
+  const digits = value.replace(/\D/g, "");
+  const normalized = digits.length === 11 && digits.startsWith("8") ? `7${digits.slice(1)}` : digits;
+  return normalized.slice(0, 11);
+}
+
+function normalizeBirthDateValue(value: string | undefined) {
+  if (!value) return "";
+  const digits = value.replace(/\D/g, "").slice(0, 8);
+  if (digits.length !== 8) return "";
+  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
+}
+
+function isValidBirthDate(value: string) {
+  if (!value) return true;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || value < MIN_BIRTH_DATE) return false;
+
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return false;
+
+  const [year, month, day] = value.split("-").map(Number);
+  const isCalendarDate =
+    date.getFullYear() === year &&
+    date.getMonth() + 1 === month &&
+    date.getDate() === day;
+
+  if (!isCalendarDate) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return date <= today;
+}
+
+function getTodayDateInputValue() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function cropAvatarImage(crop: AvatarCropState) {
@@ -315,7 +355,7 @@ export function ProfilePage() {
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
   const [avatarCrop, setAvatarCrop] = useState<AvatarCropState | null>(null);
   const avatarDragRef = useRef<AvatarDragState | null>(null);
-  const [profileNameError, setProfileNameError] = useState(false);
+  const [profileErrors, setProfileErrors] = useState<ProfileFormErrors>({});
   const [profileForm, setProfileForm] = useState<ProfileFormState>({
     firstName: "",
     lastName: "",
@@ -530,12 +570,12 @@ export function ProfilePage() {
     if (!currentUser) return;
     const name = splitProfileName(currentUser.name);
     setProfileForm({
-      firstName: name.firstName,
-      lastName: name.lastName,
+      firstName: sanitizeProfileName(name.firstName),
+      lastName: sanitizeProfileName(name.lastName),
       displayName: currentUser.displayName || name.firstName || currentUser.name,
       gender: currentUser.gender ?? "",
-      birthDate: currentUser.birthDate ?? "",
-      phone: currentUser.phone ?? "",
+      birthDate: normalizeBirthDateValue(currentUser.birthDate),
+      phone: normalizeKzPhoneInput(currentUser.phone ?? ""),
       avatarUrl: currentUser.avatarUrl ?? "",
       language: currentUser.language,
       notificationsEnabled: currentUser.notificationsEnabled,
@@ -550,6 +590,7 @@ export function ProfilePage() {
       queryClient.setQueryData(queryKeys.currentUser, (current: typeof currentUser) => current ? {
         ...current,
         name: payload.name,
+        phone: payload.phone,
         displayName: payload.displayName,
         gender: payload.gender,
         birthDate: payload.birthDate,
@@ -561,6 +602,7 @@ export function ProfilePage() {
       queryClient.setQueryData(queryKeys.currentUser, {
         ...updatedUser,
         name: payload.name,
+        phone: payload.phone,
         displayName: payload.displayName,
         gender: payload.gender,
         birthDate: payload.birthDate,
@@ -578,32 +620,14 @@ export function ProfilePage() {
   });
 
   function updateProfileForm<K extends keyof ProfileFormState>(key: K, value: ProfileFormState[K]) {
-    if (key === "firstName" || key === "lastName") {
-      setProfileNameError(false);
+    if (key === "firstName" || key === "lastName" || key === "phone" || key === "birthDate") {
+      setProfileErrors((current) => {
+        const next = { ...current };
+        delete next[key as keyof ProfileFormErrors];
+        return next;
+      });
     }
     setProfileForm((current) => ({ ...current, [key]: value }));
-  }
-
-  function handleProfileNameInput(key: "firstName" | "lastName", value: string) {
-    updateProfileForm(key, sanitizeProfileNameInput(value));
-  }
-
-  function handleProfileNameBeforeInput(event: FormEvent<HTMLInputElement>) {
-    const data = (event.nativeEvent as InputEvent).data;
-    if (data && !NAME_INPUT_PATTERN.test(data)) {
-      event.preventDefault();
-    }
-  }
-
-  function handleBirthDateInput(value: string) {
-    updateProfileForm("birthDate", sanitizeBirthDateInput(value));
-  }
-
-  function handleBirthDateBeforeInput(event: FormEvent<HTMLInputElement>) {
-    const data = (event.nativeEvent as InputEvent).data;
-    if (data && !/^[\d-]+$/.test(data)) {
-      event.preventDefault();
-    }
   }
 
   function handleAvatarChange(file: File | undefined) {
@@ -677,19 +701,44 @@ export function ProfilePage() {
     event.preventDefault();
     const firstName = profileForm.firstName.trim();
     const lastName = profileForm.lastName.trim();
+    const phone = normalizeKzPhoneInput(profileForm.phone);
+    const birthDate = profileForm.birthDate.trim();
     const fullName = `${firstName} ${lastName}`.trim();
-    if (!firstName || !lastName) {
-      setProfileNameError(true);
-      toast.error(t("cabinet.profileEditor.nameRequired"));
+    const nextErrors: ProfileFormErrors = {};
+
+    if (!firstName) {
+      nextErrors.firstName = t("cabinet.profileEditor.nameRequired");
+    } else if (!PROFILE_NAME_PATTERN.test(firstName)) {
+      nextErrors.firstName = t("cabinet.profileEditor.nameLettersOnly");
+    }
+
+    if (!lastName) {
+      nextErrors.lastName = t("cabinet.profileEditor.nameRequired");
+    } else if (!PROFILE_NAME_PATTERN.test(lastName)) {
+      nextErrors.lastName = t("cabinet.profileEditor.nameLettersOnly");
+    }
+
+    if (phone && !KZ_PHONE_PATTERN.test(phone)) {
+      nextErrors.phone = t("cabinet.profileEditor.phoneInvalid");
+    }
+
+    if (!isValidBirthDate(birthDate)) {
+      nextErrors.birthDate = t("cabinet.profileEditor.birthDateInvalid");
+    }
+
+    if (Object.keys(nextErrors).length) {
+      setProfileErrors(nextErrors);
+      toast.error(Object.values(nextErrors)[0] ?? t("cabinet.profileEditor.nameRequired"));
       return;
     }
 
+    setProfileErrors({});
     updateProfileMutation.mutate({
       name: fullName,
-      phone: currentUser?.phone ?? "",
+      phone,
       displayName: profileDisplayName,
       gender: profileForm.gender,
-      birthDate: profileForm.birthDate,
+      birthDate,
       avatarUrl: profileForm.avatarUrl,
       language: currentUser?.language ?? locale,
       notificationsEnabled: currentUser?.notificationsEnabled ?? true,
@@ -1100,52 +1149,75 @@ export function ProfilePage() {
               <section className="profile-editor-panel">
                 <h3>{t("cabinet.profileEditor.personalData")}</h3>
                 <div className="profile-editor-grid">
-                <label className={`profile-editor-field ${profileNameError ? "profile-editor-field--error" : ""}`}>
-                  <span>{t("cabinet.profileEditor.firstName")}</span>
-                  <input
-                    value={profileForm.firstName}
-                    onBeforeInput={handleProfileNameBeforeInput}
-                    onChange={(event) => handleProfileNameInput("firstName", event.target.value)}
-                    autoComplete="given-name"
-                  />
-                </label>
-                <label className={`profile-editor-field ${profileNameError ? "profile-editor-field--error" : ""}`}>
-                  <span>{t("cabinet.profileEditor.lastName")}</span>
-                  <input
-                    value={profileForm.lastName}
-                    onBeforeInput={handleProfileNameBeforeInput}
-                    onChange={(event) => handleProfileNameInput("lastName", event.target.value)}
-                    autoComplete="family-name"
-                  />
-                </label>
-                {profileNameError ? (
-                  <p className="profile-editor-error">{t("cabinet.profileEditor.nameRequired")}</p>
-                ) : null}
-                <div className="profile-editor-field">
-                  <span>{t("cabinet.profileEditor.gender")}</span>
-                  <div className="profile-editor-segmented" role="group" aria-label={t("cabinet.profileEditor.gender")}>
-                    {(["male", "female"] as const).map((gender) => (
-                      <button
-                        key={gender}
-                        type="button"
-                        className={profileForm.gender === gender ? "is-active" : ""}
-                        onClick={() => updateProfileForm("gender", gender)}
-                      >
-                        {t(`cabinet.profileEditor.genders.${gender}`)}
-                      </button>
-                    ))}
+                  <label className={`profile-editor-field ${profileErrors.firstName ? "profile-editor-field--error" : ""}`}>
+                    <span>{t("cabinet.profileEditor.firstName")}</span>
+                    <input
+                      value={profileForm.firstName}
+                      onChange={(event) => updateProfileForm("firstName", sanitizeProfileName(event.target.value))}
+                      autoComplete="given-name"
+                      maxLength={40}
+                      aria-invalid={Boolean(profileErrors.firstName)}
+                    />
+                  </label>
+                  <label className={`profile-editor-field ${profileErrors.lastName ? "profile-editor-field--error" : ""}`}>
+                    <span>{t("cabinet.profileEditor.lastName")}</span>
+                    <input
+                      value={profileForm.lastName}
+                      onChange={(event) => updateProfileForm("lastName", sanitizeProfileName(event.target.value))}
+                      autoComplete="family-name"
+                      maxLength={40}
+                      aria-invalid={Boolean(profileErrors.lastName)}
+                    />
+                  </label>
+                  {profileErrors.firstName || profileErrors.lastName ? (
+                    <p className="profile-editor-error">{profileErrors.firstName ?? profileErrors.lastName}</p>
+                  ) : null}
+                  <label className={`profile-editor-field ${profileErrors.phone ? "profile-editor-field--error" : ""}`}>
+                    <span>{t("cabinet.profileEditor.phone")}</span>
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={profileForm.phone}
+                      onChange={(event) => updateProfileForm("phone", normalizeKzPhoneInput(event.target.value))}
+                      autoComplete="tel"
+                      maxLength={11}
+                      placeholder="77001234567"
+                      aria-invalid={Boolean(profileErrors.phone)}
+                    />
+                  </label>
+                  {profileErrors.phone ? (
+                    <p className="profile-editor-error">{profileErrors.phone}</p>
+                  ) : null}
+                  <div className="profile-editor-field">
+                    <span>{t("cabinet.profileEditor.gender")}</span>
+                    <div className="profile-editor-segmented" role="group" aria-label={t("cabinet.profileEditor.gender")}>
+                      {(["male", "female"] as const).map((gender) => (
+                        <button
+                          key={gender}
+                          type="button"
+                          className={profileForm.gender === gender ? "is-active" : ""}
+                          onClick={() => updateProfileForm("gender", gender)}
+                        >
+                          {t(`cabinet.profileEditor.genders.${gender}`)}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-                <label className="profile-editor-field">
-                  <span>{t("cabinet.profileEditor.birthDate")}</span>
-                  <input
-                    type="date"
-                    value={profileForm.birthDate}
-                    inputMode="numeric"
-                    onBeforeInput={handleBirthDateBeforeInput}
-                    onChange={(event) => handleBirthDateInput(event.target.value)}
-                  />
-                </label>
+                  <label className={`profile-editor-field ${profileErrors.birthDate ? "profile-editor-field--error" : ""}`}>
+                    <span>{t("cabinet.profileEditor.birthDate")}</span>
+                    <input
+                      type="date"
+                      value={profileForm.birthDate}
+                      min={MIN_BIRTH_DATE}
+                      max={getTodayDateInputValue()}
+                      onChange={(event) => updateProfileForm("birthDate", event.target.value)}
+                      aria-invalid={Boolean(profileErrors.birthDate)}
+                    />
+                  </label>
+                  {profileErrors.birthDate ? (
+                    <p className="profile-editor-error">{profileErrors.birthDate}</p>
+                  ) : null}
                 </div>
               </section>
 
