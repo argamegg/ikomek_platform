@@ -3,7 +3,7 @@ import {
   Animated,
   View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity,
   ActivityIndicator, Image, Modal, PanResponder, Pressable, ScrollView, TextInput, Alert, useWindowDimensions,
-  KeyboardAvoidingView, Platform
+  KeyboardAvoidingView, Keyboard, Platform
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -297,7 +297,9 @@ export default function OperatorDashboard() {
   const [operatorNotes, setOperatorNotes] = useState('');
   const [resolutionNotes, setResolutionNotes] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const chatSocketRef = useRef<WebSocket | null>(null);
+  const keyboardLift = Platform.OS === 'ios' ? keyboardHeight : 0;
 
   const fetchRequests = useCallback(async () => {
     try {
@@ -324,6 +326,22 @@ export default function OperatorDashboard() {
     fetchRequests();
     fetchCategories();
   }, [fetchCategories, fetchRequests]);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSubscription = Keyboard.addListener(showEvent, (event) => {
+      setKeyboardHeight(event.endCoordinates.height);
+    });
+    const hideSubscription = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   const filteredRequests = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -364,6 +382,7 @@ export default function OperatorDashboard() {
     setMessages([]);
     setNewMessage('');
     setChatAttachment(null);
+    setKeyboardHeight(0);
     setAssignedDepartment('');
     setOperatorNotes('');
     setResolutionNotes('');
@@ -593,7 +612,7 @@ export default function OperatorDashboard() {
       {selected && (
         <Modal visible animationType="slide" presentationStyle="pageSheet">
           <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            behavior={Platform.OS === 'ios' ? undefined : 'height'}
             style={[styles.modalContainer, { paddingTop: insets.top || 16 }]}
           >
             <View style={styles.modalHeader}>
@@ -715,27 +734,29 @@ export default function OperatorDashboard() {
                 </View>
               ))}
             </ScrollView>
-            {chatAttachment ? (
-              <View style={styles.pendingAttachment}>
-                <Image source={{ uri: chatAttachment.uri }} style={styles.pendingAttachmentImage} />
-                <Text style={styles.pendingAttachmentText} numberOfLines={1}>{chatAttachment.label}</Text>
-                <TouchableOpacity onPress={() => setChatAttachment(null)} style={styles.pendingAttachmentRemove}>
-                  <Ionicons name="close" size={16} color="#64748B" />
+            <View style={[styles.messageComposer, { marginBottom: keyboardLift }]}>
+              {chatAttachment ? (
+                <View style={styles.pendingAttachment}>
+                  <Image source={{ uri: chatAttachment.uri }} style={styles.pendingAttachmentImage} />
+                  <Text style={styles.pendingAttachmentText} numberOfLines={1}>{chatAttachment.label}</Text>
+                  <TouchableOpacity onPress={() => setChatAttachment(null)} style={styles.pendingAttachmentRemove}>
+                    <Ionicons name="close" size={16} color="#64748B" />
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+              <View style={[styles.msgInputRow, { paddingBottom: keyboardLift ? 12 : insets.bottom || 16 }]}>
+                <TouchableOpacity style={styles.attachButton} onPress={pickChatMedia}>
+                  <Ionicons name="image-outline" size={21} color={ORANGE} />
+                </TouchableOpacity>
+                <TextInput style={styles.msgInput} value={newMessage} onChangeText={setNewMessage} placeholder={t('operator.replyPlaceholder')} placeholderTextColor="#C7C7CC" multiline />
+                <TouchableOpacity
+                  style={[styles.sendBtn, ((!newMessage.trim() && !chatAttachment) || isSending) && { opacity: 0.5 }]}
+                  onPress={sendMessage}
+                  disabled={(!newMessage.trim() && !chatAttachment) || isSending}
+                >
+                  <Ionicons name="send" size={20} color="#FFF" />
                 </TouchableOpacity>
               </View>
-            ) : null}
-            <View style={[styles.msgInputRow, { paddingBottom: insets.bottom || 16 }]}>
-              <TouchableOpacity style={styles.attachButton} onPress={pickChatMedia}>
-                <Ionicons name="image-outline" size={21} color={ORANGE} />
-              </TouchableOpacity>
-              <TextInput style={styles.msgInput} value={newMessage} onChangeText={setNewMessage} placeholder={t('operator.replyPlaceholder')} placeholderTextColor="#C7C7CC" multiline />
-              <TouchableOpacity
-                style={[styles.sendBtn, ((!newMessage.trim() && !chatAttachment) || isSending) && { opacity: 0.5 }]}
-                onPress={sendMessage}
-                disabled={(!newMessage.trim() && !chatAttachment) || isSending}
-              >
-                <Ionicons name="send" size={20} color="#FFF" />
-              </TouchableOpacity>
             </View>
           </KeyboardAvoidingView>
         </Modal>
@@ -1025,6 +1046,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  messageComposer: {
+    backgroundColor: '#FFF',
   },
   msgInputRow: { flexDirection: 'row', padding: 16, borderTopWidth: 1, borderTopColor: '#F2F2F7', alignItems: 'flex-end', gap: 12 },
   attachButton: {

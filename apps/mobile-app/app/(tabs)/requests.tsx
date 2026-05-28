@@ -13,6 +13,7 @@ import {
   ScrollView,
   TextInput,
   KeyboardAvoidingView,
+  Keyboard,
   Platform
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -95,9 +96,11 @@ export default function RequestsScreen() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [isSending, setIsSending] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const chatSocketRef = useRef<WebSocket | null>(null);
   
   const insets = useSafeAreaInsets();
+  const keyboardLift = Platform.OS === 'ios' ? keyboardHeight : 0;
 
   const fetchRequests = useCallback(async () => {
     try {
@@ -114,6 +117,22 @@ export default function RequestsScreen() {
   useEffect(() => {
     fetchRequests();
   }, [fetchRequests]);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSubscription = Keyboard.addListener(showEvent, (event) => {
+      setKeyboardHeight(event.endCoordinates.height);
+    });
+    const hideSubscription = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   const onRefresh = () => {
     setIsRefreshing(true);
@@ -295,7 +314,7 @@ export default function RequestsScreen() {
     return (
       <Modal visible={!!selectedRequest} animationType="slide" presentationStyle="pageSheet">
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? undefined : 'height'}
           style={styles.modalContainer}
         >
           <View style={[styles.modalHeader, { paddingTop: insets.top || 16 }]}>
@@ -305,6 +324,7 @@ export default function RequestsScreen() {
                 setMessages([]);
                 setNewMessage('');
                 setChatAttachment(null);
+                setKeyboardHeight(0);
               }}
               style={styles.closeButton}
             >
@@ -435,34 +455,36 @@ export default function RequestsScreen() {
             </View>
           </ScrollView>
 
-          {chatAttachment ? (
-            <View style={styles.pendingAttachment}>
-              <Image source={{ uri: chatAttachment.uri }} style={styles.pendingAttachmentImage} />
-              <Text style={styles.pendingAttachmentText} numberOfLines={1}>{chatAttachment.label}</Text>
-              <TouchableOpacity onPress={() => setChatAttachment(null)} style={styles.pendingAttachmentRemove}>
-                <Ionicons name="close" size={16} color="#64748B" />
+          <View style={[styles.messageComposer, { marginBottom: keyboardLift }]}>
+            {chatAttachment ? (
+              <View style={styles.pendingAttachment}>
+                <Image source={{ uri: chatAttachment.uri }} style={styles.pendingAttachmentImage} />
+                <Text style={styles.pendingAttachmentText} numberOfLines={1}>{chatAttachment.label}</Text>
+                <TouchableOpacity onPress={() => setChatAttachment(null)} style={styles.pendingAttachmentRemove}>
+                  <Ionicons name="close" size={16} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+            ) : null}
+            <View style={[styles.messageInputContainer, { paddingBottom: keyboardLift ? 12 : insets.bottom || 16 }]}>
+              <TouchableOpacity style={styles.attachButton} onPress={pickChatMedia}>
+                <Ionicons name="image-outline" size={21} color={ORANGE} />
+              </TouchableOpacity>
+              <TextInput
+                style={styles.messageInput}
+                placeholder={t('myRequests.typeMessage')}
+                placeholderTextColor="#C7C7CC"
+                value={newMessage}
+                onChangeText={setNewMessage}
+                multiline
+              />
+              <TouchableOpacity
+                style={[styles.sendButton, ((!newMessage.trim() && !chatAttachment) || isSending) && styles.sendButtonDisabled]}
+                onPress={sendMessage}
+                disabled={(!newMessage.trim() && !chatAttachment) || isSending}
+              >
+                <Ionicons name="send" size={20} color="#FFF" />
               </TouchableOpacity>
             </View>
-          ) : null}
-          <View style={[styles.messageInputContainer, { paddingBottom: insets.bottom || 16 }]}>
-            <TouchableOpacity style={styles.attachButton} onPress={pickChatMedia}>
-              <Ionicons name="image-outline" size={21} color={ORANGE} />
-            </TouchableOpacity>
-            <TextInput
-              style={styles.messageInput}
-              placeholder={t('myRequests.typeMessage')}
-              placeholderTextColor="#C7C7CC"
-              value={newMessage}
-              onChangeText={setNewMessage}
-              multiline
-            />
-            <TouchableOpacity
-              style={[styles.sendButton, ((!newMessage.trim() && !chatAttachment) || isSending) && styles.sendButtonDisabled]}
-              onPress={sendMessage}
-              disabled={(!newMessage.trim() && !chatAttachment) || isSending}
-            >
-              <Ionicons name="send" size={20} color="#FFF" />
-            </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -1197,6 +1219,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     alignItems: 'center',
     justifyContent: 'center'
+  },
+  messageComposer: {
+    backgroundColor: '#FFF'
   },
   messageInputContainer: {
     flexDirection: 'row',
