@@ -483,7 +483,7 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
-				PRODUCT_BUNDLE_IDENTIFIER = com.anonymous.ikomekmobileapp;
+				PRODUCT_BUNDLE_IDENTIFIER = kz.ikomek.mobile;
 				PRODUCT_NAME = ikomek109;
 				SWIFT_OBJC_BRIDGING_HEADER = "iKOMEKMobileApp/iKOMEKMobileApp-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -517,7 +517,7 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = com.anonymous.ikomekmobileapp;
+				PRODUCT_BUNDLE_IDENTIFIER = kz.ikomek.mobile;
 				PRODUCT_NAME = ikomek109;
 				SWIFT_OBJC_BRIDGING_HEADER = "iKOMEKMobileApp/iKOMEKMobileApp-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;

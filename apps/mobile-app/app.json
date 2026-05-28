@@ -17,7 +17,14 @@
     "ios": {
       "icon": "./assets/images/app-icon.png",
       "supportsTablet": true,
-      "bundleIdentifier": "kz.ikomek.mobile"
+      "bundleIdentifier": "kz.ikomek.mobile",
+      "infoPlist": {
+        "NSLocalNetworkUsageDescription": "Allow iKOMEK 109 to connect to the local development server.",
+        "NSBonjourServices": [
+          "_expo._tcp",
+          "_react-native-packager._tcp"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
