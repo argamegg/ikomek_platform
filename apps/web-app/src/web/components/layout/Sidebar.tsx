@@ -57,6 +57,7 @@ export function Sidebar({
       .slice(0, 2)
       .toUpperCase() || "IK";
   const userRoleLabel = currentUser ? t(`roles.${currentUser.primaryRole}`, currentUser.primaryRole) : t("shell.guest");
+  const brandTagline = t("brand.tagline");
 
   const mainItems: NavItem[] = [
     { to: "/", label: t("nav.home"), icon: Home },
@@ -151,7 +152,12 @@ export function Sidebar({
           </div>
           <div className="sidebar__brand-copy">
             <strong>{t("brand.name")}</strong>
-            <span>{t("brand.tagline")}</span>
+            <span className="sidebar__brand-tagline" title={brandTagline}>
+              <span className="sidebar__brand-tagline-track">
+                <span>{brandTagline}</span>
+                <span aria-hidden="true">{brandTagline}</span>
+              </span>
+            </span>
           </div>
         </div>
         <nav className="sidebar__nav">

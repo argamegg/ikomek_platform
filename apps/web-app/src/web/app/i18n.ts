@@ -1156,7 +1156,7 @@ const resources = {
   },
   ru: {
     translation: {
-      brand: { name: "iKOMEK 109", tagline: "Smart city платформа" },
+      brand: { name: "iKOMEK 109", tagline: "Платформа умного города" },
       common: {
         loading: "Загрузка",
         retry: "Повторить",
@@ -2308,7 +2308,7 @@ const resources = {
   },
   kz: {
     translation: {
-      brand: { name: "iKOMEK 109", tagline: "Smart city платформасы" },
+      brand: { name: "iKOMEK 109", tagline: "Ақылды қала платформасы" },
       common: {
         loading: "Жүктелуде",
         retry: "Қайталау",
