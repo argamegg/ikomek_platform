@@ -17,7 +17,7 @@ import {
 import type { Locale, OperatorStats as OperatorStatsData, RequestStatus } from "../types/platform";
 import { EmptyState } from "../web/components/ui/EmptyState";
 import { Badge } from "../web/components/ui/Badge";
-import { formatDate, getStatusTone } from "../web/lib/format";
+import { formatAddress, formatDate, getStatusTone } from "../web/lib/format";
 import { localizeRequestStatus } from "../web/lib/requestMeta";
 import { platformApi, queryKeys } from "../web/services/platformApi";
 
@@ -246,7 +246,7 @@ export function OperatorStats() {
                 <span className="cabinet-recent-item__icon">{statusIcon(request.status)}</span>
                 <span className="cabinet-recent-item__content">
                   <strong>{request.categoryName || t("requestDetails.title")}</strong>
-                  <small className="cabinet-recent-item__meta-line">📍 {request.address}</small>
+                  <small className="cabinet-recent-item__meta-line">📍 {formatAddress(request.address, locale)}</small>
                   <small className="cabinet-recent-item__meta-line">🕐 {formatDate(request.updatedAt || request.createdAt, locale)}</small>
                   <small className="cabinet-recent-item__meta-line">
                     💬 {t("cabinet.recent.category")}: {request.categoryName || "—"}

@@ -6,10 +6,10 @@ import { Link, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "../components/ui/Button";
 import { EmptyState } from "../components/ui/EmptyState";
-import { formatDate, getStatusTone } from "../lib/format";
+import { formatAddress, formatDate, getStatusTone } from "../lib/format";
 import { localizeRequestProblemType, localizeRequestStatus } from "../lib/requestMeta";
 import { getErrorMessage, platformApi, queryKeys } from "../services/platformApi";
-import type { RequestMessage } from "../../types/platform";
+import type { Locale, RequestMessage } from "../../types/platform";
 
 function mergeMessages(current: RequestMessage[] | undefined, incoming: RequestMessage) {
   const messages = current ?? [];
@@ -30,9 +30,16 @@ function ChatImagePreview({ src, label }: { src: string; label: string }) {
   );
 }
 
+function normalizeLocale(language: string): Locale {
+  if (language.startsWith("ru")) return "ru";
+  if (language.startsWith("kk") || language.startsWith("kz")) return "kz";
+  return "en";
+}
+
 export function RequestChatPage() {
   const { requestId = "" } = useParams();
   const { t, i18n } = useTranslation();
+  const locale = normalizeLocale(i18n.language);
   const queryClient = useQueryClient();
   const [message, setMessage] = useState("");
   const [attachment, setAttachment] = useState<File | null>(null);
@@ -139,9 +146,9 @@ export function RequestChatPage() {
     onSuccess: (sentMessage) => {
       setMessage("");
       setAttachment(null);
+      toast.success(t("chat.sent"));
       queryClient.setQueryData<RequestMessage[]>(messagesQueryKey, (current) => mergeMessages(current, sentMessage));
       queryClient.invalidateQueries({ queryKey: queryKeys.request(requestId) });
-      toast.success(t("chat.sent"));
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   });
@@ -176,7 +183,7 @@ export function RequestChatPage() {
               <div>
                 <p>{t("chat.requestLabel")} #{request.id.slice(0, 8)}</p>
                 <h1>{requestTitle}</h1>
-                <span>{request.address}</span>
+                <span>{formatAddress(request.address, locale)}</span>
               </div>
             </div>
             <div className="chat-shell__status">

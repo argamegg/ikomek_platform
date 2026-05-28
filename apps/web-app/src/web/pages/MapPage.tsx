@@ -16,6 +16,7 @@ import {
 import type { CivicRequest, MapMode, RequestStatus } from "../../types/platform";
 import { IssueMap } from "../components/maps/IssueMap";
 import { Tabs } from "../components/ui/Tabs";
+import { formatAddress } from "../lib/format";
 import {
   localizeRequestCategory,
   localizeRequestPriority,
@@ -509,7 +510,7 @@ export function MapPage() {
     const groups = new Map<string, Hotspot>();
 
     for (const request of analyticsRequests) {
-      const address = request.address || "—";
+      const address = formatAddress(request.address, i18n.language);
       const current = groups.get(address);
       if (current) {
         current.count += 1;
@@ -718,7 +719,7 @@ export function MapPage() {
             <div className="map-page__popup-header">
               <div>
                 <strong>{localizeRequestProblemType(selectedRequest.categoryId, selectedRequest.title, t)}</strong>
-                <span>{selectedRequest.address}</span>
+                <span>{formatAddress(selectedRequest.address, i18n.language)}</span>
               </div>
               <button
                 type="button"

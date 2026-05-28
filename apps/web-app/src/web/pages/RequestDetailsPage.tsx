@@ -17,7 +17,7 @@ import type { Locale } from "../../types/platform";
 import { Badge } from "../components/ui/Badge";
 import { EmptyState } from "../components/ui/EmptyState";
 import { IssueMap } from "../components/maps/IssueMap";
-import { formatDate, getPriorityBadgeClass, getStatusTone } from "../lib/format";
+import { formatAddress, formatDate, getPriorityBadgeClass, getStatusTone } from "../lib/format";
 import {
   localizeAttachmentType,
   localizeRequestCategory,
@@ -120,7 +120,7 @@ export function RequestDetailsPage() {
             <span>{t("requestDetails.overview")}</span>
             <strong>#{request.id.slice(0, 8)}</strong>
           </div>
-          <h2>{request.address}</h2>
+          <h2>{formatAddress(request.address, locale)}</h2>
           <p>{description}</p>
 
           <div className="request-detail-facts">
