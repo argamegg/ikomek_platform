@@ -603,49 +603,10 @@ def detect_message_locale(message: str) -> Optional[str]:
     normalized = normalize_message_text(message)
     if not normalized:
         return None
-    tokens = set(normalized.split())
-    kazakh_hint_words = {
-        "сәлем",
-        "салем",
-        "қалай",
-        "кайда",
-        "қайда",
-        "өтінім",
-        "өтініш",
-        "мәртебе",
-        "мәртебесі",
-        "сурет",
-        "ауыстыру",
-        "өзгерту",
-        "косу",
-        "қосу",
-        "мекенжай",
-        "баптау",
-        "баптаулар",
-        "жаңалық",
-        "жаңалықтар",
-        "ашу",
-        "тексеру",
-    }
-    russian_hint_words = {
-        "как",
-        "где",
-        "мои",
-        "мой",
-        "узнать",
-        "проверить",
-        "посмотреть",
-        "изменить",
-        "поменять",
-        "добавить",
-        "заявка",
-        "заявки",
-        "заявку",
-        "обращение",
-        "обращения",
-        "настройки",
-        "новости",
-    }
+    tokens = message_token_set(message)
+    if is_shared_cyrillic_only(message):
+        return None
+
     kazakh_fuzzy_words = {
         "баптаулар",
         "баптау",
@@ -664,9 +625,9 @@ def detect_message_locale(message: str) -> Optional[str]:
     } | KAZAKH_DOMAIN_WORDS
     if re.search(r"[әғқңөұүһі]", normalized):
         return "kz"
-    if tokens & kazakh_hint_words:
+    if tokens & KAZAKH_CONTEXT_TERMS:
         return "kz"
-    if tokens & russian_hint_words:
+    if tokens & STRONG_RUSSIAN_TERMS:
         return "ru"
     if has_fuzzy_word(message, kazakh_fuzzy_words, 2):
         return "kz"
@@ -675,6 +636,98 @@ def detect_message_locale(message: str) -> Optional[str]:
     if re.search(r"\b(hello|hi|hey|how|where|what|request|status|settings)\b", normalized):
         return "en"
     return None
+
+
+SHARED_CYRILLIC_TERMS = {
+    "карта",
+    "фото",
+    "чат",
+    "профиль",
+    "профил",
+    "оператор",
+    "статус",
+    "ikomek",
+    "айкомек",
+    "i-komek",
+}
+
+STRONG_RUSSIAN_TERMS = {
+    "как",
+    "где",
+    "что",
+    "почему",
+    "зачем",
+    "мой",
+    "мои",
+    "мою",
+    "ищи",
+    "найди",
+    "открой",
+    "открыть",
+    "сохрани",
+    "сохранить",
+    "узнать",
+    "проверить",
+    "посмотреть",
+    "изменить",
+    "поменять",
+    "добавить",
+    "создать",
+    "сделать",
+    "подать",
+    "заявка",
+    "заявки",
+    "заявку",
+    "обращение",
+    "обращения",
+    "настройки",
+    "новости",
+}
+
+KAZAKH_CONTEXT_TERMS = {
+    "аш",
+    "ашу",
+    "қайда",
+    "кайда",
+    "картаны",
+    "картадан",
+    "фотоны",
+    "сурет",
+    "суретті",
+    "өзгерт",
+    "өзгерту",
+    "озгерт",
+    "озгерту",
+    "ауыстыр",
+    "ауыстыру",
+    "сақта",
+    "сакта",
+    "қосу",
+    "косу",
+    "тексер",
+    "тексеру",
+    "сәлем",
+    "салем",
+    "қалай",
+    "өтінім",
+    "өтініш",
+    "мәртебе",
+    "мәртебесі",
+    "мекенжай",
+    "баптау",
+    "баптаулар",
+    "жаңалық",
+    "жаңалықтар",
+}
+
+
+def message_token_set(message: str) -> set[str]:
+    return set(normalize_message_text(message).split())
+
+
+def is_shared_cyrillic_only(message: str) -> bool:
+    tokens = message_token_set(message)
+    return bool(tokens) and tokens <= SHARED_CYRILLIC_TERMS
 
 
 def language_switch_reply(message_locale: str, site_locale: str) -> str:
@@ -711,38 +764,8 @@ def language_switch_reply(message_locale: str, site_locale: str) -> str:
 def should_show_language_switch(message: str, message_locale: str, site_locale: str) -> bool:
     if message_locale == site_locale:
         return False
-
-    normalized_tokens = set(normalize_message_text(message).split())
-    strong_russian_terms = {
-        "как",
-        "где",
-        "что",
-        "почему",
-        "зачем",
-        "мой",
-        "мои",
-        "мою",
-        "узнать",
-        "проверить",
-        "посмотреть",
-        "изменить",
-        "поменять",
-        "добавить",
-        "создать",
-        "сделать",
-        "подать",
-        "заявка",
-        "заявки",
-        "заявку",
-        "обращение",
-        "обращения",
-        "настройки",
-        "новости",
-    }
-    if site_locale == "kz" and message_locale == "ru" and normalized_tokens:
-        if not (normalized_tokens & strong_russian_terms):
-            return False
-
+    if is_shared_cyrillic_only(message):
+        return False
     return True
 
 
@@ -968,6 +991,7 @@ CREATE_ACTION_WORDS = {
 
 PHOTO_WORDS = {
     "фото",
+    "фотоны",
     "фотка",
     "фотку",
     "фотки",
@@ -1239,7 +1263,7 @@ def has_request_lookup_intent(message: str) -> bool:
 
 def has_map_intent(message: str) -> bool:
     normalized = message.casefold()
-    return any(keyword in normalized for keyword in ["карта", "map", "гео", "адрес", "локац"])
+    return any(keyword in normalized for keyword in ["карт", "map", "гео", "адрес", "локац"])
 
 
 def has_news_intent(message: str) -> bool:
@@ -1674,9 +1698,10 @@ async def generate_ai_assistant_reply(
 ) -> tuple[str, bool, str, list[dict]]:
     api_key = get_gemini_api_key()
     model = get_gemini_model()
-    site_context, actions = await build_site_context(message, locale, current_user)
     site_locale = normalize_locale(locale)
     message_locale = detect_message_locale(message)
+    response_locale = "ru" if site_locale == "en" and is_shared_cyrillic_only(message) else site_locale
+    site_context, actions = await build_site_context(message, response_locale, current_user)
     has_specific_site_intent = any(
         [
             has_create_request_intent(message),
@@ -1699,53 +1724,53 @@ async def generate_ai_assistant_reply(
         return language_switch_reply(message_locale, site_locale), bool(api_key), model, []
 
     if has_greeting_intent(message) and not has_specific_site_intent:
-        return greeting_reply(locale, bool(current_user)), bool(api_key), model, actions
+        return greeting_reply(response_locale, bool(current_user)), bool(api_key), model, actions
 
     if not (is_ikomek_related(message) or has_specific_site_intent):
-        return out_of_scope_reply(locale), True, model, actions
+        return out_of_scope_reply(response_locale), True, model, actions
 
     if has_request_photo_attachment_intent(message):
-        return request_photo_reply(locale, bool(current_user)), bool(api_key), model, actions
+        return request_photo_reply(response_locale, bool(current_user)), bool(api_key), model, actions
 
     if has_request_address_intent(message):
-        return request_address_reply(locale, bool(current_user)), bool(api_key), model, actions
+        return request_address_reply(response_locale, bool(current_user)), bool(api_key), model, actions
 
     if has_request_status_intent(message):
-        return request_status_reply(locale, bool(current_user)), bool(api_key), model, actions
+        return request_status_reply(response_locale, bool(current_user)), bool(api_key), model, actions
 
     if has_my_requests_intent(message):
-        return my_requests_reply(locale, bool(current_user)), bool(api_key), model, actions
+        return my_requests_reply(response_locale, bool(current_user)), bool(api_key), model, actions
 
     if has_create_request_intent(message):
-        return create_request_reply(locale, bool(current_user)), bool(api_key), model, actions
+        return create_request_reply(response_locale, bool(current_user)), bool(api_key), model, actions
 
     if has_profile_photo_intent(message):
-        return profile_photo_reply(locale, bool(current_user)), bool(api_key), model, actions
+        return profile_photo_reply(response_locale, bool(current_user)), bool(api_key), model, actions
 
     if has_settings_intent(message):
-        return settings_reply(locale, bool(current_user)), bool(api_key), model, actions
+        return settings_reply(response_locale, bool(current_user)), bool(api_key), model, actions
 
     if has_profile_intent(message):
-        return profile_reply(locale, bool(current_user)), bool(api_key), model, actions
+        return profile_reply(response_locale, bool(current_user)), bool(api_key), model, actions
 
     if has_language_intent(message):
-        return language_reply(locale, bool(current_user)), bool(api_key), model, actions
+        return language_reply(response_locale, bool(current_user)), bool(api_key), model, actions
 
     if has_password_intent(message):
-        return password_reply(locale, bool(current_user)), bool(api_key), model, actions
+        return password_reply(response_locale, bool(current_user)), bool(api_key), model, actions
 
     if has_map_intent(message):
-        return map_reply(locale, bool(current_user)), bool(api_key), model, actions
+        return map_reply(response_locale, bool(current_user)), bool(api_key), model, actions
 
     if has_news_intent(message):
-        return news_reply(locale, bool(current_user)), bool(api_key), model, actions
+        return news_reply(response_locale, bool(current_user)), bool(api_key), model, actions
 
     if not api_key:
-        return unconfigured_reply(locale, site_context), False, model, actions
+        return unconfigured_reply(response_locale, site_context), False, model, actions
 
     payload = {
         "system_instruction": {
-            "parts": [{"text": build_instructions(normalize_locale(locale), user_role, bool(site_context))}],
+            "parts": [{"text": build_instructions(response_locale, user_role, bool(site_context))}],
         },
         "contents": build_contents(message, history, has_off_topic_command(message), site_context),
         "generationConfig": {
@@ -1765,13 +1790,13 @@ async def generate_ai_assistant_reply(
                 json=payload,
             )
     except httpx.HTTPError:
-        return build_local_fallback_reply(locale, site_context, "provider_unreachable"), True, model, actions
+        return build_local_fallback_reply(response_locale, site_context, "provider_unreachable"), True, model, actions
 
     if response.status_code >= 400:
-        return build_local_fallback_reply(locale, site_context, f"provider_{response.status_code}"), True, model, actions
+        return build_local_fallback_reply(response_locale, site_context, f"provider_{response.status_code}"), True, model, actions
 
     reply = extract_response_text(response.json())
     if not reply:
-        return build_local_fallback_reply(locale, site_context, "empty_provider_response"), True, model, actions
+        return build_local_fallback_reply(response_locale, site_context, "empty_provider_response"), True, model, actions
 
     return reply, True, model, actions
