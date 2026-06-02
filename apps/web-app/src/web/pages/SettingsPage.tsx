@@ -61,8 +61,21 @@ export default function SettingsPage() {
   });
 
   const passwordMutation = useMutation({
-    mutationFn: platformApi.changePassword,
-    onSuccess: () => {
+    mutationFn: async () => {
+      if (currentUser?.hasLocalPassword === false) {
+        return platformApi.setLocalPassword({ newPassword: passwordForm.newPassword });
+      }
+
+      await platformApi.changePassword({
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      });
+      return null;
+    },
+    onSuccess: (updatedUser) => {
+      if (updatedUser) {
+        queryClient.setQueryData(queryKeys.currentUser, updatedUser);
+      }
       setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
       toast.success(t("settings.passwordSaved"));
     },
@@ -71,7 +84,8 @@ export default function SettingsPage() {
 
   function submitPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+    const needsCurrentPassword = currentUser?.hasLocalPassword !== false;
+    if ((needsCurrentPassword && !passwordForm.currentPassword) || !passwordForm.newPassword || !passwordForm.confirmPassword) {
       toast.error(t("settings.passwordFillAll"));
       return;
     }
@@ -84,10 +98,7 @@ export default function SettingsPage() {
       return;
     }
 
-    passwordMutation.mutate({
-      currentPassword: passwordForm.currentPassword,
-      newPassword: passwordForm.newPassword,
-    });
+    passwordMutation.mutate();
   }
 
   return (
@@ -142,20 +153,26 @@ export default function SettingsPage() {
             </span>
             <div>
               <h2>{t("settings.passwordTitle")}</h2>
-              <p>{t("settings.passwordDescription")}</p>
+              <p>
+                {currentUser?.hasLocalPassword === false
+                  ? t("settings.passwordSetupDescription")
+                  : t("settings.passwordDescription")}
+              </p>
             </div>
           </div>
 
           <form className="settings-form" onSubmit={submitPassword}>
-            <label>
-              <span>{t("settings.currentPassword")}</span>
-              <input
-                type="password"
-                value={passwordForm.currentPassword}
-                onChange={(event) => setPasswordForm((current) => ({ ...current, currentPassword: event.target.value }))}
-                autoComplete="current-password"
-              />
-            </label>
+            {currentUser?.hasLocalPassword !== false ? (
+              <label>
+                <span>{t("settings.currentPassword")}</span>
+                <input
+                  type="password"
+                  value={passwordForm.currentPassword}
+                  onChange={(event) => setPasswordForm((current) => ({ ...current, currentPassword: event.target.value }))}
+                  autoComplete="current-password"
+                />
+              </label>
+            ) : null}
             <label>
               <span>{t("settings.newPassword")}</span>
               <input

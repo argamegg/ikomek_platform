@@ -4,6 +4,7 @@ import type {
   AuthLoginInput,
   AuthRegistrationChallenge,
   AuthRegisterInput,
+  ClerkLoginInput,
   AdminPlatformStats,
   AIAssistantInput,
   AIAssistantResponse,
@@ -19,6 +20,7 @@ import type {
   Locale,
   PasswordRecoveryInput,
   PasswordChangeInput,
+  PasswordSetInput,
   PlatformMetrics,
   RequestCategory,
   RequestCreateInput,
@@ -340,6 +342,30 @@ export const platformApi = {
 
   async login(payload: AuthLoginInput) {
     const response = await platformClient.post(apiConfig.endpoints.login, payload);
+    const normalized = normalizeAuthResponse(response.data);
+    const token = normalized.accessToken ?? normalized.token;
+
+    if (token) {
+      session.setToken(token);
+    }
+
+    return normalized;
+  },
+
+  async loginWithClerk(payload: ClerkLoginInput) {
+    const response = await platformClient.post(
+      "/auth/clerk",
+      {
+        token: payload.token,
+        email: payload.email,
+        full_name: payload.fullName,
+        phone: payload.phone,
+        gender: payload.gender,
+        birth_date: payload.birthDate,
+        avatar_url: payload.avatarUrl,
+      },
+      { timeout: 15_000 },
+    );
     const normalized = normalizeAuthResponse(response.data);
     const token = normalized.accessToken ?? normalized.token;
 
@@ -809,6 +835,13 @@ export const platformApi = {
       current_password: payload.currentPassword,
       new_password: payload.newPassword,
     });
+  },
+
+  async setLocalPassword(payload: PasswordSetInput) {
+    const response = await platformClient.put("/auth/local-password", {
+      new_password: payload.newPassword,
+    });
+    return normalizeUser(response.data);
   },
 
   async getNotifications() {

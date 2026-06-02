@@ -48,6 +48,7 @@ import { localizeRequestProblemType, localizeRequestStatus } from "../lib/reques
 import { getErrorMessage, platformApi, queryKeys } from "../services/platformApi";
 import { applyLoggedOutQueryState } from "../lib/querySession";
 import { reverseGeocodeAstanaPoint, searchAstanaAddresses } from "../lib/locationGeocoding";
+import { useOptionalClerkSession } from "../app/clerk";
 
 const ACCENT = "#ff6b35";
 const MONTH_WINDOW = 6;
@@ -346,6 +347,7 @@ export function ProfilePage() {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { signOutClerk } = useOptionalClerkSession();
   const locale = normalizeLocale(i18n.language);
   const [savedFormOpen, setSavedFormOpen] = useState(false);
   const [savedForm, setSavedForm] = useState({
@@ -835,6 +837,7 @@ export function ProfilePage() {
   async function handleLogout() {
     try {
       await platformApi.logout();
+      await signOutClerk();
       await applyLoggedOutQueryState(queryClient);
       navigate("/auth");
       toast.success(t("cabinet.logout"));

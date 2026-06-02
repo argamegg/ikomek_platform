@@ -24,8 +24,17 @@ class UserCreate(BaseModel):
     role: str = ROLE_CITIZEN  # Default role is citizen
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    email: str = Field(min_length=1)
     password: str
+
+class ClerkSessionLogin(BaseModel):
+    token: str = Field(min_length=1)
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+    gender: Optional[str] = None
+    birth_date: Optional[str] = None
+    avatar_url: Optional[str] = None
 
 class UserResponse(BaseModel):
     id: str
@@ -38,6 +47,7 @@ class UserResponse(BaseModel):
     avatar_url: Optional[str] = None
     role: str
     language: str = "ru"
+    has_local_password: bool = True
     created_at: datetime
 
 class UserProfileUpdate(BaseModel):
@@ -50,6 +60,9 @@ class UserProfileUpdate(BaseModel):
 
 class PasswordChange(BaseModel):
     current_password: str
+    new_password: str = Field(min_length=6)
+
+class PasswordSet(BaseModel):
     new_password: str = Field(min_length=6)
 
 class TokenResponse(BaseModel):

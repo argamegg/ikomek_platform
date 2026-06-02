@@ -33,6 +33,15 @@ EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS = int(
 )
 EMAIL_VERIFICATION_MAX_ATTEMPTS = int(os.environ.get("EMAIL_VERIFICATION_MAX_ATTEMPTS", "5"))
 
+CLERK_JWT_ISSUER = os.environ.get("CLERK_JWT_ISSUER", "").strip().rstrip("/")
+CLERK_AUTHORIZED_PARTIES = [
+    party.strip()
+    for party in os.environ.get("CLERK_AUTHORIZED_PARTIES", "").split(",")
+    if party.strip()
+]
+CLERK_SECRET_KEY = os.environ.get("CLERK_SECRET_KEY", "").strip()
+CLERK_API_URL = os.environ.get("CLERK_API_URL", "https://api.clerk.com").strip().rstrip("/")
+
 SMTP_HOST = os.environ.get("SMTP_HOST", "").strip()
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
 SMTP_USERNAME = os.environ.get("SMTP_USERNAME", "").strip()

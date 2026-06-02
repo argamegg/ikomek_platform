@@ -49,6 +49,7 @@ export type User = {
   language: Locale;
   notificationsEnabled: boolean;
   avatarUrl?: string;
+  hasLocalPassword: boolean;
   createdAt?: string;
   departmentName?: string;
 };
@@ -297,6 +298,16 @@ export type AuthLoginInput = {
   password: string;
 };
 
+export type ClerkLoginInput = {
+  token: string;
+  email?: string;
+  fullName?: string;
+  phone?: string;
+  gender?: string;
+  birthDate?: string;
+  avatarUrl?: string;
+};
+
 export type AuthRegisterInput = {
   name: string;
   email: string;
@@ -311,6 +322,10 @@ export type PasswordRecoveryInput = {
 
 export type PasswordChangeInput = {
   currentPassword: string;
+  newPassword: string;
+};
+
+export type PasswordSetInput = {
   newPassword: string;
 };
 

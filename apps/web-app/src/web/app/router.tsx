@@ -1,7 +1,9 @@
 import type { ReactElement } from "react";
+import { HandleSSOCallback } from "@clerk/react";
 import { useQuery } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { isClerkConfigured } from "./clerk";
 import { AppShell } from "../components/layout/AppShell";
 import { platformApi, queryKeys } from "../services/platformApi";
 import { AuthPage } from "../pages/AuthPage";
@@ -86,6 +88,40 @@ function CitizenRequestsRoute({ children }: { children: ReactElement }) {
   return children;
 }
 
+function ClerkSsoCallbackRoute() {
+  const navigate = useNavigate();
+
+  if (!isClerkConfigured) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  function navigateToAuth(destination: string) {
+    if (destination.startsWith("http")) {
+      window.location.assign(destination);
+      return;
+    }
+
+    navigate(destination, { replace: true });
+  }
+
+  return (
+    <>
+      <GuardFallback />
+      <HandleSSOCallback
+        navigateToApp={({ decorateUrl }) => {
+          navigateToAuth(decorateUrl("/auth"));
+        }}
+        navigateToSignIn={() => {
+          navigate("/auth", { replace: true });
+        }}
+        navigateToSignUp={() => {
+          navigate("/auth", { replace: true });
+        }}
+      />
+    </>
+  );
+}
+
 export function AppRouter() {
   return (
     <BrowserRouter>
@@ -93,6 +129,7 @@ export function AppRouter() {
         <Route element={<AppShell />}>
           <Route index element={<HomePage />} />
           <Route path="/auth" element={<AuthPage />} />
+          <Route path="/sso-callback" element={<ClerkSsoCallbackRoute />} />
           <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path="/requests" element={<CitizenRequestsRoute><RequestsPage /></CitizenRequestsRoute>} />
           <Route path="/requests/new" element={<ProtectedRoute><NewRequestPage /></ProtectedRoute>} />

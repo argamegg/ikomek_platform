@@ -1,17 +1,20 @@
 import axios from "axios";
-import { startTransition, useEffect, useMemo, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { Show, UserButton, useAuth, useUser } from "@clerk/react";
+import { useSignIn } from "@clerk/react/legacy";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { KeyRound, LockKeyhole, Mail, RefreshCcw, Smartphone, User2 } from "lucide-react";
+import { KeyRound, LockKeyhole, Mail, RefreshCcw, ShieldCheck, Smartphone, User2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { isClerkConfigured } from "../app/clerk";
 import { Card } from "../components/ui/Card";
 import { Input, Select } from "../components/ui/Input";
 import { Tabs } from "../components/ui/Tabs";
 import { Button } from "../components/ui/Button";
 import { getErrorMessage, platformApi, queryKeys } from "../services/platformApi";
 import { applyLoggedInQueryState } from "../lib/querySession";
-import type { AuthRegistrationChallenge } from "../../types/platform";
+import type { AuthRegistrationChallenge, User } from "../../types/platform";
 
 type AuthTab = "login" | "register" | "recover";
 type RegisterForm = {
@@ -21,6 +24,53 @@ type RegisterForm = {
   password: string;
   language: "en" | "ru" | "kz";
 };
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function getRecordString(record: unknown, key: string) {
+  if (!isPlainRecord(record)) {
+    return undefined;
+  }
+
+  const value = record[key];
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function getClerkMetadataString(user: unknown, keys: string[]) {
+  if (!isPlainRecord(user)) {
+    return undefined;
+  }
+
+  for (const metadataKey of ["publicMetadata", "unsafeMetadata"]) {
+    const metadata = user[metadataKey];
+    for (const key of keys) {
+      const value = getRecordString(metadata, key);
+      if (value) {
+        return value;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function getClerkPrimaryPhone(user: unknown) {
+  if (!isPlainRecord(user)) {
+    return undefined;
+  }
+
+  const primaryPhoneNumber = user.primaryPhoneNumber;
+  return getRecordString(primaryPhoneNumber, "phoneNumber") ?? getRecordString(primaryPhoneNumber, "phone_number");
+}
+
+function navigateToUserHome(user: User | undefined, navigate: ReturnType<typeof useNavigate>, replace = false) {
+  const roles = user?.roles ?? [];
+  navigate(roles.includes("admin") ? "/admin" : roles.includes("operator") ? "/operator" : "/profile", {
+    replace,
+  });
+}
 
 export function AuthPage() {
   const { t } = useTranslation();
@@ -43,13 +93,14 @@ export function AuthPage() {
   const [verificationCode, setVerificationCode] = useState("");
   const [verificationError, setVerificationError] = useState("");
   const [resendCooldown, setResendCooldown] = useState(0);
+  const requiresLocalPassword = currentUserQuery.data?.hasLocalPassword === false;
   const authContentKey = verificationState ? "verification" : tab === "recover" ? "recovery" : tab;
   const authHeaderDefaults = {
     login: {
       eyebrow: "Login",
       title: "Sign in to your existing iKOMEK account",
       subtitle:
-        "Web and mobile applications use one authentication flow, profiles, requests, and chat history.",
+        "Sign in to view your profile, requests, and chat history in one place.",
     },
     register: {
       eyebrow: "Registration",
@@ -117,7 +168,7 @@ export function AuthPage() {
   }, [resendCooldown]);
 
   useEffect(() => {
-    if (currentUserQuery.data) {
+    if (currentUserQuery.data && currentUserQuery.data.hasLocalPassword !== false) {
       navigate("/profile", { replace: true });
     }
   }, [currentUserQuery.data, navigate]);
@@ -191,13 +242,13 @@ export function AuthPage() {
   return (
     <div className="page-stack auth-page">
       <div className="auth-shell">
-        <div className="auth-header">
+        <section className="auth-header" aria-labelledby="auth-page-title">
           <span className="page-header__eyebrow">
             {t(`auth.${authContentKey}.eyebrow`, {
               defaultValue: authHeaderDefaults[authContentKey].eyebrow,
             })}
           </span>
-          <h1>
+          <h1 id="auth-page-title">
             {t(`auth.${authContentKey}.title`, {
               defaultValue: authHeaderDefaults[authContentKey].title,
             })}
@@ -207,26 +258,33 @@ export function AuthPage() {
               defaultValue: authHeaderDefaults[authContentKey].subtitle,
             })}
           </p>
-        </div>
+        </section>
 
-        <Card className="auth-panel auth-panel--centered" hover={false}>
-          <Tabs
-            value={tab}
-            onChange={(value) => {
-              const nextTab = value as AuthTab;
-              setTab(nextTab);
-              if (nextTab !== "register") {
-                resetVerificationStep();
-              }
-            }}
-            options={[
-              { key: "login", label: t("auth.loginTab") },
-              { key: "register", label: t("auth.registerTab") },
-              { key: "recover", label: t("auth.recoverTab") },
-            ]}
-          />
+        <Card className="auth-panel" hover={false}>
+          {!requiresLocalPassword ? (
+            <Tabs
+              className="auth-tabs"
+              value={tab}
+              onChange={(value) => {
+                const nextTab = value as AuthTab;
+                setTab(nextTab);
+                if (nextTab !== "register") {
+                  resetVerificationStep();
+                }
+              }}
+              options={[
+                { key: "login", label: t("auth.loginTab") },
+                { key: "register", label: t("auth.registerTab") },
+                { key: "recover", label: t("auth.recoverTab") },
+              ]}
+            />
+          ) : null}
 
-          {tab === "login" ? (
+          {!verificationState && (requiresLocalPassword || tab !== "recover") ? (
+            <ClerkAuthSection currentUser={currentUserQuery.data} />
+          ) : null}
+
+          {!requiresLocalPassword && tab === "login" ? (
             <form
               className="form-stack"
               onSubmit={(event) => {
@@ -235,11 +293,12 @@ export function AuthPage() {
               }}
             >
               <Input
-                label={t("auth.fields.email")}
-                type="email"
+                label={t("auth.fields.emailOrPhone")}
+                type="text"
                 icon={<Mail size={16} />}
                 value={loginForm.email}
                 onChange={(event) => setLoginForm((value) => ({ ...value, email: event.target.value }))}
+                autoComplete="username"
                 required
               />
               <Input
@@ -256,7 +315,7 @@ export function AuthPage() {
             </form>
           ) : null}
 
-          {tab === "register" ? (
+          {!requiresLocalPassword && tab === "register" ? (
             verificationState ? (
               <div className="form-stack auth-verify">
                 <div className="auth-verify__box">
@@ -390,7 +449,7 @@ export function AuthPage() {
             )
           ) : null}
 
-          {tab === "recover" ? (
+          {!requiresLocalPassword && tab === "recover" ? (
             <div className="form-stack auth-recover">
               <div className="auth-recover__box">
                 <p className="auth-recover__title">{t("auth.recoverNotice.title")}</p>
@@ -401,6 +460,264 @@ export function AuthPage() {
           ) : null}
         </Card>
       </div>
+    </div>
+  );
+}
+
+function ClerkAuthSection({ currentUser }: { currentUser?: User | null }) {
+  const { t } = useTranslation();
+
+  if (!isClerkConfigured) {
+    return (
+      <div className="auth-clerk auth-clerk--setup">
+        <p className="auth-clerk__title">{t("auth.clerk.title")}</p>
+        <p>{t("auth.clerk.setupRequired")}</p>
+        <div className="auth-clerk__actions">
+          <button type="button" className="auth-clerk__button auth-clerk__button--google" disabled>
+            <span className="auth-clerk__google-mark" aria-hidden="true">G</span>
+            <span>{t("auth.clerk.google")}</span>
+          </button>
+        </div>
+        <div className="auth-divider">
+          <span>{t("auth.clerk.orLegacy")}</span>
+        </div>
+      </div>
+    );
+  }
+
+  return <ConfiguredClerkAuthSection currentUser={currentUser} />;
+}
+
+function ConfiguredClerkAuthSection({ currentUser }: { currentUser?: User | null }) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { isLoaded, signIn } = useSignIn();
+  const { getToken, isSignedIn } = useAuth();
+  const { isLoaded: isClerkUserLoaded, user: clerkUser } = useUser();
+  const [isClerkSubmitting, setIsClerkSubmitting] = useState(false);
+  const [hasStartedClerkSync, setHasStartedClerkSync] = useState(false);
+  const [syncedClerkUserId, setSyncedClerkUserId] = useState<string | null>(null);
+  const [clerkError, setClerkError] = useState("");
+  const [localPasswordForm, setLocalPasswordForm] = useState({ password: "", confirmPassword: "" });
+
+  function getClerkErrorMessage(error: unknown) {
+    const clerkApiError = error as {
+      errors?: Array<{ longMessage?: string; message?: string }>;
+    };
+    const firstError = clerkApiError.errors?.[0];
+    return firstError?.longMessage ?? firstError?.message ?? (error instanceof Error ? error.message : t("auth.clerk.genericError"));
+  }
+
+  const getClerkBackendErrorMessage = useCallback((error: unknown) => {
+    if (axios.isAxiosError(error) && error.response?.status === 409) {
+      return t("auth.clerk.linkSecretRequired");
+    }
+
+    return getErrorMessage(error);
+  }, [t]);
+
+  async function handleGoogleSignIn() {
+    if (!isLoaded || !signIn) {
+      return;
+    }
+
+    setClerkError("");
+    setIsClerkSubmitting(true);
+
+    try {
+      await signIn.authenticateWithRedirect({
+        strategy: "oauth_google",
+        redirectUrl: "/sso-callback",
+        redirectUrlComplete: "/auth",
+        oidcPrompt: "select_account",
+      });
+    } catch (error) {
+      setClerkError(getClerkErrorMessage(error));
+      setIsClerkSubmitting(false);
+    }
+  }
+
+  const clerkLoginMutation = useMutation({
+    mutationFn: platformApi.loginWithClerk,
+    onSuccess: async (result) => {
+      await applyLoggedInQueryState(queryClient, result.user);
+      setSyncedClerkUserId(clerkUser?.id ?? null);
+      setHasStartedClerkSync(false);
+
+      if (result.user?.hasLocalPassword === false) {
+        return;
+      }
+
+      toast.success(t("auth.feedback.loginSuccess"));
+      navigateToUserHome(result.user, navigate, true);
+    },
+    onError: (error) => {
+      setClerkError(getClerkBackendErrorMessage(error));
+      setHasStartedClerkSync(false);
+    },
+  });
+
+  const localPasswordMutation = useMutation({
+    mutationFn: platformApi.setLocalPassword,
+    onSuccess: (updatedUser) => {
+      queryClient.setQueryData(queryKeys.currentUser, updatedUser);
+      setLocalPasswordForm({ password: "", confirmPassword: "" });
+      toast.success(t("auth.clerk.localPasswordSaved"));
+      navigateToUserHome(updatedUser, navigate, true);
+    },
+    onError: (error) => {
+      setClerkError(getClerkBackendErrorMessage(error));
+    },
+  });
+
+  function submitLocalPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setClerkError("");
+
+    if (!localPasswordForm.password || !localPasswordForm.confirmPassword) {
+      setClerkError(t("auth.clerk.localPasswordFillAll"));
+      return;
+    }
+
+    if (localPasswordForm.password.length < 6) {
+      setClerkError(t("auth.clerk.localPasswordMin"));
+      return;
+    }
+
+    if (localPasswordForm.password !== localPasswordForm.confirmPassword) {
+      setClerkError(t("auth.clerk.localPasswordMismatch"));
+      return;
+    }
+
+    localPasswordMutation.mutate({ newPassword: localPasswordForm.password });
+  }
+
+  const needsLocalPassword =
+    currentUser?.hasLocalPassword === false || clerkLoginMutation.data?.user?.hasLocalPassword === false;
+
+  useEffect(() => {
+    if (
+      !isSignedIn ||
+      !isClerkUserLoaded ||
+      !clerkUser ||
+      hasStartedClerkSync ||
+      clerkLoginMutation.isPending ||
+      needsLocalPassword ||
+      syncedClerkUserId === clerkUser.id
+    ) {
+      return;
+    }
+
+    setHasStartedClerkSync(true);
+    setClerkError("");
+
+    void getToken()
+      .then((token) => {
+        if (!token) {
+          throw new Error(t("auth.clerk.missingToken"));
+        }
+
+        return clerkLoginMutation.mutateAsync({
+          token,
+          email: clerkUser.primaryEmailAddress?.emailAddress,
+          fullName: clerkUser.fullName ?? clerkUser.username ?? undefined,
+          phone: getClerkPrimaryPhone(clerkUser),
+          gender: getClerkMetadataString(clerkUser, ["gender", "sex"]),
+          birthDate: getClerkMetadataString(clerkUser, ["birthDate", "birth_date", "birthday", "date_of_birth"]),
+          avatarUrl: clerkUser.imageUrl,
+        });
+      })
+      .catch((error) => {
+        setClerkError(getClerkBackendErrorMessage(error));
+        setHasStartedClerkSync(false);
+      });
+  }, [
+    clerkLoginMutation,
+    clerkUser,
+    getToken,
+    getClerkBackendErrorMessage,
+    hasStartedClerkSync,
+    isClerkUserLoaded,
+    isSignedIn,
+    needsLocalPassword,
+    syncedClerkUserId,
+    t,
+  ]);
+
+  return (
+    <div className="auth-clerk">
+      <Show when="signed-out">
+        <p className="auth-clerk__title">{t("auth.clerk.title")}</p>
+        <p>{t("auth.clerk.subtitle")}</p>
+        <div className="auth-clerk__actions">
+          <button
+            type="button"
+            className="auth-clerk__button auth-clerk__button--google"
+            onClick={handleGoogleSignIn}
+            disabled={!isLoaded || isClerkSubmitting}
+          >
+            <span className="auth-clerk__google-mark" aria-hidden="true">G</span>
+            <span>{t("auth.clerk.google")}</span>
+          </button>
+        </div>
+        {clerkError ? <p className="auth-clerk__error">{clerkError}</p> : null}
+        <div className="auth-divider">
+          <span>{t("auth.clerk.orLegacy")}</span>
+        </div>
+      </Show>
+
+      <Show when="signed-in">
+        {needsLocalPassword ? (
+          <form className="auth-local-password" onSubmit={submitLocalPassword}>
+            <div className="auth-clerk__signed-in">
+              <UserButton />
+              <div>
+                <p className="auth-clerk__title">{t("auth.clerk.localPasswordTitle")}</p>
+                <p>{t("auth.clerk.localPasswordHint")}</p>
+              </div>
+              <ShieldCheck size={20} aria-hidden="true" />
+            </div>
+            <Input
+              label={t("auth.clerk.localPassword")}
+              type="password"
+              icon={<LockKeyhole size={16} />}
+              value={localPasswordForm.password}
+              onChange={(event) => setLocalPasswordForm((value) => ({ ...value, password: event.target.value }))}
+              autoComplete="new-password"
+              required
+            />
+            <Input
+              label={t("auth.clerk.localPasswordConfirm")}
+              type="password"
+              icon={<LockKeyhole size={16} />}
+              value={localPasswordForm.confirmPassword}
+              onChange={(event) =>
+                setLocalPasswordForm((value) => ({ ...value, confirmPassword: event.target.value }))
+              }
+              autoComplete="new-password"
+              required
+            />
+            <Button type="submit" fullWidth isLoading={localPasswordMutation.isPending}>
+              {t("auth.clerk.localPasswordSave")}
+            </Button>
+          </form>
+        ) : (
+          <div className="auth-clerk__signed-in">
+            <UserButton />
+            <div>
+              <p className="auth-clerk__title">{t("auth.clerk.signedInTitle")}</p>
+              <p>
+                {clerkLoginMutation.isPending || hasStartedClerkSync
+                  ? t("auth.clerk.syncing")
+                  : t("auth.clerk.signedInHint")}
+              </p>
+            </div>
+            <ShieldCheck size={20} aria-hidden="true" />
+          </div>
+        )}
+        {clerkError ? <p className="auth-clerk__error">{clerkError}</p> : null}
+      </Show>
     </div>
   );
 }

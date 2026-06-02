@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
+import { useOptionalClerkSession } from "../../app/clerk";
 import { queryKeys, getErrorMessage, platformApi } from "../../services/platformApi";
 import { applyLoggedOutQueryState } from "../../lib/querySession";
 import { WEB_SESSION_TOKEN_CLEARED_EVENT, WEB_SESSION_TOKEN_KEY } from "../../lib/session";
@@ -22,6 +23,7 @@ export function AppShell({ children }: PropsWithChildren) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
+  const { signOutClerk } = useOptionalClerkSession();
   const currentUserQuery = useQuery({
     queryKey: queryKeys.currentUser,
     queryFn: platformApi.getCurrentUser,
@@ -37,6 +39,7 @@ export function AppShell({ children }: PropsWithChildren) {
   async function handleLogout() {
     try {
       await platformApi.logout();
+      await signOutClerk();
       await applyLoggedOutQueryState(queryClient);
       navigate("/auth", { replace: true });
       toast.success(t("common.logout"));
