@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, type FormEvent, type PointerEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { LoaderCircle, MessageCircle, Send, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -11,6 +11,16 @@ type AssistantMessage = AIAssistantChatMessage & {
   actions?: AIAssistantAction[];
 };
 
+type AssistantPanelSize = {
+  width: number;
+  height: number;
+};
+
+const ASSISTANT_PANEL_SIZE_KEY = "ikomek.aiAssistant.panelSize";
+const DEFAULT_PANEL_SIZE: AssistantPanelSize = { width: 360, height: 520 };
+const MIN_PANEL_SIZE: AssistantPanelSize = { width: 360, height: 520 };
+const MAX_PANEL_SIZE: AssistantPanelSize = { width: 760, height: 820 };
+
 function getLocale(language: string): Locale {
   if (language.startsWith("kz") || language.startsWith("kk")) {
     return "kz";
@@ -21,6 +31,65 @@ function getLocale(language: string): Locale {
   return "ru";
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function loadPanelSize(): AssistantPanelSize {
+  if (typeof window === "undefined") {
+    return DEFAULT_PANEL_SIZE;
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(ASSISTANT_PANEL_SIZE_KEY);
+    if (!rawValue) {
+      return DEFAULT_PANEL_SIZE;
+    }
+
+    const parsed = JSON.parse(rawValue) as Partial<AssistantPanelSize>;
+    return {
+      width: clamp(Number(parsed.width) || DEFAULT_PANEL_SIZE.width, MIN_PANEL_SIZE.width, MAX_PANEL_SIZE.width),
+      height: clamp(Number(parsed.height) || DEFAULT_PANEL_SIZE.height, MIN_PANEL_SIZE.height, MAX_PANEL_SIZE.height),
+    };
+  } catch {
+    return DEFAULT_PANEL_SIZE;
+  }
+}
+
+function savePanelSize(size: AssistantPanelSize) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(ASSISTANT_PANEL_SIZE_KEY, JSON.stringify(size));
+}
+
+function renderAssistantContent(content: string): ReactNode {
+  const nodes: ReactNode[] = [];
+  const pattern = /(\*\*\*([^*]+)\*\*\*|\*\*([^*]+)\*\*)/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      nodes.push(content.slice(lastIndex, match.index));
+    }
+
+    nodes.push(
+      <strong key={`strong-${match.index}`}>
+        {match[2] ?? match[3]}
+      </strong>,
+    );
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < content.length) {
+    nodes.push(content.slice(lastIndex));
+  }
+
+  return nodes.length ? nodes : content;
+}
+
 export function AIAssistantWidget() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -29,6 +98,7 @@ export function AIAssistantWidget() {
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [configured, setConfigured] = useState(true);
+  const [panelSize, setPanelSize] = useState<AssistantPanelSize>(() => loadPanelSize());
   const [messages, setMessages] = useState<AssistantMessage[]>([
     { role: "assistant", content: t("aiAssistant.greeting") },
   ]);
@@ -96,6 +166,50 @@ export function AIAssistantWidget() {
     setOpen(false);
   }
 
+  function handleResizeStart(event: PointerEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startSize = panelSize;
+
+    function handlePointerMove(moveEvent: globalThis.PointerEvent) {
+      const nextSize = {
+        width: clamp(startSize.width + startX - moveEvent.clientX, MIN_PANEL_SIZE.width, MAX_PANEL_SIZE.width),
+        height: clamp(startSize.height + startY - moveEvent.clientY, MIN_PANEL_SIZE.height, MAX_PANEL_SIZE.height),
+      };
+      setPanelSize(nextSize);
+      savePanelSize(nextSize);
+    }
+
+    function handlePointerUp() {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    }
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp, { once: true });
+  }
+
+  const textScale = clamp(panelSize.width / DEFAULT_PANEL_SIZE.width, 1, 1.3);
+  const panelStyle: CSSProperties &
+    Record<
+      | "--ai-assistant-width"
+      | "--ai-assistant-height"
+      | "--ai-assistant-message-font-size"
+      | "--ai-assistant-input-font-size"
+      | "--ai-assistant-title-font-size"
+      | "--ai-assistant-subtitle-font-size",
+      string
+    > = {
+    "--ai-assistant-width": `${panelSize.width}px`,
+    "--ai-assistant-height": `${panelSize.height}px`,
+    "--ai-assistant-message-font-size": `${15.5 * textScale}px`,
+    "--ai-assistant-input-font-size": `${15 * textScale}px`,
+    "--ai-assistant-title-font-size": `${17 * textScale}px`,
+    "--ai-assistant-subtitle-font-size": `${12.5 * textScale}px`,
+    transformOrigin: "bottom right",
+  };
+
   return (
     <div className="ai-assistant">
       <AnimatePresence>
@@ -107,8 +221,15 @@ export function AIAssistantWidget() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.85, y: 16 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            style={{ transformOrigin: "bottom right" }}
+            style={panelStyle}
           >
+          <button
+            type="button"
+            className="ai-assistant__resize"
+            onPointerDown={handleResizeStart}
+            aria-label={t("aiAssistant.resize", { defaultValue: "Resize AI assistant" })}
+            title={t("aiAssistant.resize", { defaultValue: "Resize AI assistant" })}
+          />
           <header className="ai-assistant__header">
             <span className="ai-assistant__avatar">
               <MessageCircle size={20} />
@@ -128,7 +249,7 @@ export function AIAssistantWidget() {
                 className={`ai-assistant__message ai-assistant__message--${message.role}`}
                 key={`${message.role}-${index}`}
               >
-                {message.content}
+                {renderAssistantContent(message.content)}
                 {message.actions?.length ? (
                   <div className="ai-assistant__actions">
                     {message.actions.map((action, actionIndex) => (
