@@ -32,6 +32,7 @@ from core.config import (
     security,
 )
 from schemas import ROLE_CITIZEN, RegistrationStartResponse
+from request_localization import localize_request_payload
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
@@ -91,17 +92,7 @@ def localize_news_document(news: dict, lang: Optional[str]) -> dict:
     return news
 
 def localize_request_document(request: dict, lang: Optional[str]) -> dict:
-    request = dict(request)
-    content_lang = normalize_content_language(lang)
-
-    if content_lang == "kz":
-        request["description"] = request.get("description_kz") or request.get("description_ru") or request.get("description_en") or request.get("description")
-    elif content_lang == "en":
-        request["description"] = request.get("description_en") or request.get("description_ru") or request.get("description_kz") or request.get("description")
-    else:
-        request["description"] = request.get("description_ru") or request.get("description") or request.get("description_en") or request.get("description_kz")
-
-    return request
+    return localize_request_payload(request, lang)
 
 def to_pagination_params(page: int, limit: int) -> tuple[int, int]:
     safe_page = max(1, page)

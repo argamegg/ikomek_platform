@@ -63,11 +63,8 @@ function getRequestSearchText(request: CivicRequest) {
   ].filter(Boolean).join(" ").toLowerCase();
 }
 
-function canUseRequestChat(currentUser: Awaited<ReturnType<typeof platformApi.getCurrentUser>> | null, citizenId: string) {
-  if (!currentUser) return false;
-
-  return currentUser.roles.some((role) => role === "operator" || role === "admin")
-    || currentUser.id === citizenId;
+function canUseRequestChat(currentUser: Awaited<ReturnType<typeof platformApi.getCurrentUser>> | null) {
+  return Boolean(currentUser);
 }
 
 export function RequestsPage() {
@@ -317,7 +314,7 @@ export function RequestsPage() {
                   <strong>{scope === "mine" ? `#${request.id.slice(0, 8)}` : request.citizenName || t("requests.unknownAuthor")}</strong>
                 </div>
                 <div className="request-tile__actions">
-                  {canUseRequestChat(currentUser, request.citizenId) ? (
+                  {canUseRequestChat(currentUser) ? (
                     <Link to={`/requests/${request.id}/chat`} aria-label={t("common.chat")}>
                       <MessageCircle size={17} />
                     </Link>

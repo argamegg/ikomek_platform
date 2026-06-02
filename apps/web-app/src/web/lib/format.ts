@@ -37,6 +37,9 @@ export function formatDate(value: string, locale: Locale = "en") {
 
 const ADDRESS_REPLACEMENTS: Record<Locale, Array<[RegExp, string]>> = {
   en: [
+    [/\bул\.\s*([^,]+),/gi, "$1 Street,"],
+    [/\bпр\.\s*([^,]+),/gi, "$1 Avenue,"],
+    [/\bпер\.\s*([^,]+),/gi, "$1 Lane,"],
     [/Достық көшесі/gi, "Dostyq Street"],
     [/Есіл ауданы/gi, "Esil district"],
     [/Астана/gi, "Astana"],
@@ -54,6 +57,9 @@ const ADDRESS_REPLACEMENTS: Record<Locale, Array<[RegExp, string]>> = {
     [/\bKazakhstan\b/gi, "Казахстан"],
   ],
   kz: [
+    [/\bул\.\s*([^,]+),/gi, "$1 көшесі,"],
+    [/\bпр\.\s*([^,]+),/gi, "$1 даңғылы,"],
+    [/\bпер\.\s*([^,]+),/gi, "$1 тұйық көшесі,"],
     [/\bLandmark\b/gi, "Бағдар"],
     [/\bDostyq Street\b/gi, "Достық көшесі"],
     [/\bEsil district\b/gi, "Есіл ауданы"],

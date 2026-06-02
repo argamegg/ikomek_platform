@@ -84,7 +84,7 @@ const PROBLEM_TYPES: Record<string, RequestOption[]> = {
     { id: 'other', legacyLabels: ['Other road issue'] },
   ],
   public_order: [
-    { id: 'noise', legacyLabels: ['Noise complaint'] },
+    { id: 'noise', legacyLabels: ['Noise complaint', 'Шум в ночное время', 'Түнгі уақытта шу'] },
     { id: 'illegal_parking', legacyLabels: ['Illegal parking'] },
     { id: 'vandalism', legacyLabels: ['Vandalism'] },
     { id: 'abandoned_vehicle', legacyLabels: ['Abandoned vehicle'] },
@@ -92,15 +92,15 @@ const PROBLEM_TYPES: Record<string, RequestOption[]> = {
     { id: 'other', legacyLabels: ['Other public order issue'] },
   ],
   waste: [
-    { id: 'overflowing', legacyLabels: ['Overflowing trash bin'] },
-    { id: 'illegal_dump', legacyLabels: ['Illegal dump site'] },
-    { id: 'missed_collection', legacyLabels: ['Missed garbage collection'] },
+    { id: 'overflowing', legacyLabels: ['Overflowing trash bin', 'Переполненный люк', 'Толып кеткен люк'] },
+    { id: 'illegal_dump', legacyLabels: ['Illegal dump site', 'Незаконная торговля', 'Заңсыз сауда'] },
+    { id: 'missed_collection', legacyLabels: ['Missed garbage collection', 'Мусор не вывозят', 'Мусор не вывезли', 'Қоқыс шығарылмайды'] },
     { id: 'hazardous', legacyLabels: ['Hazardous waste'] },
     { id: 'bulk_waste', legacyLabels: ['Bulk waste removal needed'] },
     { id: 'other', legacyLabels: ['Other waste issue'] },
   ],
   heating: [
-    { id: 'no_heating', legacyLabels: ['No heating'] },
+    { id: 'no_heating', legacyLabels: ['No heating', 'Нет отопления', 'Жылыту жоқ'] },
     { id: 'radiator_leak', legacyLabels: ['Radiator leak'] },
     { id: 'cold_apartment', legacyLabels: ['Cold apartment'] },
     { id: 'overheating', legacyLabels: ['Overheating'] },
@@ -108,9 +108,9 @@ const PROBLEM_TYPES: Record<string, RequestOption[]> = {
     { id: 'other', legacyLabels: ['Other heating issue'] },
   ],
   street_lighting: [
-    { id: 'lamp_out', legacyLabels: ['Lamp not working'] },
+    { id: 'lamp_out', legacyLabels: ['Lamp not working', 'Не работает уличный фонарь', 'Көше шамы істемейді'] },
     { id: 'flickering', legacyLabels: ['Flickering light'] },
-    { id: 'damaged_pole', legacyLabels: ['Damaged pole'] },
+    { id: 'damaged_pole', legacyLabels: ['Damaged pole', 'Сломан столб', 'Бағана сынған'] },
     { id: 'dark_area', legacyLabels: ['Dark area needs lighting'] },
     { id: 'timer', legacyLabels: ['Timer malfunction'] },
     { id: 'other', legacyLabels: ['Other lighting issue'] },
@@ -206,9 +206,62 @@ const prettify = (value?: string | null) => {
   return value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
+const DESCRIPTION_SUFFIXES: Record<string, { en: string; ru: string; kz: string }> = {
+  'не отрегулирован клапан': {
+    en: 'The valve has not been adjusted.',
+    ru: 'Не отрегулирован клапан.',
+    kz: 'Клапан реттелмеген.',
+  },
+  'нарушение графика вывоза': {
+    en: 'Collection schedule violation.',
+    ru: 'Нарушение графика вывоза.',
+    kz: 'Қоқыс шығару кестесі бұзылған.',
+  },
+  'засор трубы': {
+    en: 'Pipe blockage.',
+    ru: 'Засор трубы.',
+    kz: 'Құбыр бітелген.',
+  },
+  'неизвестный нарушитель': {
+    en: 'Unknown offender.',
+    ru: 'Неизвестный нарушитель.',
+    kz: 'Бұзушы белгісіз.',
+  },
+  'плановые работы не завершены': {
+    en: 'Scheduled work has not been completed.',
+    ru: 'Плановые работы не завершены.',
+    kz: 'Жоспарлы жұмыстар аяқталмаған.',
+  },
+};
+
 const translate = (t: TranslationFn, key: string, fallback?: string) => {
   const value = t(key);
   return value === key ? fallback || key : value;
+};
+
+const getLocaleFromTranslation = (t: TranslationFn): 'en' | 'ru' | 'kz' => {
+  const author = t('requests.author').toLowerCase();
+  if (author === 'author') return 'en';
+  if (author === 'автор') return 'ru';
+  return 'kz';
+};
+
+const formatLegacyAddress = (address: string, locale: 'en' | 'ru' | 'kz') => {
+  if (locale === 'en') {
+    return address
+      .replace(/\bул\.\s*([^,]+),/gi, '$1 Street,')
+      .replace(/\bпр\.\s*([^,]+),/gi, '$1 Avenue,')
+      .replace(/\bпер\.\s*([^,]+),/gi, '$1 Lane,');
+  }
+
+  if (locale === 'kz') {
+    return address
+      .replace(/\bул\.\s*([^,]+),/gi, '$1 көшесі,')
+      .replace(/\bпр\.\s*([^,]+),/gi, '$1 даңғылы,')
+      .replace(/\bпер\.\s*([^,]+),/gi, '$1 тұйық көшесі,');
+  }
+
+  return address;
 };
 
 const resolveOptionId = (options: RequestOption[], value?: string | null) => {
@@ -309,6 +362,26 @@ export const localizeRequestDescription = (
     if (localizedLeft !== parts[0] || localizedRight !== parts[1]) {
       return `${localizedLeft} - ${localizedRight}`;
     }
+  }
+
+  const addressMatch = description.match(/^(.+?)\s+по\s+адресу\s+(.+)\.\s+(.+)$/i);
+  if (addressMatch) {
+    const [, rawProblem, rawAddress, rawSuffix] = addressMatch;
+    const locale = getLocaleFromTranslation(t);
+    const localizedProblem = localizeRequestProblemType(categoryId, rawProblem, t);
+    const localizedAddress = formatLegacyAddress(rawAddress, locale);
+    const suffixKey = normalize(rawSuffix).replace(/[.!?]+$/g, '');
+    const localizedSuffix = DESCRIPTION_SUFFIXES[suffixKey]?.[locale] || rawSuffix;
+
+    if (locale === 'en') {
+      return `${localizedProblem} at ${localizedAddress}. ${localizedSuffix}`;
+    }
+
+    if (locale === 'kz') {
+      return `${localizedAddress} мекенжайындағы ${localizedProblem.toLowerCase()}. ${localizedSuffix}`;
+    }
+
+    return `${localizedProblem} по адресу ${localizedAddress}. ${localizedSuffix}`;
   }
 
   return description;

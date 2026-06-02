@@ -306,7 +306,9 @@ async function searchAstanaAddressesWithPhoton(
 
   return (result.features ?? [])
     .map((feature, index): GeocodedAddressSuggestion | null => {
-      const [lng, lat] = feature.geometry?.coordinates ?? [];
+      const [lngValue, latValue] = feature.geometry?.coordinates ?? [];
+      const lat = typeof latValue === "number" ? latValue : Number.NaN;
+      const lng = typeof lngValue === "number" ? lngValue : Number.NaN;
       if (!Number.isFinite(lat) || !Number.isFinite(lng) || !isInsideAstanaSearchBounds(lat, lng)) {
         return null;
       }

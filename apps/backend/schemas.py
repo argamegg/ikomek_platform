@@ -112,14 +112,30 @@ class RequestModel(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     user_id: str
     citizen_name: Optional[str] = None
+    citizen_name_en: Optional[str] = None
     category_id: str
     category_name: str
+    category_name_ru: Optional[str] = None
+    category_name_kz: Optional[str] = None
+    category_name_en: Optional[str] = None
     address: str
+    address_ru: Optional[str] = None
+    address_kz: Optional[str] = None
+    address_en: Optional[str] = None
     latitude: float
     longitude: float
     place_type: Optional[str] = None
+    place_type_ru: Optional[str] = None
+    place_type_kz: Optional[str] = None
+    place_type_en: Optional[str] = None
     problem_type: str
+    problem_type_ru: Optional[str] = None
+    problem_type_kz: Optional[str] = None
+    problem_type_en: Optional[str] = None
     reason: str
+    reason_ru: Optional[str] = None
+    reason_kz: Optional[str] = None
+    reason_en: Optional[str] = None
     description: Optional[str] = None
     description_ru: Optional[str] = None
     description_kz: Optional[str] = None

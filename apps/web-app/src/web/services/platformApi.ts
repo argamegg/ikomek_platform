@@ -279,11 +279,7 @@ function canUseRequestInteraction(user: User | null, request: CivicRequest) {
     return false;
   }
 
-  if (user.roles.some((role) => role === "operator" || role === "admin")) {
-    return true;
-  }
-
-  return request.citizenId === user.id;
+  return Boolean(request.id);
 }
 
 function normalizeRegistrationChallenge(payload: unknown): AuthRegistrationChallenge {
