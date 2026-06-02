@@ -659,9 +659,11 @@ export function HomePage() {
                   <div className="home-hero__signal-top">
                     <span className="home-hero__signal-type">
                       <MapPinned size={14} />
-                      {request.statusLabel
-                        ? localizeRequestStatus(request.statusLabel, t)
-                        : getLocalizedRequestStatus(request.status)}
+                      <span className="home-hero__signal-type-label">
+                        {request.statusLabel
+                          ? localizeRequestStatus(request.statusLabel, t)
+                          : getLocalizedRequestStatus(request.status)}
+                      </span>
                     </span>
                     <span className="home-hero__signal-category">
                       {localizeRequestCategory(request.categoryId || request.categoryName, t)}

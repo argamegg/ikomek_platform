@@ -1047,12 +1047,17 @@ button {
 .ui-badge {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
+  min-height: 28px;
   padding: 6px 10px;
   border-radius: 999px;
   font-size: 0.78rem;
   font-weight: 700;
+  line-height: 1;
   text-transform: capitalize;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .ui-badge--neutral {
@@ -1063,6 +1068,7 @@ button {
 .ui-badge--warning {
   background: rgba(245, 158, 11, 0.12);
   color: #b45309;
+  padding-inline: 14px 16px;
 }
 
 .ui-badge--success {
@@ -3761,6 +3767,19 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.request-tile__header .ui-badge {
+  min-height: 34px;
+  padding: 0 16px;
+  gap: 10px;
+  font-size: 0.9rem;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.request-tile__header .ui-badge svg {
+  flex: 0 0 auto;
 }
 
 .request-tile__body {
@@ -6760,11 +6779,16 @@ button {
 .home-hero__signal-category {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
   border-radius: 999px;
-  padding: 7px 10px;
+  padding: 9px 14px;
   font-size: 0.76rem;
   font-weight: 700;
+}
+
+.home-hero__signal-type svg,
+.home-hero__signal-category svg {
+  flex: 0 0 auto;
 }
 
 .home-hero__signal-type {
@@ -6773,7 +6797,13 @@ button {
 }
 
 .home-hero__signal-category {
-  background: rgba(15, 23, 42, 0.88);
+  background: linear-gradient(135deg, var(--primary) 0%, #ff934d 100%);
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(255, 107, 0, 0.22);
+}
+
+.home-hero__signal-top .home-hero__signal-category,
+.home-hero__signal .home-hero__signal-category {
   color: #fff;
 }
 
@@ -6784,6 +6814,33 @@ button {
 
 .home-hero__signal span {
   color: var(--text-faint);
+}
+
+.home-hero__signal .home-hero__signal-type {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  gap: 12px;
+  padding: 0 16px;
+  background: rgba(255, 237, 226, 0.92);
+  color: #4f6b88;
+  font-size: 0.9rem;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.home-hero__signal .home-hero__signal-type svg {
+  flex: 0 0 auto;
+  color: currentColor;
+}
+
+.home-hero__signal .home-hero__signal-type-label {
+  display: inline-flex;
+  align-items: center;
+  color: inherit;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .home-hero__visual-footer {
@@ -9533,6 +9590,156 @@ button {
     min-height: 32px;
     padding: 6px 10px;
     font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 1024px) {
+  .cabinet-page {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    gap: 18px;
+    overflow: hidden;
+  }
+
+  .cabinet-main,
+  .cabinet-profile-card,
+  .cabinet-section {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .cabinet-main {
+    display: grid;
+    gap: 18px;
+  }
+
+  .cabinet-profile-card {
+    position: static;
+    top: auto;
+    margin: 0;
+  }
+
+  .cabinet-profile-card h1,
+  .cabinet-profile-card span,
+  .cabinet-profile-meta strong,
+  .cabinet-profile-meta span,
+  .cabinet-section h2 {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 767px) {
+  .cabinet-page {
+    gap: 16px;
+  }
+
+  .cabinet-profile-card {
+    gap: 18px;
+    padding: 20px;
+    border-radius: 24px;
+  }
+
+  .cabinet-profile-card__top {
+    width: 100%;
+    text-align: center;
+  }
+
+  .cabinet-avatar {
+    width: 86px;
+    height: 86px;
+    font-size: 1.55rem;
+  }
+
+  .cabinet-profile-card h1 {
+    font-size: clamp(1.55rem, 7vw, 2rem);
+    line-height: 1.08;
+  }
+
+  .cabinet-profile-card > .ui-button,
+  .cabinet-logout {
+    width: 100%;
+  }
+
+  .cabinet-profile-meta {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .cabinet-profile-meta div {
+    align-items: center;
+  }
+
+  .cabinet-section {
+    padding: 18px;
+    border-radius: 24px;
+  }
+
+  .cabinet-section__header {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 900px) and (max-height: 560px) and (orientation: landscape) {
+  .cabinet-page {
+    gap: 14px;
+  }
+
+  .cabinet-profile-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 14px;
+    align-items: center;
+    padding: 16px;
+  }
+
+  .cabinet-profile-card__top {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    justify-items: start;
+    gap: 8px 14px;
+    text-align: left;
+  }
+
+  .cabinet-profile-card__top .cabinet-kicker,
+  .cabinet-profile-card__top h1,
+  .cabinet-profile-card__top span {
+    grid-column: 2;
+  }
+
+  .cabinet-avatar {
+    grid-row: 1 / span 3;
+    width: 64px;
+    height: 64px;
+    font-size: 1.2rem;
+  }
+
+  .cabinet-profile-card h1 {
+    font-size: 1.35rem;
+  }
+
+  .cabinet-profile-meta {
+    grid-column: 1;
+    justify-self: start;
+    width: auto;
+    min-width: min(320px, 100%);
+    padding: 12px 14px;
+  }
+
+  .cabinet-profile-card > .ui-button,
+  .cabinet-logout {
+    grid-column: 2;
+    width: max-content;
+    min-width: 150px;
+    justify-self: end;
+  }
+
+  .cabinet-section {
+    padding: 16px;
   }
 }
 
