@@ -65,14 +65,7 @@ export function RequestChatPage() {
     refetchInterval: currentUser ? 30_000 : false,
   });
   const request = requestQuery.data;
-  const canUseChat = Boolean(
-    request &&
-      currentUser &&
-      (
-        currentUser.roles.some((role) => role === "operator" || role === "admin") ||
-        currentUser.id === request.citizenId
-      ),
-  );
+  const canUseChat = Boolean(request && currentUser);
   const messagesQuery = useQuery({
     queryKey: messagesQueryKey,
     queryFn: () => platformApi.getRequestMessages(requestId),

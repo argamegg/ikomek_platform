@@ -17,6 +17,7 @@ from helpers import (
 )
 from schemas import ROLE_ADMIN, ROLE_OPERATOR, Priority, RequestCreate, RequestModel, StatusUpdate
 from services.translation import translate_to_all_languages
+from request_localization import build_request_translations, localize_request_payload
 
 router = APIRouter()
 MAP_REQUEST_LIMIT = 1000
@@ -127,7 +128,8 @@ def _date_range_query(date_from: Optional[str], date_to: Optional[str], default_
 
     return {"created_at": created_at} if created_at else {}
 
-def _map_request_document(request: dict, current_user: Optional[dict] = None) -> dict:
+def _map_request_document(request: dict, current_user: Optional[dict] = None, lang: str = "ru") -> dict:
+    request = localize_request_payload(request, lang)
     role = current_user.get("role") if current_user else None
     is_staff = role in {ROLE_OPERATOR, ROLE_ADMIN}
     is_mine = bool(current_user and request.get("user_id") == current_user.get("id"))
@@ -167,6 +169,15 @@ def _map_projection() -> dict:
         "address": 1,
         "created_at": 1,
         "problem_type": 1,
+        "problem_type_ru": 1,
+        "problem_type_kz": 1,
+        "problem_type_en": 1,
+        "address_ru": 1,
+        "address_kz": 1,
+        "address_en": 1,
+        "category_name_ru": 1,
+        "category_name_kz": 1,
+        "category_name_en": 1,
     }
 
 def _last_six_month_keys():
@@ -237,7 +248,9 @@ async def create_request(request_data: RequestCreate, current_user: dict = Depen
         source_lang=source_lang,
         photos=request_data.photos
     )
-    await db.requests.insert_one(request_obj.dict())
+    request_dict = request_obj.dict()
+    request_dict.update(build_request_translations(request_dict))
+    await db.requests.insert_one(request_dict)
     return request_obj
 
 @router.get("/requests", response_model=List[RequestModel])
@@ -273,7 +286,7 @@ async def get_all_requests(
     
     requests = await cursor.to_list(limit if limit > 0 else None)
     if map:
-        return [_map_request_document(req, current_user) for req in requests]
+        return [_map_request_document(req, current_user, lang) for req in requests]
 
     requests = await attach_citizen_names(requests)
     return [RequestModel(**visible_request_document(req, lang, current_user)) for req in requests]
@@ -285,6 +298,7 @@ async def get_map_requests(
     category: Optional[str] = None,
     status: Optional[str] = None,
     limit: int = MAP_REQUEST_LIMIT,
+    lang: str = "ru",
     current_user: Optional[dict] = Depends(get_optional_current_user),
 ):
     query = _date_range_query(date_from, date_to, default_last_days=7)
@@ -299,7 +313,7 @@ async def get_map_requests(
         cursor = cursor.limit(safe_limit)
 
     requests = await cursor.to_list(safe_limit if safe_limit > 0 else None)
-    return [_map_request_document(req, current_user) for req in requests]
+    return [_map_request_document(req, current_user, lang) for req in requests]
 
 @router.get("/requests/{request_id}", response_model=RequestModel)
 async def get_request(
@@ -386,6 +400,27 @@ async def get_admin_platform_stats(current_user: dict = Depends(get_current_user
             for month in month_keys
         ],
         "operators_workload": operators_workload,
+    }
+
+@router.post("/admin/requests/translate-existing")
+async def translate_existing_requests(current_user: dict = Depends(require_role([ROLE_ADMIN]))):
+    cursor = db.requests.find({})
+    updated = 0
+    scanned = 0
+
+    async for request in cursor:
+        scanned += 1
+        translations = build_request_translations(request)
+        await db.requests.update_one(
+            {"id": request.get("id")},
+            {"$set": translations},
+        )
+        updated += 1
+
+    return {
+        "message": "Request translations refreshed",
+        "scanned": scanned,
+        "updated": updated,
     }
 
 @router.get("/operator/my-stats")
