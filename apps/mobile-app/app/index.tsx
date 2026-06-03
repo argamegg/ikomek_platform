@@ -30,6 +30,11 @@ export default function Index() {
   useEffect(() => {
     if (!isLoading) {
       if (isAuthenticated && user) {
+        if (user.has_local_password === false) {
+          router.replace('/(auth)/login');
+          return;
+        }
+
         router.replace(getRedirectPath(user.role) as any);
       } else {
         router.replace('/(auth)/login');

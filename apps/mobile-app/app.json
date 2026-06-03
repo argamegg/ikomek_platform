@@ -51,7 +51,9 @@
       ],
       "@maplibre/maplibre-react-native",
       "expo-video",
-      "expo-web-browser"
+      "expo-web-browser",
+      "@clerk/expo",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true

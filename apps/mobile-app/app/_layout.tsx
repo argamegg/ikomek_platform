@@ -3,6 +3,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
+import { OptionalClerkProvider } from '../src/context/ClerkContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, ActivityIndicator, Animated, Easing, StyleSheet } from 'react-native';
@@ -39,6 +40,7 @@ function RootLayoutContent() {
   const dataLoaded = !isLoading;
   const transitionReady = nativeSplashHidden && videoFinished && dataLoaded;
   const shouldShowSpinner = nativeSplashHidden && videoFinished && !dataLoaded && !splashDismissed;
+  const needsLocalPassword = isAuthenticated && user?.has_local_password === false;
 
   useEffect(() => {
     if (isLoading) return;
@@ -53,10 +55,17 @@ function RootLayoutContent() {
       return;
     }
 
+    if (needsLocalPassword) {
+      if (!inAuthGroup) {
+        router.replace('/(auth)/login');
+      }
+      return;
+    }
+
     if (inAuthGroup) {
       router.replace(getRedirectPath(user.role) as any);
     }
-  }, [isAuthenticated, isLoading, router, segments, user]);
+  }, [isAuthenticated, isLoading, needsLocalPassword, router, segments, user]);
 
   useEffect(() => {
     setIsJsReady(true);
@@ -155,11 +164,13 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <AuthProvider>
-          <AppBackground>
-            <RootLayoutContent />
-          </AppBackground>
-        </AuthProvider>
+        <OptionalClerkProvider>
+          <AuthProvider>
+            <AppBackground>
+              <RootLayoutContent />
+            </AppBackground>
+          </AuthProvider>
+        </OptionalClerkProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

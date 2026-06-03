@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios, { isAxiosError } from 'axios';
 import Constants from 'expo-constants';
 import i18n from '../i18n';
+import { signOutClerkIfAvailable } from './ClerkContext';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.backendUrl || '';
 const PENDING_VERIFICATION_KEY = 'pendingVerification';
@@ -18,6 +19,7 @@ export interface User {
   avatar_url?: string;
   role: 'citizen' | 'operator' | 'admin';
   language: string;
+  has_local_password?: boolean;
   created_at: string;
 }
 
@@ -41,6 +43,16 @@ type LoginResult =
   | { status: 'authenticated' }
   | { status: 'verification_required'; pendingVerification: PendingVerification };
 
+export interface ClerkLoginInput {
+  token: string;
+  email?: string;
+  fullName?: string;
+  phone?: string;
+  gender?: string;
+  birthDate?: string;
+  avatarUrl?: string;
+}
+
 interface AuthContextType {
   user: User | null;
   token: string | null;
@@ -48,11 +60,13 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<LoginResult>;
+  loginWithClerk: (payload: ClerkLoginInput) => Promise<LoginResult>;
   register: (email: string, password: string, fullName: string, phone?: string) => Promise<PendingVerification>;
   verifyEmailCode: (code: string) => Promise<void>;
   resendVerificationCode: () => Promise<PendingVerification>;
   clearPendingVerification: () => Promise<void>;
   logout: () => Promise<void>;
+  setLocalPassword: (newPassword: string) => Promise<void>;
   updateProfile: (payload: ProfileUpdateInput) => Promise<void>;
   updateLanguage: (language: string) => Promise<void>;
   isCitizen: boolean;
@@ -141,6 +155,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await AsyncStorage.removeItem(PENDING_VERIFICATION_KEY);
   };
 
+  const persistAuthenticatedUser = async (accessToken: string, userData: User) => {
+    await AsyncStorage.setItem('token', accessToken);
+    await AsyncStorage.setItem('user', JSON.stringify(userData));
+    await AsyncStorage.setItem('language', userData.language || 'ru');
+    await persistPendingVerification(null);
+
+    setToken(accessToken);
+    setUser(userData);
+    i18n.changeLanguage(userData.language || 'ru');
+  };
+
   const login = async (email: string, password: string) => {
     try {
       const response = await axios.post(`${API_URL}/api/auth/login`, {
@@ -149,15 +174,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       const { access_token, user: userData } = response.data;
-
-      await AsyncStorage.setItem('token', access_token);
-      await AsyncStorage.setItem('user', JSON.stringify(userData));
-      await AsyncStorage.setItem('language', userData.language || 'ru');
-      await persistPendingVerification(null);
-
-      setToken(access_token);
-      setUser(userData);
-      i18n.changeLanguage(userData.language || 'ru');
+      await persistAuthenticatedUser(access_token, userData);
 
       return { status: 'authenticated' as const };
     } catch (error) {
@@ -172,6 +189,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       throw error;
     }
+  };
+
+  const loginWithClerk = async (payload: ClerkLoginInput) => {
+    const response = await axios.post(`${API_URL}/api/auth/clerk`, {
+      token: payload.token,
+      email: payload.email,
+      full_name: payload.fullName,
+      phone: payload.phone,
+      gender: payload.gender,
+      birth_date: payload.birthDate,
+      avatar_url: payload.avatarUrl,
+    });
+
+    const { access_token, user: userData } = response.data;
+    await persistAuthenticatedUser(access_token, userData);
+
+    return { status: 'authenticated' as const };
   };
 
   const register = async (email: string, password: string, fullName: string, phone?: string) => {
@@ -199,15 +233,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     const { access_token, user: userData } = response.data;
-
-    await AsyncStorage.setItem('token', access_token);
-    await AsyncStorage.setItem('user', JSON.stringify(userData));
-    await AsyncStorage.setItem('language', userData.language || 'ru');
-    await persistPendingVerification(null);
-
-    setToken(access_token);
-    setUser(userData);
-    i18n.changeLanguage(userData.language || 'ru');
+    await persistAuthenticatedUser(access_token, userData);
   };
 
   const resendVerificationCode = async () => {
@@ -229,12 +255,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
+    await signOutClerkIfAvailable();
     await AsyncStorage.removeItem('token');
     await AsyncStorage.removeItem('user');
     await AsyncStorage.removeItem(PENDING_VERIFICATION_KEY);
     setToken(null);
     setUser(null);
     setPendingVerification(null);
+  };
+
+  const setLocalPassword = async (newPassword: string) => {
+    if (!token) return;
+
+    const response = await axios.put(
+      `${API_URL}/api/auth/local-password`,
+      { new_password: newPassword },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    const updatedUser = response.data;
+    setUser(updatedUser);
+    await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
   const updateProfile = async (payload: ProfileUpdateInput) => {
@@ -298,11 +339,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isLoading,
         isAuthenticated: !!token && !!user,
         login,
+        loginWithClerk,
         register,
         verifyEmailCode,
         resendVerificationCode,
         clearPendingVerification,
         logout,
+        setLocalPassword,
         updateProfile,
         updateLanguage,
         isCitizen,
