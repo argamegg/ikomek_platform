@@ -6,6 +6,7 @@ from typing import Optional
 import httpx
 
 from core.config import db
+from request_localization import PROBLEM_LABELS, REASON_LABELS, localize_address
 from schemas import ROLE_ADMIN, ROLE_OPERATOR
 
 
@@ -26,6 +27,14 @@ IKOMEK_RELEVANCE_KEYWORDS = {
     "әкімдік",
     "жкх",
     "заяв",
+    "главная",
+    "главную",
+    "домой",
+    "home",
+    "homepage",
+    "main page",
+    "басты",
+    "басты бет",
     "икөмек",
     "ikomek",
     "i-komek",
@@ -289,6 +298,16 @@ def localize_action_label(action: str, locale: Optional[str]) -> str:
             "kz": "Менің өтінімдерімді ашу",
             "en": "Open my requests",
         },
+        "public_requests": {
+            "ru": "Открыть обращения",
+            "kz": "Өтініштерді ашу",
+            "en": "Open requests",
+        },
+        "home": {
+            "ru": "Открыть главную",
+            "kz": "Басты бетті ашу",
+            "en": "Open home",
+        },
     }
     return labels[action][language]
 
@@ -450,6 +469,54 @@ def my_requests_reply(locale: Optional[str], authenticated: bool) -> str:
     )
 
 
+def public_requests_reply(locale: Optional[str]) -> str:
+    language = normalize_locale(locale)
+    if language == "kz":
+        return (
+            "Қалалық өтініштер “Өтініштер” бөлімінде орналасқан.\n\n"
+            "Ол жерде азаматтардың жария өтініштері көрсетіледі: мәртебесі, күні, мекенжайы және қысқаша сипаттамасы. "
+            "Керек өтінішті ашсаңыз, толық ақпаратын көре аласыз.\n\n"
+            "Төмендегі батырма өтініштер бөлімін ашады."
+        )
+    if language == "en":
+        return (
+            "Citizen requests are in the “Requests” section.\n\n"
+            "There you can see public city requests from residents: status, date, address, and short description. "
+            "Open a card to view the details.\n\n"
+            "Use the button below to open the requests section."
+        )
+    return (
+        "Обращения граждан находятся в разделе “Обращения”.\n\n"
+        "Там отображаются публичные заявки жителей: статус, дата, адрес и краткое описание. "
+        "Нажмите на нужную карточку, чтобы открыть детали обращения.\n\n"
+        "Кнопка ниже откроет раздел обращений."
+    )
+
+
+def home_reply(locale: Optional[str]) -> str:
+    language = normalize_locale(locale)
+    if language == "kz":
+        return (
+            "“Басты бет” сол жақтағы мәзірде орналасқан.\n\n"
+            "Сол жақ панельден “Басты бет” тармағын бассаңыз, сайттың негізгі беті ашылады. "
+            "Онда iKOMEK туралы негізгі ақпарат, қалалық өтініштерге жылдам өту және маңызды бөлімдер көрсетіледі.\n\n"
+            "Төмендегі батырма басты бетті ашады."
+        )
+    if language == "en":
+        return (
+            "The Home page is in the left sidebar.\n\n"
+            "Click “Home” in the left menu to open the main page. It shows the main iKOMEK overview, quick access to city requests, "
+            "and the key platform sections.\n\n"
+            "Use the button below to open Home."
+        )
+    return (
+        "Главная страница находится слева в меню.\n\n"
+        "Нажмите “Главная” на левой панели, чтобы открыть основной экран сайта. Там показана основная информация iKOMEK, "
+        "быстрый переход к обращениям и важные разделы платформы.\n\n"
+        "Кнопка ниже откроет главную страницу."
+    )
+
+
 def request_status_reply(locale: Optional[str], authenticated: bool) -> str:
     language = normalize_locale(locale)
     if language == "kz":
@@ -605,7 +672,7 @@ def detect_message_locale(message: str) -> Optional[str]:
         return None
     tokens = message_token_set(message)
     if is_shared_cyrillic_only(message):
-        return None
+        return "ru" if has_cyrillic_text(message) else None
 
     kazakh_fuzzy_words = {
         "баптаулар",
@@ -730,6 +797,10 @@ def is_shared_cyrillic_only(message: str) -> bool:
     return bool(tokens) and tokens <= SHARED_CYRILLIC_TERMS
 
 
+def has_cyrillic_text(message: str) -> bool:
+    return bool(re.search(r"[а-яәғқңөұүһі]", message.casefold()))
+
+
 def language_switch_reply(message_locale: str, site_locale: str) -> str:
     site_labels = {
         "ru": {"ru": "русский", "kz": "орыс тілі", "en": "Russian"},
@@ -764,7 +835,7 @@ def language_switch_reply(message_locale: str, site_locale: str) -> str:
 def should_show_language_switch(message: str, message_locale: str, site_locale: str) -> bool:
     if message_locale == site_locale:
         return False
-    if is_shared_cyrillic_only(message):
+    if is_shared_cyrillic_only(message) and site_locale != "en":
         return False
     return True
 
@@ -963,11 +1034,30 @@ REQUEST_NOUN_WORDS = {
     "обращения",
     "обращению",
     "обращении",
+    "проблема",
+    "проблему",
+    "проблемы",
+    "проблем",
     "request",
+    "issue",
+    "problem",
+    "complaint",
     "өтінім",
+    "өтінімді",
     "отиним",
+    "отинимди",
     "өтініш",
+    "өтінішті",
     "отиниш",
+    "отиништи",
+    "мәселе",
+    "мәселені",
+    "мәселелер",
+    "мәселелерді",
+    "маселе",
+    "маселени",
+    "маселелер",
+    "маселелерди",
 }
 
 CREATE_ACTION_WORDS = {
@@ -983,10 +1073,19 @@ CREATE_ACTION_WORDS = {
     "submit",
     "send",
     "беру",
-    "жасау",
     "жіберу",
+    "жібер",
+    "жіберді",
+    "жіберем",
+    "жіберуге",
+    "жібереді",
+    "жиберу",
+    "жибер",
+    "жибереди",
+    "жасау",
     "құру",
     "қалдыру",
+    "қалай",
 }
 
 PHOTO_WORDS = {
@@ -1140,6 +1239,13 @@ IKOMEK_FUZZY_WORDS = REQUEST_NOUN_WORDS | PHOTO_WORDS | KAZAKH_DOMAIN_WORDS | {
     "чат",
     "пароль",
     "баптаулар",
+    "главная",
+    "главную",
+    "домой",
+    "home",
+    "homepage",
+    "басты",
+    "басты бет",
 }
 
 
@@ -1166,12 +1272,17 @@ def has_create_request_intent(message: str) -> bool:
     if not has_request_noun:
         return False
 
-    if has_my_requests_intent(message) or has_request_status_intent(message):
-        return False
     if has_request_address_intent(message) or has_request_photo_attachment_intent(message):
         return False
 
-    return has_fuzzy_word(message, CREATE_ACTION_WORDS, 1)
+    has_create_action = has_fuzzy_word(message, CREATE_ACTION_WORDS, 1)
+    if not has_create_action:
+        return False
+
+    if has_request_status_intent(message):
+        return False
+
+    return True
 
 
 def has_greeting_intent(message: str) -> bool:
@@ -1214,7 +1325,7 @@ def has_language_intent(message: str) -> bool:
     return any(keyword in normalized for keyword in LANGUAGE_KEYWORDS) or has_fuzzy_word(
         message,
         {"язык", "language", "тіл", "тил", "қазақ", "казак", "ағылшын"},
-        2,
+        1,
     )
 
 
@@ -1229,9 +1340,93 @@ def has_password_intent(message: str) -> bool:
 
 def has_my_requests_intent(message: str) -> bool:
     normalized = message.casefold()
+    if has_create_request_intent(message) or has_public_requests_intent(message) or has_latest_requests_intent(message):
+        return False
     if any(keyword in normalized for keyword in ["мои заяв", "мои обращ", "my requests", "менің өтінім"]):
         return True
     return has_fuzzy_word(message, REQUEST_NOUN_WORDS, 2) and has_fuzzy_word(message, VIEW_REQUEST_WORDS, 2)
+
+
+def has_public_requests_intent(message: str) -> bool:
+    normalized = message.casefold()
+    public_markers = (
+        "чуж",
+        "все заяв",
+        "все обращ",
+        "общие заяв",
+        "общие обращ",
+        "публичные заяв",
+        "публичные обращ",
+        "обращения граждан",
+        "заявки граждан",
+        "заявки жителей",
+        "обращения жителей",
+        "не мои заяв",
+        "не мои обращ",
+        "all requests",
+        "public requests",
+        "citizen requests",
+    )
+    return has_fuzzy_word(message, REQUEST_NOUN_WORDS, 2) and any(marker in normalized for marker in public_markers)
+
+
+def has_latest_requests_intent(message: str) -> bool:
+    normalized = message.casefold()
+    latest_markers = (
+        "последние заяв",
+        "последние обращ",
+        "последние проблем",
+        "последние 5 заяв",
+        "последние 5 обращ",
+        "последние 5 проблем",
+        "свежие заяв",
+        "свежие обращ",
+        "свежие проблем",
+        "новые заявки",
+        "новые обращения",
+        "новые проблемы",
+        "latest requests",
+        "latest issues",
+        "latest problems",
+        "recent requests",
+        "recent issues",
+        "recent problems",
+        "last requests",
+        "last issues",
+        "last problems",
+        "соңғы өтін",
+        "сонгы отин",
+        "соңғы өтініш",
+        "сонгы отиниш",
+        "соңғы мәселе",
+        "сонгы маселе",
+        "соңғы 5 өтін",
+        "сонгы 5 отин",
+        "соңғы 5 мәселе",
+        "сонгы 5 маселе",
+    )
+    return has_fuzzy_word(message, REQUEST_NOUN_WORDS, 2) and any(marker in normalized for marker in latest_markers)
+
+
+def has_home_intent(message: str) -> bool:
+    normalized = message.casefold()
+    home_markers = (
+        "главная",
+        "главную",
+        "на главную",
+        "домой",
+        "главная страница",
+        "home",
+        "homepage",
+        "main page",
+        "home page",
+        "басты бет",
+        "басты",
+        "үй бет",
+        "негізгі бет",
+        "негизги бет",
+    )
+    return any(marker in normalized for marker in home_markers)
 
 
 def has_request_status_intent(message: str) -> bool:
@@ -1337,6 +1532,10 @@ async def get_recent_requests(current_user: Optional[dict], limit: int = 5) -> l
     return await db.requests.find(access_filter).sort("created_at", -1).to_list(limit)
 
 
+async def get_latest_public_requests(limit: int = 5) -> list[dict]:
+    return await db.requests.find({}).sort("created_at", -1).to_list(limit)
+
+
 def format_datetime(value) -> str:
     if isinstance(value, datetime):
         return value.strftime("%d.%m.%Y %H:%M")
@@ -1358,6 +1557,126 @@ def status_label(status: Optional[str], locale: Optional[str]) -> str:
     if not status:
         return "не указан" if language == "ru" else "not specified"
     return labels.get(status, {}).get(language, status)
+
+
+def localized_request_value(request: dict, field: str, locale: Optional[str]) -> str:
+    language = normalize_locale(locale)
+    suffix = "kz" if language == "kz" else language
+    value = request.get(f"{field}_{suffix}") or request.get(field)
+    if not value:
+        return ""
+
+    text = str(value).strip()
+    if field in {"problem_type", "reason"}:
+        return localize_taxonomy_value(text, language)
+    return text
+
+
+def localize_taxonomy_value(value: str, language: str) -> str:
+    for labels in (PROBLEM_LABELS, REASON_LABELS):
+        for russian_label, translations in labels.items():
+            if value == russian_label:
+                return translations.get(language, russian_label) if language != "ru" else russian_label
+            for translated_label in translations.values():
+                if value == translated_label:
+                    return russian_label if language == "ru" else translations.get(language, russian_label)
+    return value
+
+
+def format_latest_request_address(address: str, locale: Optional[str]) -> str:
+    language = normalize_locale(locale)
+    localized = localize_address(address, language) or address
+    without_postal_code = re.sub(r"\b[A-Z]\d{2}[A-Z]\d[A-Z]\d\b,?\s*", "", localized)
+
+    replacements = {
+        "ru": [
+            (r"\bул\.\s*([^,]+),", r"улица \1,"),
+            (r"\bпр\.\s*([^,]+),", r"проспект \1,"),
+            (r"\bпер\.\s*([^,]+),", r"переулок \1,"),
+            (r"\bLandmark\b", "Ориентир"),
+            (r"Достық көшесі", "улица Достык"),
+            (r"\bDostyq Street\b", "улица Достык"),
+            (r"\bEsil district\b", "район Есиль"),
+            (r"\bAlmaty district\b", "район Алматы"),
+            (r"\bSaryarka district\b", "район Сарыарка"),
+            (r"\bBaikonyr district\b", "район Байконыр"),
+            (r"\bAstana\b", "Астана"),
+            (r"\bKazakhstan\b", "Казахстан"),
+        ],
+        "en": [
+            (r"\bул\.\s*([^,]+),", r"\1 Street,"),
+            (r"\bпр\.\s*([^,]+),", r"\1 Avenue,"),
+            (r"\bпер\.\s*([^,]+),", r"\1 Lane,"),
+            (r"\bРеспублики Avenue\b", "Republic Avenue"),
+            (r"\bАлматы Street\b", "Almaty Street"),
+            (r"\bАбылай хана Street\b", "Abylai Khan Street"),
+            (r"\bБейбітшілік Street\b", "Beibitshilik Street"),
+            (r"Достық көшесі", "Dostyq Street"),
+            (r"Достык көшесі", "Dostyq Street"),
+            (r"\bDostyk koshesi\b", "Dostyq Street"),
+            (r"\bАстана\b", "Astana"),
+            (r"\bКазахстан\b", "Kazakhstan"),
+            (r"\bҚазақстан\b", "Kazakhstan"),
+            (r"(\d+)Б\b", r"\1B"),
+        ],
+        "kz": [
+            (r"\bул\.\s*([^,]+),", r"\1 көшесі,"),
+            (r"\bпр\.\s*([^,]+),", r"\1 даңғылы,"),
+            (r"\bпер\.\s*([^,]+),", r"\1 тұйық көшесі,"),
+            (r"\bLandmark\b", "Бағдар"),
+            (r"\bDostyq Street\b", "Достық көшесі"),
+            (r"\bEsil district\b", "Есіл ауданы"),
+            (r"\bAlmaty district\b", "Алматы ауданы"),
+            (r"\bSaryarka district\b", "Сарыарқа ауданы"),
+            (r"\bBaikonyr district\b", "Байқоңыр ауданы"),
+            (r"\bAstana\b", "Астана"),
+            (r"\bKazakhstan\b", "Қазақстан"),
+        ],
+    }
+
+    result = without_postal_code
+    for pattern, replacement in replacements[language]:
+        result = re.sub(pattern, replacement, result, flags=re.IGNORECASE)
+
+    return re.sub(r"\s{2,}", " ", result).replace(" ,", ",").strip(" ,")
+
+
+def latest_requests_reply(locale: Optional[str], requests: list[dict]) -> str:
+    language = normalize_locale(locale)
+    if not requests:
+        if language == "kz":
+            return "Қазір соңғы өтініштер табылмады."
+        if language == "en":
+            return "I could not find recent requests right now."
+        return "Сейчас не удалось найти последние обращения."
+
+    lines: list[str] = []
+    for index, request in enumerate(requests, start=1):
+        title = localized_request_value(request, "problem_type", locale) or {
+            "ru": "Без названия",
+            "kz": "Атауы жоқ",
+            "en": "Untitled",
+        }[language]
+        raw_address = localized_request_value(request, "address", locale)
+        address = format_latest_request_address(raw_address, locale) if raw_address else {
+            "ru": "адрес не указан",
+            "kz": "мекенжай көрсетілмеген",
+            "en": "address not specified",
+        }[language]
+        status = status_label(request.get("status"), locale)
+        created_at = format_datetime(request.get("created_at"))
+        if language == "kz":
+            lines.append(f"{index}. {title} — мекенжай: {address}; мәртебе: {status}; құрылған: {created_at}.")
+        elif language == "en":
+            lines.append(f"{index}. {title} — address: {address}; status: {status}; created: {created_at}.")
+        else:
+            lines.append(f"{index}. {title} — адрес: {address}; статус: {status}; создано: {created_at}.")
+
+    if language == "kz":
+        return "Соңғы 5 өтініш:\n\n" + "\n".join(lines)
+    if language == "en":
+        return "Latest 5 requests:\n\n" + "\n".join(lines)
+    return "Последние 5 обращений:\n\n" + "\n".join(lines)
 
 
 def summarize_request(request: dict, locale: Optional[str], include_internal: bool = False) -> str:
@@ -1512,7 +1831,31 @@ async def build_site_context(
             ),
         )
 
-    if has_my_requests_intent(message) or has_request_status_intent(message):
+    if has_public_requests_intent(message) or has_latest_requests_intent(message):
+        notes.append("Public requests page shows citizen requests, statuses, dates, addresses and request details.")
+        add_action(
+            actions,
+            build_action(
+                localize_action_label("public_requests", locale),
+                "/requests",
+                "/(tabs)/requests",
+            ),
+        )
+
+    if has_home_intent(message):
+        notes.append("Home page is available from the left sidebar and opens the main platform overview.")
+        add_action(
+            actions,
+            build_action(
+                localize_action_label("home", locale),
+                "/",
+                "/(tabs)",
+            ),
+        )
+
+    if (has_my_requests_intent(message) or has_request_status_intent(message)) and not (
+        has_create_request_intent(message) or has_public_requests_intent(message) or has_latest_requests_intent(message)
+    ):
         notes.append("My requests page shows the user's request list, statuses, dates, addresses and request details.")
         add_action(
             actions,
@@ -1603,7 +1946,7 @@ async def build_site_context(
             ),
         )
 
-    if has_request_lookup_intent(message):
+    if has_request_lookup_intent(message) and not has_create_request_intent(message):
         references = extract_request_references(message)
         matched_requests = await find_requests_by_references(references, current_user) if references else []
         if references and matched_requests:
@@ -1710,6 +2053,9 @@ async def generate_ai_assistant_reply(
             has_profile_intent(message),
             has_language_intent(message),
             has_password_intent(message),
+            has_public_requests_intent(message),
+            has_latest_requests_intent(message),
+            has_home_intent(message),
             has_my_requests_intent(message),
             has_request_status_intent(message),
             has_request_address_intent(message),
@@ -1729,20 +2075,30 @@ async def generate_ai_assistant_reply(
     if not (is_ikomek_related(message) or has_specific_site_intent):
         return out_of_scope_reply(response_locale), True, model, actions
 
+    if has_home_intent(message):
+        return home_reply(response_locale), bool(api_key), model, actions
+
+    if has_latest_requests_intent(message):
+        latest_requests = await get_latest_public_requests(5)
+        return latest_requests_reply(response_locale, latest_requests), bool(api_key), model, actions
+
+    if has_public_requests_intent(message):
+        return public_requests_reply(response_locale), bool(api_key), model, actions
+
     if has_request_photo_attachment_intent(message):
         return request_photo_reply(response_locale, bool(current_user)), bool(api_key), model, actions
 
     if has_request_address_intent(message):
         return request_address_reply(response_locale, bool(current_user)), bool(api_key), model, actions
 
+    if has_create_request_intent(message):
+        return create_request_reply(response_locale, bool(current_user)), bool(api_key), model, actions
+
     if has_request_status_intent(message):
         return request_status_reply(response_locale, bool(current_user)), bool(api_key), model, actions
 
     if has_my_requests_intent(message):
         return my_requests_reply(response_locale, bool(current_user)), bool(api_key), model, actions
-
-    if has_create_request_intent(message):
-        return create_request_reply(response_locale, bool(current_user)), bool(api_key), model, actions
 
     if has_profile_photo_intent(message):
         return profile_photo_reply(response_locale, bool(current_user)), bool(api_key), model, actions
