@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useTranslation } from 'react-i18next';
+import { isAxiosError } from 'axios';
 import {
   LocationPickerMap,
   type LocationPickerCoordinate,
@@ -119,7 +120,12 @@ export default function LocationScreen() {
       const response = await apiService.getSavedLocations();
       setSavedLocations(response.data);
     } catch (error) {
-      console.error('Saved locations error:', error);
+      if (isAxiosError(error) && error.response?.status === 401) {
+        setSavedLocations([]);
+        return;
+      }
+
+      console.warn('Unable to fetch saved locations:', error);
     }
   }, []);
 

@@ -20,6 +20,7 @@ import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { isAxiosError } from 'axios';
 import {
   LocationPickerMap,
   type LocationPickerCoordinate,
@@ -60,7 +61,7 @@ const LANGUAGES = [
 
 export default function SettingsScreen() {
   const { t, i18n } = useTranslation();
-  const { user, logout, updateLanguage, isCitizen } = useAuth();
+  const { user, token, logout, updateLanguage, isCitizen } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]);
@@ -91,19 +92,27 @@ export default function SettingsScreen() {
     : null;
 
   const fetchLocations = useCallback(async () => {
+    if (!token || !isCitizen) {
+      setSavedLocations([]);
+      return;
+    }
+
     try {
       const response = await apiService.getSavedLocations();
       setSavedLocations(response.data);
     } catch (error) {
-      console.error('Error fetching locations:', error);
+      if (isAxiosError(error) && error.response?.status === 401) {
+        setSavedLocations([]);
+        return;
+      }
+
+      console.warn('Unable to fetch saved locations:', error);
     }
-  }, []);
+  }, [isCitizen, token]);
 
   useEffect(() => {
-    if (isCitizen) {
-      void fetchLocations();
-    }
-  }, [fetchLocations, isCitizen]);
+    void fetchLocations();
+  }, [fetchLocations]);
 
   useEffect(() => () => {
     if (reverseGeocodeTimeoutRef.current) {

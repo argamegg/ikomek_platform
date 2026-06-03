@@ -285,7 +285,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const isCitizen = user?.role === 'citizen' || !user?.role;
+  const isCitizen = Boolean(user) && (user?.role === 'citizen' || !user?.role);
   const isOperator = user?.role === 'operator';
   const isAdmin = user?.role === 'admin';
 
