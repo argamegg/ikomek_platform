@@ -1161,8 +1161,13 @@ button {
 }
 
 .cabinet-profile-card h1 {
+  width: 100%;
+  max-width: 100%;
   font-size: 1.72rem;
   line-height: 1.1;
+  text-align: center;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 
 .cabinet-profile-card span {
