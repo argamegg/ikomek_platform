@@ -993,7 +993,7 @@ const resources = {
           save: "Save changes",
           saved: "Profile updated",
           nameRequired: "Enter your first and last name",
-          nameLettersOnly: "Use letters only for first and last name",
+          nameLettersOnly: "Use letters only, with a hyphen only between name parts",
           phoneInvalid: "Enter a Kazakhstan phone number as 11 digits starting with 7",
           birthDateInvalid: "Enter a valid birth date, not in the future",
           genders: {
@@ -2171,7 +2171,7 @@ const resources = {
           save: "Сохранить",
           saved: "Профиль обновлен",
           nameRequired: "Введите имя и фамилию",
-          nameLettersOnly: "В имени и фамилии используйте только буквы",
+          nameLettersOnly: "В имени и фамилии используйте только буквы, дефис можно ставить только между частями имени",
           phoneInvalid: "Введите казахстанский номер: 11 цифр, начиная с 7",
           birthDateInvalid: "Введите корректную дату рождения, не из будущего",
           genders: {
@@ -3348,7 +3348,7 @@ const resources = {
           save: "Сақтау",
           saved: "Профиль жаңартылды",
           nameRequired: "Атыңызды және тегіңізді енгізіңіз",
-          nameLettersOnly: "Аты мен тегінде тек әріптерді қолданыңыз",
+          nameLettersOnly: "Аты мен тегінде тек әріптерді қолданыңыз, дефис тек атау бөліктерінің арасында болуы керек",
           phoneInvalid: "Қазақстан нөмірін 7-ден басталатын 11 цифрмен енгізіңіз",
           birthDateInvalid: "Болашақ емес, дұрыс туған күнді енгізіңіз",
           genders: {

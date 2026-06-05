@@ -54,8 +54,9 @@ const ACCENT = "#ff6b35";
 const MONTH_WINDOW = 6;
 const SAVED_LOCATION_TYPES: SavedLocationType[] = ["home", "work", "study", "family", "other"];
 const AVATAR_CROP_SIZE = 512;
-const PROFILE_NAME_CHAR_PATTERN = /^[A-Za-zА-Яа-яЁёӘәҒғҚқҢңӨөҰұҮүҺһІі]$/;
-const PROFILE_NAME_PATTERN = /^[A-Za-zА-Яа-яЁёӘәҒғҚқҢңӨөҰұҮүҺһІі]+$/;
+const PROFILE_NAME_LETTERS = "A-Za-zА-Яа-яЁёӘәҒғҚқҢңӨөҰұҮүҺһІі";
+const PROFILE_NAME_CHAR_PATTERN = new RegExp(`^[${PROFILE_NAME_LETTERS}-]$`);
+const PROFILE_NAME_PATTERN = new RegExp(`^[${PROFILE_NAME_LETTERS}]+(?:-[${PROFILE_NAME_LETTERS}]+)*$`);
 const KZ_PHONE_PATTERN = /^7\d{10}$/;
 const MIN_BIRTH_DATE = "1900-01-01";
 
@@ -638,6 +639,38 @@ export function ProfilePage() {
   const profileDisplayName = `${profileForm.firstName} ${profileForm.lastName}`.trim();
   const isSavedAddressLookupActive = isSavedGeocoding || isSavedReverseGeocoding;
 
+  function getProfileFormFromUser(user: typeof currentUser): ProfileFormState {
+    const name = splitProfileName(user?.name);
+    return {
+      firstName: sanitizeProfileName(name.firstName),
+      lastName: sanitizeProfileName(name.lastName),
+      displayName: user?.displayName || name.firstName || user?.name || "",
+      gender: user?.gender ?? "",
+      birthDate: normalizeBirthDateValue(user?.birthDate),
+      phone: normalizeKzPhoneInput(user?.phone ?? ""),
+      avatarUrl: user?.avatarUrl ?? "",
+      language: user?.language ?? locale,
+      notificationsEnabled: user?.notificationsEnabled ?? true,
+    };
+  }
+
+  function resetProfileEditor() {
+    setProfileForm(getProfileFormFromUser(currentUser));
+    setProfileErrors({});
+    setAvatarCrop(null);
+    avatarDragRef.current = null;
+  }
+
+  function openProfileEditor() {
+    resetProfileEditor();
+    setProfileEditorOpen(true);
+  }
+
+  function closeProfileEditor() {
+    resetProfileEditor();
+    setProfileEditorOpen(false);
+  }
+
   useEffect(() => {
     if (!profileEditorOpen) return;
     const previousOverflow = document.body.style.overflow;
@@ -657,18 +690,7 @@ export function ProfilePage() {
 
   useEffect(() => {
     if (!currentUser) return;
-    const name = splitProfileName(currentUser.name);
-    setProfileForm({
-      firstName: sanitizeProfileName(name.firstName),
-      lastName: sanitizeProfileName(name.lastName),
-      displayName: currentUser.displayName || name.firstName || currentUser.name,
-      gender: currentUser.gender ?? "",
-      birthDate: normalizeBirthDateValue(currentUser.birthDate),
-      phone: normalizeKzPhoneInput(currentUser.phone ?? ""),
-      avatarUrl: currentUser.avatarUrl ?? "",
-      language: currentUser.language,
-      notificationsEnabled: currentUser.notificationsEnabled,
-    });
+    setProfileForm(getProfileFormFromUser(currentUser));
   }, [currentUser]);
 
   const updateProfileMutation = useMutation({
@@ -698,7 +720,7 @@ export function ProfilePage() {
         avatarUrl: payload.avatarUrl,
       });
       toast.success(t("cabinet.profileEditor.saved"));
-      setProfileEditorOpen(false);
+      closeProfileEditor();
     },
     onError: (error, _payload, context) => {
       if (context?.previousUser) {
@@ -885,7 +907,7 @@ export function ProfilePage() {
           variant="secondary"
           fullWidth
           iconLeft={<Pencil size={16} />}
-          onClick={() => setProfileEditorOpen(true)}
+          onClick={openProfileEditor}
         >
           {t("cabinet.editProfile")}
         </Button>
@@ -1182,7 +1204,7 @@ export function ProfilePage() {
           role="presentation"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
-              setProfileEditorOpen(false);
+              closeProfileEditor();
             }
           }}
         >
@@ -1204,7 +1226,7 @@ export function ProfilePage() {
               <button
                 type="button"
                 className="profile-editor-modal__close"
-                onClick={() => setProfileEditorOpen(false)}
+                onClick={closeProfileEditor}
                 aria-label={t("common.close")}
               >
                 <X size={22} />
@@ -1323,7 +1345,7 @@ export function ProfilePage() {
               </section>
 
               <div className="profile-editor-actions">
-                <Button type="button" variant="ghost" onClick={() => setProfileEditorOpen(false)}>
+                <Button type="button" variant="ghost" onClick={closeProfileEditor}>
                   {t("common.cancel")}
                 </Button>
                 <Button type="submit" isLoading={updateProfileMutation.isPending}>
