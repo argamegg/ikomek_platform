@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
+import { useId } from "react";
 import { cn } from "../../lib/cn";
 
 export type TabOption = {
@@ -14,6 +15,8 @@ type TabsProps = {
 };
 
 export function Tabs({ value, options, onChange, className }: TabsProps) {
+  const tabsId = useId();
+
   return (
     <div className={cn("ui-tabs", className)}>
       {options.map((option) => {
@@ -31,8 +34,8 @@ export function Tabs({ value, options, onChange, className }: TabsProps) {
               {active ? (
                 <motion.span
                   className="ui-tabs__pill"
-                  layoutId="tabs-pill"
-                  transition={{ duration: 0.22 }}
+                  layoutId={`tabs-pill-${tabsId}`}
+                  transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
                 />
               ) : null}
             </AnimatePresence>

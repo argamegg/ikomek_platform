@@ -2593,12 +2593,22 @@ button {
   color: #475569;
   font-size: 0.98rem;
   line-height: 1.15;
+  isolation: isolate;
+  transform: translateZ(0);
 }
 
 .auth-tabs .ui-tabs__pill {
   border-radius: 18px;
   background: #ffffff;
   box-shadow: 0 14px 28px rgba(15, 23, 42, 0.1);
+}
+
+.auth-tab-content {
+  display: grid;
+  width: 100%;
+  gap: 24px;
+  transform-origin: top center;
+  will-change: opacity, transform, filter;
 }
 
 .auth-panel .form-stack {

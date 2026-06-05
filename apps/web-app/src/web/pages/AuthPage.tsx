@@ -3,6 +3,7 @@ import { startTransition, useCallback, useEffect, useMemo, useState, type FormEv
 import { Show, UserButton, useAuth, useUser } from "@clerk/react";
 import { useSignIn } from "@clerk/react/legacy";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { KeyRound, LockKeyhole, Mail, RefreshCcw, ShieldCheck, Smartphone, User2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -24,6 +25,14 @@ type RegisterForm = {
   password: string;
   language: "en" | "ru" | "kz";
 };
+
+const authTabContentVariants = {
+  initial: { opacity: 0, y: 10, filter: "blur(4px)" },
+  animate: { opacity: 1, y: 0, filter: "blur(0px)" },
+  exit: { opacity: 0, y: -8, filter: "blur(3px)" },
+};
+
+const authTabContentTransition = { duration: 0.22, ease: [0.22, 1, 0.36, 1] } as const;
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -95,6 +104,7 @@ export function AuthPage() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const requiresLocalPassword = currentUserQuery.data?.hasLocalPassword === false;
   const authContentKey = verificationState ? "verification" : tab === "recover" ? "recovery" : tab;
+  const authTabContentKey = requiresLocalPassword ? "local-password" : verificationState ? "verification" : tab;
   const authHeaderDefaults = {
     login: {
       eyebrow: "Login",
@@ -280,184 +290,196 @@ export function AuthPage() {
             />
           ) : null}
 
-          {!verificationState && (requiresLocalPassword || tab !== "recover") ? (
-            <ClerkAuthSection currentUser={currentUserQuery.data} />
-          ) : null}
-
-          {!requiresLocalPassword && tab === "login" ? (
-            <form
-              className="form-stack"
-              onSubmit={(event) => {
-                event.preventDefault();
-                loginMutation.mutate(loginForm);
-              }}
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={authTabContentKey}
+              className="auth-tab-content"
+              variants={authTabContentVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={authTabContentTransition}
             >
-              <Input
-                label={t("auth.fields.emailOrPhone")}
-                type="text"
-                icon={<Mail size={16} />}
-                value={loginForm.email}
-                onChange={(event) => setLoginForm((value) => ({ ...value, email: event.target.value }))}
-                autoComplete="username"
-                required
-              />
-              <Input
-                label={t("auth.fields.password")}
-                type="password"
-                icon={<LockKeyhole size={16} />}
-                value={loginForm.password}
-                onChange={(event) => setLoginForm((value) => ({ ...value, password: event.target.value }))}
-                required
-              />
-              <Button type="submit" isLoading={loginMutation.isPending} fullWidth>
-                {t("common.login")}
-              </Button>
-            </form>
-          ) : null}
+              {!verificationState && (requiresLocalPassword || tab !== "recover") ? (
+                <ClerkAuthSection currentUser={currentUserQuery.data} />
+              ) : null}
 
-          {!requiresLocalPassword && tab === "register" ? (
-            verificationState ? (
-              <div className="form-stack auth-verify">
-                <div className="auth-verify__box">
-                  <p className="auth-verify__title">{t("auth.verification.titleText")}</p>
-                  <p>
-                    {t("auth.verification.sentTo", {
-                      email: verificationEmail,
-                    })}
-                  </p>
-                  <p>{t("auth.verification.instructions")}</p>
-                </div>
+              {!requiresLocalPassword && tab === "login" ? (
                 <form
                   className="form-stack"
                   onSubmit={(event) => {
                     event.preventDefault();
-                    if (!verificationState) {
-                      return;
-                    }
-                    setVerificationError("");
-                    verifyMutation.mutate({
-                      registrationId: verificationState.registrationId,
-                      code: verificationCode.trim(),
-                    });
+                    loginMutation.mutate(loginForm);
                   }}
                 >
                   <Input
-                    label={t("auth.verification.code")}
-                    icon={<KeyRound size={16} />}
-                    value={verificationCode}
-                    onChange={(event) => setVerificationCode(event.target.value)}
-                    inputMode="numeric"
-                    maxLength={6}
-                    placeholder={t("auth.verification.codePlaceholder")}
-                    helper={
-                      verificationState.expiresInSeconds > 0
-                        ? t("auth.verification.expiresInMinutes", {
-                            minutes: Math.max(1, Math.ceil(verificationState.expiresInSeconds / 60)),
-                          })
-                        : undefined
-                    }
-                    error={verificationError || undefined}
+                    label={t("auth.fields.emailOrPhone")}
+                    type="text"
+                    icon={<Mail size={16} />}
+                    value={loginForm.email}
+                    onChange={(event) => setLoginForm((value) => ({ ...value, email: event.target.value }))}
+                    autoComplete="username"
                     required
                   />
-                  <Button type="submit" isLoading={verifyMutation.isPending} fullWidth>
-                    {t("auth.verification.confirm")}
+                  <Input
+                    label={t("auth.fields.password")}
+                    type="password"
+                    icon={<LockKeyhole size={16} />}
+                    value={loginForm.password}
+                    onChange={(event) => setLoginForm((value) => ({ ...value, password: event.target.value }))}
+                    required
+                  />
+                  <Button type="submit" isLoading={loginMutation.isPending} fullWidth>
+                    {t("common.login")}
                   </Button>
                 </form>
-                <div className="auth-verify__actions">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => {
-                      if (!verificationState) {
-                        return;
-                      }
-                      resendMutation.mutate({ registrationId: verificationState.registrationId });
-                    }}
-                    disabled={resendCooldown > 0}
-                    isLoading={resendMutation.isPending}
-                    iconLeft={<RefreshCcw size={16} />}
-                  >
-                    {resendCooldown > 0
-                      ? t("auth.verification.resendIn", { seconds: resendCooldown })
-                      : t("auth.verification.resend")}
-                  </Button>
-                  <Button type="button" variant="ghost" onClick={resetVerificationStep}>
-                    {t("auth.verification.editEmail")}
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <form
-                className="form-stack"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  registerMutation.mutate(registerForm);
-                }}
-              >
-                <Input
-                  label={t("auth.fields.name")}
-                  icon={<User2 size={16} />}
-                  value={registerForm.name}
-                  onChange={(event) => setRegisterForm((value) => ({ ...value, name: event.target.value }))}
-                  required
-                />
-                <Input
-                  label={t("auth.fields.email")}
-                  type="email"
-                  icon={<Mail size={16} />}
-                  value={registerForm.email}
-                  onChange={(event) => setRegisterForm((value) => ({ ...value, email: event.target.value }))}
-                  required
-                />
-                <Input
-                  label={t("auth.fields.phone")}
-                  type="tel"
-                  icon={<Smartphone size={16} />}
-                  value={registerForm.phone}
-                  onChange={(event) => setRegisterForm((value) => ({ ...value, phone: event.target.value }))}
-                />
-                <Input
-                  label={t("auth.fields.password")}
-                  type="password"
-                  icon={<LockKeyhole size={16} />}
-                  value={registerForm.password}
-                  onChange={(event) =>
-                    setRegisterForm((value) => ({ ...value, password: event.target.value }))
-                  }
-                  required
-                />
-                <Select
-                  label={t("auth.fields.language")}
-                  value={registerForm.language}
-                  onChange={(event) =>
-                    setRegisterForm((value) => ({
-                      ...value,
-                      language: event.target.value as "en" | "ru" | "kz",
-                    }))
-                  }
-                >
-                  {languageOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </Select>
-                <Button type="submit" isLoading={registerMutation.isPending} fullWidth>
-                  {t("common.register")}
-                </Button>
-              </form>
-            )
-          ) : null}
+              ) : null}
 
-          {!requiresLocalPassword && tab === "recover" ? (
-            <div className="form-stack auth-recover">
-              <div className="auth-recover__box">
-                <p className="auth-recover__title">{t("auth.recoverNotice.title")}</p>
-                <p>{t("auth.recoverNotice.body")}</p>
-                <p>{t("auth.recoverNotice.hint")}</p>
-              </div>
-            </div>
-          ) : null}
+              {!requiresLocalPassword && tab === "register" ? (
+                verificationState ? (
+                  <div className="form-stack auth-verify">
+                    <div className="auth-verify__box">
+                      <p className="auth-verify__title">{t("auth.verification.titleText")}</p>
+                      <p>
+                        {t("auth.verification.sentTo", {
+                          email: verificationEmail,
+                        })}
+                      </p>
+                      <p>{t("auth.verification.instructions")}</p>
+                    </div>
+                    <form
+                      className="form-stack"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        if (!verificationState) {
+                          return;
+                        }
+                        setVerificationError("");
+                        verifyMutation.mutate({
+                          registrationId: verificationState.registrationId,
+                          code: verificationCode.trim(),
+                        });
+                      }}
+                    >
+                      <Input
+                        label={t("auth.verification.code")}
+                        icon={<KeyRound size={16} />}
+                        value={verificationCode}
+                        onChange={(event) => setVerificationCode(event.target.value)}
+                        inputMode="numeric"
+                        maxLength={6}
+                        placeholder={t("auth.verification.codePlaceholder")}
+                        helper={
+                          verificationState.expiresInSeconds > 0
+                            ? t("auth.verification.expiresInMinutes", {
+                                minutes: Math.max(1, Math.ceil(verificationState.expiresInSeconds / 60)),
+                              })
+                            : undefined
+                        }
+                        error={verificationError || undefined}
+                        required
+                      />
+                      <Button type="submit" isLoading={verifyMutation.isPending} fullWidth>
+                        {t("auth.verification.confirm")}
+                      </Button>
+                    </form>
+                    <div className="auth-verify__actions">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => {
+                          if (!verificationState) {
+                            return;
+                          }
+                          resendMutation.mutate({ registrationId: verificationState.registrationId });
+                        }}
+                        disabled={resendCooldown > 0}
+                        isLoading={resendMutation.isPending}
+                        iconLeft={<RefreshCcw size={16} />}
+                      >
+                        {resendCooldown > 0
+                          ? t("auth.verification.resendIn", { seconds: resendCooldown })
+                          : t("auth.verification.resend")}
+                      </Button>
+                      <Button type="button" variant="ghost" onClick={resetVerificationStep}>
+                        {t("auth.verification.editEmail")}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <form
+                    className="form-stack"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      registerMutation.mutate(registerForm);
+                    }}
+                  >
+                    <Input
+                      label={t("auth.fields.name")}
+                      icon={<User2 size={16} />}
+                      value={registerForm.name}
+                      onChange={(event) => setRegisterForm((value) => ({ ...value, name: event.target.value }))}
+                      required
+                    />
+                    <Input
+                      label={t("auth.fields.email")}
+                      type="email"
+                      icon={<Mail size={16} />}
+                      value={registerForm.email}
+                      onChange={(event) => setRegisterForm((value) => ({ ...value, email: event.target.value }))}
+                      required
+                    />
+                    <Input
+                      label={t("auth.fields.phone")}
+                      type="tel"
+                      icon={<Smartphone size={16} />}
+                      value={registerForm.phone}
+                      onChange={(event) => setRegisterForm((value) => ({ ...value, phone: event.target.value }))}
+                    />
+                    <Input
+                      label={t("auth.fields.password")}
+                      type="password"
+                      icon={<LockKeyhole size={16} />}
+                      value={registerForm.password}
+                      onChange={(event) =>
+                        setRegisterForm((value) => ({ ...value, password: event.target.value }))
+                      }
+                      required
+                    />
+                    <Select
+                      label={t("auth.fields.language")}
+                      value={registerForm.language}
+                      onChange={(event) =>
+                        setRegisterForm((value) => ({
+                          ...value,
+                          language: event.target.value as "en" | "ru" | "kz",
+                        }))
+                      }
+                    >
+                      {languageOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </Select>
+                    <Button type="submit" isLoading={registerMutation.isPending} fullWidth>
+                      {t("common.register")}
+                    </Button>
+                  </form>
+                )
+              ) : null}
+
+              {!requiresLocalPassword && tab === "recover" ? (
+                <div className="form-stack auth-recover">
+                  <div className="auth-recover__box">
+                    <p className="auth-recover__title">{t("auth.recoverNotice.title")}</p>
+                    <p>{t("auth.recoverNotice.body")}</p>
+                    <p>{t("auth.recoverNotice.hint")}</p>
+                  </div>
+                </div>
+              ) : null}
+            </motion.div>
+          </AnimatePresence>
         </Card>
       </div>
     </div>
