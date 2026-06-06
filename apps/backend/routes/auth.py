@@ -52,7 +52,8 @@ from schemas import (
 
 router = APIRouter()
 
-PROFILE_NAME_RE = re.compile(r"^[A-Za-zА-Яа-яЁёӘәҒғҚқҢңӨөҰұҮүҺһІі]+$")
+PROFILE_NAME_LETTERS = r"A-Za-zА-Яа-яЁёӘәҒғҚқҢңӨөҰұҮүҺһІі"
+PROFILE_NAME_RE = re.compile(rf"^[{PROFILE_NAME_LETTERS}]+(?:-[{PROFILE_NAME_LETTERS}]+)*$")
 KZ_PHONE_RE = re.compile(r"^7\d{10}$")
 MIN_BIRTH_DATE = date(1900, 1, 1)
 JWKS_CLIENTS: dict[str, PyJWKClient] = {}
@@ -68,7 +69,10 @@ def validate_profile_full_name(full_name: str) -> str:
     if len(parts) < 2:
         raise HTTPException(status_code=400, detail="Enter first and last name")
     if any(not PROFILE_NAME_RE.fullmatch(part) for part in parts):
-        raise HTTPException(status_code=400, detail="First and last name must contain letters only")
+        raise HTTPException(
+            status_code=400,
+            detail="First and last name must contain letters, with hyphens only between name parts",
+        )
     return normalized
 
 
