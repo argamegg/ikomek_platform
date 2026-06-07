@@ -34,8 +34,9 @@ const ORANGE = '#FF6B00';
 const BLUE = '#007AFF';
 const GREEN = '#34C759';
 const AMBER = '#FF9500';
-const PROFILE_NAME_CHAR_PATTERN = /^[A-Za-zА-Яа-яЁёӘәҒғҚқҢңӨөҰұҮүҺһІі]$/;
-const PROFILE_NAME_PATTERN = /^[A-Za-zА-Яа-яЁёӘәҒғҚқҢңӨөҰұҮүҺһІі]+$/;
+const PROFILE_NAME_LETTERS = 'A-Za-zА-Яа-яЁёӘәҒғҚқҢңӨөҰұҮүҺһІі';
+const PROFILE_NAME_CHAR_PATTERN = new RegExp(`^[${PROFILE_NAME_LETTERS}-]$`);
+const PROFILE_NAME_PATTERN = new RegExp(`^[${PROFILE_NAME_LETTERS}]+(?:-[${PROFILE_NAME_LETTERS}]+)*$`);
 const KZ_PHONE_PATTERN = /^7\d{10}$/;
 const MIN_BIRTH_DATE = '1900-01-01';
 
