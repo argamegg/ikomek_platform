@@ -37,6 +37,11 @@ type NavSection = {
   items: NavItem[];
 };
 
+type IndexedNavSection = {
+  title: string;
+  items: Array<NavItem & { indexLabel: string }>;
+};
+
 export function Sidebar({
   currentUser,
   collapsed,
@@ -111,6 +116,15 @@ export function Sidebar({
       : [{ to: "/auth", label: t("nav.auth"), icon: LogIn }],
   });
 
+  let navItemIndex = 0;
+  const indexedSections: IndexedNavSection[] = sections.map((section) => ({
+    ...section,
+    items: section.items.map((item) => ({
+      ...item,
+      indexLabel: String((navItemIndex += 1)).padStart(2, "0"),
+    })),
+  }));
+
   return (
     <>
       <div
@@ -124,18 +138,7 @@ export function Sidebar({
           isCompact && "sidebar--compact",
           isCompact && mobileOpen && "sidebar--mobile-open",
         )}
-        style={!isCompact ? { width: collapsed ? 94 : "var(--sidebar-width)" } : undefined}
       >
-        {!isCompact ? (
-          <button
-            type="button"
-            className="sidebar__collapse-button"
-            onClick={onToggleSidebar}
-            aria-label={isCollapsed ? t("shell.expandSidebar") : t("shell.collapseSidebar")}
-          >
-            {isCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-          </button>
-        ) : null}
         {isCompact && mobileOpen ? (
           <button
             type="button"
@@ -159,11 +162,21 @@ export function Sidebar({
               </span>
             </span>
           </div>
+          {!isCompact ? (
+            <button
+              type="button"
+              className="sidebar__collapse-button"
+              onClick={onToggleSidebar}
+              aria-label={isCollapsed ? t("shell.expandSidebar") : t("shell.collapseSidebar")}
+            >
+              {isCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+            </button>
+          ) : null}
         </div>
         <nav className="sidebar__nav">
-          {sections.map((section) => (
+          {indexedSections.map((section) => (
             <div className="sidebar__section" key={section.title}>
-              <span className="sidebar__section-title">{isCollapsed ? "-" : section.title}</span>
+              <span className="sidebar__section-title">{section.title}</span>
               {section.items.map((item) => {
                 const Icon = item.icon;
 
@@ -177,8 +190,9 @@ export function Sidebar({
                     }
                     onClick={isCompact ? onCloseMobile : undefined}
                   >
+                    <span className="sidebar__index" aria-hidden="true">{item.indexLabel}</span>
                     <Icon size={18} />
-                    <span>{item.label}</span>
+                    <span className="sidebar__link-label">{item.label}</span>
                   </NavLink>
                 );
               })}
@@ -186,7 +200,7 @@ export function Sidebar({
           ))}
         </nav>
         <div className="sidebar__footer">
-          <span className="sidebar__footer-label">{isCollapsed ? "-" : t("shell.account")}</span>
+          <span className="sidebar__footer-label">{t("shell.account")}</span>
           <div className="sidebar__account">
             <div className="sidebar__account-avatar">
               {currentUser?.avatarUrl ? <img src={currentUser.avatarUrl} alt="" /> : <span>{userInitials}</span>}
