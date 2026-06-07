@@ -3928,20 +3928,37 @@ button {
   display: flex;
   gap: 6px;
   min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
   padding: 5px;
   border-radius: 18px;
   background: #f1f5f9;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.requests-priority-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .requests-priority-tabs button {
-  flex: 1;
-  min-width: 0;
+  display: inline-flex;
+  flex: 0 0 auto;
+  min-width: 104px;
   min-height: 42px;
+  align-items: center;
+  justify-content: center;
   padding: 0 12px;
   border-radius: 14px;
   color: #64748b;
   font-weight: 900;
+  line-height: 1.1;
+  white-space: nowrap;
   cursor: pointer;
+}
+
+.requests-priority-tabs button:first-child {
+  min-width: 148px;
 }
 
 .requests-priority-tabs button.is-active {
