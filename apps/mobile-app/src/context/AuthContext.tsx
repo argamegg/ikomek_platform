@@ -67,6 +67,7 @@ interface AuthContextType {
   clearPendingVerification: () => Promise<void>;
   logout: () => Promise<void>;
   setLocalPassword: (newPassword: string) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   updateProfile: (payload: ProfileUpdateInput) => Promise<void>;
   updateLanguage: (language: string) => Promise<void>;
   isCitizen: boolean;
@@ -278,6 +279,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    if (!token) return;
+
+    await axios.put(
+      `${API_URL}/api/auth/password`,
+      {
+        current_password: currentPassword,
+        new_password: newPassword,
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+  };
+
   const updateProfile = async (payload: ProfileUpdateInput) => {
     if (!token) return;
 
@@ -346,6 +360,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         clearPendingVerification,
         logout,
         setLocalPassword,
+        changePassword,
         updateProfile,
         updateLanguage,
         isCitizen,

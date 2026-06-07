@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { CheckCircle2, Globe2, KeyRound, Pencil, SettingsIcon, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Eye, EyeOff, Globe2, KeyRound, Pencil, SettingsIcon, ShieldCheck } from "lucide-react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -44,6 +44,7 @@ export default function SettingsPage() {
     newPassword: "",
     confirmPassword: "",
   });
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   useEffect(() => {
     setSelectedLanguage(normalizeLocale(i18n.language));
@@ -77,6 +78,7 @@ export default function SettingsPage() {
         queryClient.setQueryData(queryKeys.currentUser, updatedUser);
       }
       setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setIsPasswordVisible(false);
       toast.success(t("settings.passwordSaved"));
     },
     onError: (error) => toast.error(getErrorMessage(error)),
@@ -100,6 +102,9 @@ export default function SettingsPage() {
 
     passwordMutation.mutate();
   }
+
+  const passwordInputType = isPasswordVisible ? "text" : "password";
+  const passwordVisibilityLabel = isPasswordVisible ? "Hide password" : "Show password";
 
   return (
     <motion.div
@@ -165,31 +170,61 @@ export default function SettingsPage() {
             {currentUser?.hasLocalPassword !== false ? (
               <label>
                 <span>{t("settings.currentPassword")}</span>
-                <input
-                  type="password"
-                  value={passwordForm.currentPassword}
-                  onChange={(event) => setPasswordForm((current) => ({ ...current, currentPassword: event.target.value }))}
-                  autoComplete="current-password"
-                />
+                <div className="settings-password-field">
+                  <input
+                    type={passwordInputType}
+                    value={passwordForm.currentPassword}
+                    onChange={(event) => setPasswordForm((current) => ({ ...current, currentPassword: event.target.value }))}
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    className="settings-password-toggle"
+                    aria-label={passwordVisibilityLabel}
+                    onClick={() => setIsPasswordVisible((value) => !value)}
+                  >
+                    {isPasswordVisible ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
               </label>
             ) : null}
             <label>
               <span>{t("settings.newPassword")}</span>
-              <input
-                type="password"
-                value={passwordForm.newPassword}
-                onChange={(event) => setPasswordForm((current) => ({ ...current, newPassword: event.target.value }))}
-                autoComplete="new-password"
-              />
+              <div className="settings-password-field">
+                <input
+                  type={passwordInputType}
+                  value={passwordForm.newPassword}
+                  onChange={(event) => setPasswordForm((current) => ({ ...current, newPassword: event.target.value }))}
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  className="settings-password-toggle"
+                  aria-label={passwordVisibilityLabel}
+                  onClick={() => setIsPasswordVisible((value) => !value)}
+                >
+                  {isPasswordVisible ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
             </label>
             <label>
               <span>{t("settings.confirmPassword")}</span>
-              <input
-                type="password"
-                value={passwordForm.confirmPassword}
-                onChange={(event) => setPasswordForm((current) => ({ ...current, confirmPassword: event.target.value }))}
-                autoComplete="new-password"
-              />
+              <div className="settings-password-field">
+                <input
+                  type={passwordInputType}
+                  value={passwordForm.confirmPassword}
+                  onChange={(event) => setPasswordForm((current) => ({ ...current, confirmPassword: event.target.value }))}
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  className="settings-password-toggle"
+                  aria-label={passwordVisibilityLabel}
+                  onClick={() => setIsPasswordVisible((value) => !value)}
+                >
+                  {isPasswordVisible ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
             </label>
             <Button type="submit" isLoading={passwordMutation.isPending} iconLeft={<ShieldCheck size={16} />}>
               {t("settings.savePassword")}

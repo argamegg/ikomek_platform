@@ -27,7 +27,7 @@ import {
   type LocationPickerMapRef,
 } from '../src/components/LocationPickerMap';
 import { useAuth } from '../src/context/AuthContext';
-import { apiService, SavedLocation } from '../src/utils/api';
+import { apiService, getApiErrorMessage, SavedLocation } from '../src/utils/api';
 import {
   ASTANA_CENTER_LAT,
   ASTANA_CENTER_LNG,
@@ -44,6 +44,17 @@ const ORANGE = '#FF6B00';
 
 const LOCATION_TYPES = ['home', 'work', 'study', 'family', 'other'] as const;
 type SavedLocationType = (typeof LOCATION_TYPES)[number];
+type PasswordForm = {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+};
+
+const EMPTY_PASSWORD_FORM: PasswordForm = {
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: '',
+};
 
 const LOCATION_ICONS: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: string }> = {
   home: { icon: 'home', color: '#FF9500' },
@@ -61,11 +72,15 @@ const LANGUAGES = [
 
 export default function SettingsScreen() {
   const { t, i18n } = useTranslation();
-  const { user, token, logout, updateLanguage, isCitizen } = useAuth();
+  const { user, token, logout, setLocalPassword, changePassword, updateLanguage, isCitizen } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]);
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isPasswordSaving, setIsPasswordSaving] = useState(false);
+  const [showPasswordFields, setShowPasswordFields] = useState(false);
+  const [passwordForm, setPasswordForm] = useState<PasswordForm>(EMPTY_PASSWORD_FORM);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
   const [isFindingAddress, setIsFindingAddress] = useState(false);
@@ -371,6 +386,56 @@ export default function SettingsScreen() {
     setIsLanguageModalOpen(false);
   };
 
+  const closePasswordModal = () => {
+    Keyboard.dismiss();
+    setIsPasswordModalOpen(false);
+    setShowPasswordFields(false);
+    setPasswordForm(EMPTY_PASSWORD_FORM);
+  };
+
+  const handlePasswordSubmit = async () => {
+    if (!token || !user) {
+      Alert.alert(t('common.error'), t('errors.tryAgain'));
+      return;
+    }
+
+    const needsCurrentPassword = user?.has_local_password !== false;
+    const currentPassword = passwordForm.currentPassword;
+    const newPassword = passwordForm.newPassword;
+    const confirmPassword = passwordForm.confirmPassword;
+
+    if ((needsCurrentPassword && !currentPassword) || !newPassword || !confirmPassword) {
+      Alert.alert(t('common.error'), t('profile.passwordFillAll'));
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      Alert.alert(t('common.error'), t('profile.passwordMin'));
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      Alert.alert(t('common.error'), t('profile.passwordMismatch'));
+      return;
+    }
+
+    setIsPasswordSaving(true);
+    try {
+      if (user?.has_local_password === false) {
+        await setLocalPassword(newPassword);
+      } else {
+        await changePassword(currentPassword, newPassword);
+      }
+
+      closePasswordModal();
+      Alert.alert(t('common.success'), t('profile.passwordSaved'));
+    } catch (error) {
+      Alert.alert(t('common.error'), getApiErrorMessage(error, t('errors.tryAgain')));
+    } finally {
+      setIsPasswordSaving(false);
+    }
+  };
+
   const handleLogout = () => {
     Alert.alert(t('profile.logout'), t('profile.logoutConfirm'), [
       { text: t('common.cancel'), style: 'cancel' },
@@ -463,6 +528,14 @@ export default function SettingsScreen() {
             <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
           </TouchableOpacity>
 
+          <TouchableOpacity style={styles.settingItem} onPress={() => setIsPasswordModalOpen(true)}>
+            <View style={[styles.settingIcon, { backgroundColor: '#FF950020' }]}>
+              <Ionicons name="key" size={20} color="#FF9500" />
+            </View>
+            <Text style={styles.settingText}>{t('profile.changePassword')}</Text>
+            <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.settingItem}>
             <View style={[styles.settingIcon, { backgroundColor: '#34C75920' }]}>
               <Ionicons name="help-circle" size={20} color="#34C759" />
@@ -519,6 +592,127 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </View>
         </View>
+      </Modal>
+
+      <Modal visible={isPasswordModalOpen} transparent animationType="slide" onRequestClose={closePasswordModal}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardAvoidingOverlay}
+        >
+          <View style={styles.langModalOverlay}>
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={isPasswordSaving ? undefined : closePasswordModal}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.close')}
+            />
+            <View style={[styles.langModalContent, { paddingBottom: insets.bottom + 16 }]}>
+              <View style={styles.langModalHandle} />
+              <Text style={styles.langModalTitle}>
+                {user?.has_local_password === false ? t('profile.passwordSetupTitle') : t('profile.changePassword')}
+              </Text>
+              <Text style={styles.passwordModalDescription}>
+                {user?.has_local_password === false
+                  ? t('profile.passwordSetupDescription')
+                  : t('profile.passwordDescription')}
+              </Text>
+
+              {user?.has_local_password !== false ? (
+                <View style={styles.passwordInputRow}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    value={passwordForm.currentPassword}
+                    onChangeText={(currentPassword) => setPasswordForm((current) => ({ ...current, currentPassword }))}
+                    placeholder={t('profile.currentPassword')}
+                    placeholderTextColor="#C7C7CC"
+                    secureTextEntry={!showPasswordFields}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoComplete="off"
+                    textContentType="none"
+                    importantForAutofill="no"
+                    spellCheck={false}
+                    clearTextOnFocus={false}
+                    selectTextOnFocus={false}
+                    returnKeyType="next"
+                  />
+                  <TouchableOpacity onPress={() => setShowPasswordFields((value) => !value)} style={styles.passwordEyeButton}>
+                    <Ionicons name={showPasswordFields ? 'eye-off-outline' : 'eye-outline'} size={20} color="#8E8E93" />
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+
+              <View style={styles.passwordInputRow}>
+                <TextInput
+                  style={styles.passwordInput}
+                  value={passwordForm.newPassword}
+                  onChangeText={(newPassword) => setPasswordForm((current) => ({ ...current, newPassword }))}
+                  placeholder={t('profile.newPassword')}
+                  placeholderTextColor="#C7C7CC"
+                  secureTextEntry={!showPasswordFields}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="off"
+                  textContentType="none"
+                  importantForAutofill="no"
+                  spellCheck={false}
+                  clearTextOnFocus={false}
+                  selectTextOnFocus={false}
+                  returnKeyType="next"
+                />
+                <TouchableOpacity onPress={() => setShowPasswordFields((value) => !value)} style={styles.passwordEyeButton}>
+                  <Ionicons name={showPasswordFields ? 'eye-off-outline' : 'eye-outline'} size={20} color="#8E8E93" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.passwordInputRow}>
+                <TextInput
+                  style={styles.passwordInput}
+                  value={passwordForm.confirmPassword}
+                  onChangeText={(confirmPassword) => setPasswordForm((current) => ({ ...current, confirmPassword }))}
+                  placeholder={t('profile.confirmPassword')}
+                  placeholderTextColor="#C7C7CC"
+                  secureTextEntry={!showPasswordFields}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="off"
+                  textContentType="none"
+                  importantForAutofill="no"
+                  spellCheck={false}
+                  clearTextOnFocus={false}
+                  selectTextOnFocus={false}
+                  returnKeyType="done"
+                  onSubmitEditing={handlePasswordSubmit}
+                />
+                <TouchableOpacity onPress={() => setShowPasswordFields((value) => !value)} style={styles.passwordEyeButton}>
+                  <Ionicons name={showPasswordFields ? 'eye-off-outline' : 'eye-outline'} size={20} color="#8E8E93" />
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.savePasswordButton, isPasswordSaving && styles.disabledButton]}
+                onPress={handlePasswordSubmit}
+                disabled={isPasswordSaving}
+              >
+                {isPasswordSaving ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <>
+                    <Ionicons name="shield-checkmark-outline" size={19} color="#FFF" />
+                    <Text style={styles.savePasswordText}>{t('profile.savePassword')}</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.langCloseBtn}
+                onPress={closePasswordModal}
+                disabled={isPasswordSaving}
+              >
+                <Text style={styles.langCloseText}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal visible={isAddressModalOpen} transparent animationType="slide" onRequestClose={requestAddressModalClose}>
@@ -717,6 +911,12 @@ const styles = StyleSheet.create({
   settingIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   settingText: { flex: 1, fontSize: 16, color: '#1C1C1E', marginLeft: 12 },
   settingValue: { fontSize: 15, color: '#8E8E93' },
+  passwordModalDescription: { fontSize: 14, lineHeight: 20, color: '#64748B', marginTop: -8, marginBottom: 16 },
+  passwordInputRow: { minHeight: 52, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 14, flexDirection: 'row', alignItems: 'center', paddingLeft: 14, marginBottom: 10 },
+  passwordInput: { flex: 1, color: '#1C1C1E', fontSize: 15, fontWeight: '600', paddingVertical: 13 },
+  passwordEyeButton: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
+  savePasswordButton: { minHeight: 52, borderRadius: 16, backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, marginTop: 4 },
+  savePasswordText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
   languageValue: { flexDirection: 'row', alignItems: 'center', gap: 6, marginRight: 8 },
   languageFlag: { fontSize: 16 },
   logoutButton: { backgroundColor: '#FFF', borderRadius: 12, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
