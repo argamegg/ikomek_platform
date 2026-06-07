@@ -142,7 +142,7 @@ def _map_request_document(request: dict, current_user: Optional[dict] = None, la
         "latitude": request.get("latitude"),
         "longitude": request.get("longitude"),
         "status": request.get("status", "pending"),
-        "priority": request.get("priority", "medium"),
+        "priority": request.get("priority", "unset"),
         "category": request.get("category_id", ""),
         "category_id": request.get("category_id", ""),
         "category_name": request.get("category_name", ""),

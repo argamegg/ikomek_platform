@@ -3,6 +3,7 @@
     "cabinet": "My Cabinet"
   },
   "priority": {
+    "unset": "Unset",
     "low": "Low",
     "medium": "Medium",
     "high": "High"

@@ -39,6 +39,7 @@ const TIMELINE_COLORS = {
 } as const;
 
 const PRIORITY_BADGE_STYLES = {
+  unset: { background: '#F8FAFC', text: '#64748B', border: '#CBD5E1' },
   low: { background: '#F3F4F6', text: '#6B7280', border: '#D1D5DB' },
   medium: { background: '#FEF9C3', text: '#CA8A04', border: '#FDE047' },
   high: { background: '#FEE2E2', text: '#DC2626', border: '#FCA5A5' },
@@ -960,7 +961,7 @@ export default function MapScreen() {
   }, []);
 
   const renderPointCard = (item: MapPoint) => {
-    const priorityStyle = PRIORITY_BADGE_STYLES[item.priority ?? 'medium'] ?? PRIORITY_BADGE_STYLES.medium;
+    const priorityStyle = PRIORITY_BADGE_STYLES[item.priority ?? 'unset'] ?? PRIORITY_BADGE_STYLES.unset;
     const statusColor = STATUS_COLORS[item.status] || '#FF9500';
     const title = localizeProblemType(item.category, item.title, t);
     return (
@@ -1013,8 +1014,8 @@ export default function MapScreen() {
       t,
     )
     : '';
-  const selectedPointPriority = selectedPointRequest?.priority ?? selectedPoint?.priority ?? 'medium';
-  const selectedPointPriorityStyle = PRIORITY_BADGE_STYLES[selectedPointPriority] ?? PRIORITY_BADGE_STYLES.medium;
+  const selectedPointPriority = selectedPointRequest?.priority ?? selectedPoint?.priority ?? 'unset';
+  const selectedPointPriorityStyle = PRIORITY_BADGE_STYLES[selectedPointPriority] ?? PRIORITY_BADGE_STYLES.unset;
 
   if (isLoading) {
     return <View style={[styles.container, styles.centered]}><ActivityIndicator size="large" color={ORANGE} /></View>;

@@ -27,6 +27,7 @@ export const ru = {
   },
 
   priority: {
+    unset: 'Не задан',
     low: 'Низкий',
     medium: 'Средний',
     high: 'Высокий',
@@ -303,6 +304,7 @@ export const ru = {
     },
     priorities: {
       low: 'Низкий',
+      unset: 'Не задан',
       medium: 'Средний',
       high: 'Высокий',
     },

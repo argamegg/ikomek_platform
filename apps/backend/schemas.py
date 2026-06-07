@@ -11,6 +11,7 @@ ROLE_OPERATOR = "operator"
 ROLE_ADMIN = "admin"
 
 class Priority(str, Enum):
+    unset = "unset"
     low = "low"
     medium = "medium"
     high = "high"
@@ -156,7 +157,7 @@ class RequestModel(BaseModel):
     source_lang: Optional[str] = "ru"
     photos: List[str] = []
     status: str = "pending"
-    priority: Priority = Priority.medium
+    priority: Priority = Priority.unset
     district: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

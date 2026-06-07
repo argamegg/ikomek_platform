@@ -16,6 +16,7 @@ const statusToneMap: Record<string, "neutral" | "warning" | "success" | "danger"
 };
 
 const priorityBadgeClassMap: Record<RequestPriority, string> = {
+  unset: "ui-badge--priority-unset",
   high: "ui-badge--priority-high",
   medium: "ui-badge--priority-medium",
   low: "ui-badge--priority-low",
@@ -128,7 +129,7 @@ export function getStatusTone(status: RequestStatus) {
 }
 
 export function getPriorityBadgeClass(priority: RequestPriority) {
-  return priorityBadgeClassMap[priority] ?? priorityBadgeClassMap.medium;
+  return priorityBadgeClassMap[priority] ?? priorityBadgeClassMap.unset;
 }
 
 export function formatRole(role: UserRole) {

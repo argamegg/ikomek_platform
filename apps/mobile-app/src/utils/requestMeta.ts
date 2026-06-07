@@ -10,6 +10,7 @@ export const statusKeyMap: Record<string, string> = {
 };
 
 export const priorityKeyMap: Record<string, string> = {
+  unset: 'priority.unset',
   low: 'priority.low',
   medium: 'priority.medium',
   high: 'priority.high',

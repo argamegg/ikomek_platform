@@ -38,7 +38,7 @@ const TIMELINE_COLORS = {
   closed: "#34c759",
 } as const;
 
-const PRIORITY_OPTIONS = ["all", "low", "medium", "high"] as const;
+const PRIORITY_OPTIONS = ["all", "unset", "low", "medium", "high"] as const;
 const WEEKDAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 const MAX_DATE_RANGE_DAYS = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;

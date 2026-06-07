@@ -38,13 +38,14 @@ type SortMode = "newest" | "oldest" | "priority";
 
 const STATUS_FILTERS: StatusFilter[] = ["all", "pending", "in_progress", "closed"];
 const STATUS_OPTIONS: OperatorStatus[] = ["pending", "in_progress", "closed"];
-const PRIORITY_FILTERS: PriorityFilter[] = ["all", "high", "medium", "low"];
-const PRIORITY_OPTIONS: RequestPriority[] = ["low", "medium", "high"];
+const PRIORITY_FILTERS: PriorityFilter[] = ["all", "unset", "high", "medium", "low"];
+const PRIORITY_OPTIONS: RequestPriority[] = ["unset", "low", "medium", "high"];
 const OPERATOR_PAGE_SIZE = 12;
 const PRIORITY_SORT_WEIGHT: Record<RequestPriority, number> = {
   high: 3,
   medium: 2,
   low: 1,
+  unset: 0,
 };
 
 function normalizeLocale(language: string): Locale {
@@ -83,7 +84,7 @@ export function OperatorPage() {
   const queryClient = useQueryClient();
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [statusDraft, setStatusDraft] = useState<OperatorStatus>("in_progress");
-  const [priorityDraft, setPriorityDraft] = useState<RequestPriority>("medium");
+  const [priorityDraft, setPriorityDraft] = useState<RequestPriority>("unset");
   const [departmentName, setDepartmentName] = useState("");
   const [internalNote, setInternalNote] = useState("");
   const [resolutionNote, setResolutionNote] = useState("");

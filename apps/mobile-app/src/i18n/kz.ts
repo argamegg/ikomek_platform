@@ -27,6 +27,7 @@ export const kz = {
   },
 
   priority: {
+    unset: 'Белгіленбеген',
     low: 'Төмен',
     medium: 'Орташа',
     high: 'Жоғары',
@@ -303,6 +304,7 @@ export const kz = {
     },
     priorities: {
       low: 'Төмен',
+      unset: 'Белгіленбеген',
       medium: 'Орташа',
       high: 'Жоғары',
     },

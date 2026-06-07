@@ -33,12 +33,13 @@ type PriorityFilter = "all" | RequestPriority;
 type SortMode = "newest" | "oldest" | "priority";
 
 const STATUS_FILTERS: FilterMode[] = ["all", "pending", "in_progress", "closed"];
-const PRIORITY_FILTERS: PriorityFilter[] = ["all", "high", "medium", "low"];
+const PRIORITY_FILTERS: PriorityFilter[] = ["all", "unset", "high", "medium", "low"];
 const REQUESTS_PAGE_SIZE = 12;
 const PRIORITY_SORT_WEIGHT: Record<RequestPriority, number> = {
   high: 3,
   medium: 2,
   low: 1,
+  unset: 0,
 };
 
 function getStatusCount(requests: CivicRequest[], status: RequestStatus) {

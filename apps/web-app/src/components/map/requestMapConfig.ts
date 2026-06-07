@@ -55,7 +55,9 @@ export function getRequestWeight(request: CivicRequest) {
     ? 1
     : request.priority === "medium"
       ? 0.66
-      : 0.4;
+      : request.priority === "low"
+        ? 0.4
+        : 0.24;
 }
 
 export function getRequestColor(

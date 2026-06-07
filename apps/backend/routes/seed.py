@@ -48,7 +48,7 @@ async def seed_demo_data():
     
     categories = ["electricity", "water", "heating", "public_order", "sewage", "waste", "roads", "street_lighting"]
     statuses = ["pending", "in_progress", "closed"]
-    priorities = ["low", "medium", "high"]
+    priorities = ["unset", "low", "medium", "high"]
     
     problem_types_ru = {
         "electricity": ["Отключение света", "Скачки напряжения", "Повреждение кабеля", "Не работает фонарь"],

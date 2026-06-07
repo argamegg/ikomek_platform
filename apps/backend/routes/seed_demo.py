@@ -425,7 +425,7 @@ DEPARTMENTS = {
 }
 
 STATUS_WEIGHTS = [("pending", 0.5), ("in_progress", 0.3), ("closed", 0.2)]
-PRIORITY_WEIGHTS = [("medium", 0.6), ("high", 0.25), ("low", 0.15)]
+PRIORITY_WEIGHTS = [("unset", 0.25), ("medium", 0.35), ("high", 0.25), ("low", 0.15)]
 PLACE_TYPES = ["Квартира", "Подъезд", "Двор", "Улица", "Паркинг", "Детская площадка"]
 ASTANA_BOUNDS = {
     "min_lat": 51.05,

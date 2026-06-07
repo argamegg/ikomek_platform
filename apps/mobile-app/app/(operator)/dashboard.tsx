@@ -23,13 +23,14 @@ import { localizeRequestPriority } from '../../src/utils/requestMeta';
 
 const ORANGE = '#FF6B00';
 const STATUSES: Request['status'][] = ['pending', 'in_progress', 'closed'];
-const PRIORITIES: RequestPriority[] = ['low', 'medium', 'high'];
+const PRIORITIES: RequestPriority[] = ['unset', 'low', 'medium', 'high'];
 const PRIORITY_META: Record<RequestPriority, { background: string; text: string; border: string; strip: string }> = {
+  unset: { background: '#F8FAFC', text: '#64748B', border: '#CBD5E1', strip: '#94A3B8' },
   low: { background: '#F3F4F6', text: '#6B7280', border: '#D1D5DB', strip: '#6B7280' },
   medium: { background: '#FEF9C3', text: '#CA8A04', border: '#FDE047', strip: '#CA8A04' },
   high: { background: '#FEE2E2', text: '#DC2626', border: '#FCA5A5', strip: '#DC2626' },
 };
-const PRIORITY_WEIGHT: Record<RequestPriority, number> = { high: 3, medium: 2, low: 1 };
+const PRIORITY_WEIGHT: Record<RequestPriority, number> = { high: 3, medium: 2, low: 1, unset: 0 };
 const STATS_HORIZONTAL_PADDING = 16;
 const STATS_GAP = 8;
 
@@ -72,7 +73,7 @@ function getSearchText(request: Request) {
 }
 
 function getPriorityValue(priority?: Request['priority']): RequestPriority {
-  return priority ?? 'medium';
+  return priority ?? 'unset';
 }
 
 type OperatorFilterSheetProps = {
@@ -292,7 +293,7 @@ export default function OperatorDashboard() {
   const [chatAttachment, setChatAttachment] = useState<ChatAttachment | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [statusDraft, setStatusDraft] = useState<Request['status']>('in_progress');
-  const [priorityDraft, setPriorityDraft] = useState<RequestPriority>('medium');
+  const [priorityDraft, setPriorityDraft] = useState<RequestPriority>('unset');
   const [assignedDepartment, setAssignedDepartment] = useState('');
   const [operatorNotes, setOperatorNotes] = useState('');
   const [resolutionNotes, setResolutionNotes] = useState('');

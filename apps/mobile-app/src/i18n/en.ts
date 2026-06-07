@@ -27,6 +27,7 @@ export const en = {
   },
 
   priority: {
+    unset: 'Unset',
     low: 'Low',
     medium: 'Medium',
     high: 'High',
@@ -303,6 +304,7 @@ export const en = {
     },
     priorities: {
       low: 'Low',
+      unset: 'Unset',
       medium: 'Medium',
       high: 'High',
     },

@@ -199,10 +199,10 @@ function normalizeStatus(value: unknown): RequestStatus {
 }
 
 function normalizePriority(value: unknown): RequestPriority {
-  const normalized = (asString(value, "medium") || "medium").toLowerCase();
-  return normalized === "low" || normalized === "medium" || normalized === "high"
+  const normalized = (asString(value, "unset") || "unset").toLowerCase();
+  return normalized === "unset" || normalized === "low" || normalized === "medium" || normalized === "high"
     ? normalized
-    : "medium";
+    : "unset";
 }
 
 function normalizeNewsPriority(value: unknown): NewsPriority | "" {

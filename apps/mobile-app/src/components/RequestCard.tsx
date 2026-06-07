@@ -35,6 +35,7 @@ const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
 };
 
 const PRIORITY_COLORS = {
+  unset: { background: '#F8FAFC', text: '#64748B', border: '#CBD5E1' },
   low: { background: '#F3F4F6', text: '#6B7280', border: '#D1D5DB' },
   medium: { background: '#FEF9C3', text: '#CA8A04', border: '#FDE047' },
   high: { background: '#FEE2E2', text: '#DC2626', border: '#FCA5A5' },
@@ -60,8 +61,8 @@ export const RequestCard = ({ request, onPress }: RequestCardProps) => {
     request.reason,
     t,
   );
-  const priority = request.priority ?? 'medium';
-  const priorityStyle = PRIORITY_COLORS[priority] ?? PRIORITY_COLORS.medium;
+  const priority = request.priority ?? 'unset';
+  const priorityStyle = PRIORITY_COLORS[priority] ?? PRIORITY_COLORS.unset;
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>

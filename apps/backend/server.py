@@ -32,6 +32,44 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+VALID_REQUEST_PRIORITIES = ["unset", "low", "medium", "high"]
+
+
+async def migrate_request_priorities():
+    normal_result = await db.requests.update_many(
+        {"priority": "normal"},
+        {"$set": {"priority": "medium"}},
+    )
+    missing_or_invalid_result = await db.requests.update_many(
+        {
+            "$or": [
+                {"priority": {"$exists": False}},
+                {"priority": None},
+                {"priority": {"$nin": VALID_REQUEST_PRIORITIES}},
+            ],
+        },
+        {"$set": {"priority": "unset"}},
+    )
+    untouched_medium_result = await db.requests.update_many(
+        {
+            "status": "pending",
+            "priority": "medium",
+            "$or": [
+                {"operator_id": {"$exists": False}},
+                {"operator_id": None},
+            ],
+        },
+        {"$set": {"priority": "unset"}},
+    )
+
+    if normal_result.modified_count or missing_or_invalid_result.modified_count or untouched_medium_result.modified_count:
+        logger.info(
+            "Request priority migration updated normal=%s invalid=%s untouched_medium=%s.",
+            normal_result.modified_count,
+            missing_or_invalid_result.modified_count,
+            untouched_medium_result.modified_count,
+        )
+
 
 @app.get("/api/health")
 async def health_check():
@@ -98,7 +136,8 @@ async def ensure_indexes_with_retries():
     for attempt in range(1, max_attempts + 1):
         try:
             await create_indexes()
-            logger.info("MongoDB indexes are ready.")
+            await migrate_request_priorities()
+            logger.info("MongoDB indexes and request priority migration are ready.")
             return
         except PyMongoError as exc:
             logger.warning(

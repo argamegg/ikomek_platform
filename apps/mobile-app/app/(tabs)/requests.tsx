@@ -50,15 +50,16 @@ const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
 };
 
 const PRIORITY_BADGE_STYLES = {
+  unset: { background: '#F8FAFC', text: '#64748B', border: '#CBD5E1' },
   low: { background: '#F3F4F6', text: '#6B7280', border: '#D1D5DB' },
   medium: { background: '#FEF9C3', text: '#CA8A04', border: '#FDE047' },
   high: { background: '#FEE2E2', text: '#DC2626', border: '#FCA5A5' },
 } as const;
 
 type SortMode = 'newest' | 'oldest' | 'priority';
-type RequestPriorityFilter = 'all' | 'low' | 'medium' | 'high';
+type RequestPriorityFilter = 'all' | 'unset' | 'low' | 'medium' | 'high';
 
-const PRIORITY_WEIGHT: Record<string, number> = { high: 3, medium: 2, low: 1 };
+const PRIORITY_WEIGHT: Record<string, number> = { high: 3, medium: 2, low: 1, unset: 0 };
 const formatRequestId = (id?: string | null) => (id ? `#${id.slice(0, 8)}` : '#—');
 
 type ChatAttachment = {
@@ -249,7 +250,7 @@ export default function RequestsScreen() {
       .filter((request) => {
         const matchesStatus = !filter || request.status === filter;
         const matchesCategory = categoryFilter === 'all' || request.category_id === categoryFilter;
-        const priority = request.priority ?? 'medium';
+        const priority = request.priority ?? 'unset';
         const matchesPriority = priorityFilter === 'all' || priority === priorityFilter;
         const searchable = [
           request.id,
@@ -267,7 +268,7 @@ export default function RequestsScreen() {
           return new Date(first.created_at).getTime() - new Date(second.created_at).getTime();
         }
         if (sortMode === 'priority') {
-          const priorityDiff = (PRIORITY_WEIGHT[second.priority ?? 'medium'] ?? 2) - (PRIORITY_WEIGHT[first.priority ?? 'medium'] ?? 2);
+          const priorityDiff = (PRIORITY_WEIGHT[second.priority ?? 'unset'] ?? 0) - (PRIORITY_WEIGHT[first.priority ?? 'unset'] ?? 0);
           if (priorityDiff !== 0) return priorityDiff;
         }
         return new Date(second.created_at).getTime() - new Date(first.created_at).getTime();
@@ -307,8 +308,8 @@ export default function RequestsScreen() {
       selectedRequest.reason,
       t,
     );
-    const detailPriority = selectedRequest.priority ?? 'medium';
-    const detailPriorityStyle = PRIORITY_BADGE_STYLES[detailPriority] ?? PRIORITY_BADGE_STYLES.medium;
+    const detailPriority = selectedRequest.priority ?? 'unset';
+    const detailPriorityStyle = PRIORITY_BADGE_STYLES[detailPriority] ?? PRIORITY_BADGE_STYLES.unset;
 
     return (
       <Modal visible={!!selectedRequest} animationType="slide" presentationStyle="pageSheet">
@@ -659,7 +660,7 @@ export default function RequestsScreen() {
 
               <Text style={styles.filterSectionTitle}>{t('myRequests.priorityFilter')}</Text>
               <View style={styles.optionGrid}>
-                {(['all', 'high', 'medium', 'low'] as RequestPriorityFilter[]).map((item) => {
+                {(['all', 'unset', 'high', 'medium', 'low'] as RequestPriorityFilter[]).map((item) => {
                   const active = priorityFilter === item;
                   const label = item === 'all' ? t('myRequests.allPriorities') : localizeRequestPriority(item, t);
                   return (

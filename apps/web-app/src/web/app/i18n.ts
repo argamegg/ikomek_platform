@@ -51,6 +51,7 @@ const resources = {
         locateMe: "Locate me",
       },
       priority: {
+        unset: "Unset",
         low: "Low",
         medium: "Medium",
         high: "High",
@@ -496,6 +497,7 @@ const resources = {
           rejected: "Rejected",
         },
         priorities: {
+          unset: "Unset",
           low: "Low",
           medium: "Medium",
           high: "High",
@@ -1225,6 +1227,7 @@ const resources = {
         locateMe: "Мое местоположение",
       },
       priority: {
+        unset: "Не задан",
         low: "Низкий",
         medium: "Средний",
         high: "Высокий",
@@ -1671,6 +1674,7 @@ const resources = {
           rejected: "Отклонено",
         },
         priorities: {
+          unset: "Не задан",
           low: "Низкий",
           medium: "Средний",
           high: "Высокий",
@@ -2403,6 +2407,7 @@ const resources = {
         locateMe: "Менің орным",
       },
       priority: {
+        unset: "Белгіленбеген",
         low: "Төмен",
         medium: "Орташа",
         high: "Жоғары",
@@ -2850,6 +2855,7 @@ const resources = {
           rejected: "Қабылданбады",
         },
         priorities: {
+          unset: "Белгіленбеген",
           low: "Төмен",
           medium: "Орташа",
           high: "Жоғары",

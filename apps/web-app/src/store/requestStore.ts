@@ -11,7 +11,7 @@ export function getCitizenRequestSummary(requests: CivicRequest[]) {
 
 export function getOperatorPriorityQueue(requests: CivicRequest[]) {
   return [...requests].sort((left, right) => {
-    const priorityWeight = { high: 3, medium: 2, low: 1 };
+    const priorityWeight = { high: 3, medium: 2, low: 1, unset: 0 };
     return priorityWeight[right.priority] - priorityWeight[left.priority];
   });
 }
