@@ -606,6 +606,7 @@ export const en = {
     passwordMin: 'New password must be at least 6 characters',
     passwordMismatch: 'New passwords do not match',
     helpSupport: 'Help & Support',
+    faq: 'FAQ',
     termsPrivacy: 'Terms & Privacy',
     version: 'Version',
     logout: 'Logout',

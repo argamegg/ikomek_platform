@@ -11,7 +11,6 @@ import { format } from 'date-fns';
 import { apiService, MapPoint, Request } from '../../src/utils/api';
 import { RequestsMap } from '../../src/components/RequestsMap';
 import { StatusBadge } from '../../src/components/StatusBadge';
-import { AIAssistantHeaderButton } from '../../src/components/AIAssistantWidget';
 import {
   REQUEST_CATEGORIES,
   localizeCategory,
@@ -1026,7 +1025,6 @@ export default function MapScreen() {
       <View style={[styles.header, { paddingHorizontal: horizontalPadding }]}>
         <Text style={styles.headerTitle} data-testid="map-title">{t('nav.map')}</Text>
         <View style={styles.headerActions}>
-          <AIAssistantHeaderButton />
           <View style={styles.headerRight}>
             <TouchableOpacity style={[styles.viewToggle, viewMode === 'map' && styles.viewToggleActive]} onPress={() => setViewMode('map')} data-testid="map-view-toggle">
               <Ionicons name="map" size={18} color={viewMode === 'map' ? '#FFF' : '#64748B'} />

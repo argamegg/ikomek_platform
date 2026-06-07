@@ -606,6 +606,7 @@ export const ru = {
     passwordMin: 'Новый пароль должен быть не короче 6 символов',
     passwordMismatch: 'Новые пароли не совпадают',
     helpSupport: 'Помощь и поддержка',
+    faq: 'FAQ',
     termsPrivacy: 'Условия и конфиденциальность',
     version: 'Версия',
     logout: 'Выйти',

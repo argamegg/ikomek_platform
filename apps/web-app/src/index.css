@@ -1767,6 +1767,11 @@ button {
   color: #16a34a;
 }
 
+.settings-card__icon--gray {
+  background: rgba(100, 116, 139, 0.12);
+  color: #64748b;
+}
+
 .settings-profile-preview {
   display: flex;
   align-items: center;
@@ -1914,6 +1919,64 @@ button {
 .settings-language-list small {
   color: #64748b;
   font-weight: 900;
+}
+
+.settings-card--faq {
+  grid-column: 1 / -1;
+}
+
+.settings-faq-list {
+  display: grid;
+  gap: 10px;
+}
+
+.settings-faq-item {
+  overflow: hidden;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.92);
+}
+
+.settings-faq-item summary {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 0 16px;
+  color: #0f172a;
+  cursor: pointer;
+  font-weight: 900;
+  list-style: none;
+}
+
+.settings-faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.settings-faq-item summary::after {
+  content: "+";
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 107, 0, 0.1);
+  color: #ff6b00;
+  font-weight: 900;
+}
+
+.settings-faq-item[open] summary::after {
+  content: "-";
+}
+
+.settings-faq-item p {
+  margin: 0;
+  padding: 0 16px 16px;
+  color: #64748b;
+  font-weight: 700;
+  line-height: 1.65;
 }
 
 .cabinet-main {

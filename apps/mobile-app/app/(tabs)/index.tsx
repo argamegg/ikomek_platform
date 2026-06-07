@@ -16,7 +16,6 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { NewsFilterSheet, type PeriodFilter, type SortFilter } from '../../src/components/NewsFilterSheet';
 import { NewsCard } from '../../src/components/NewsCard';
-import { AIAssistantHeaderButton } from '../../src/components/AIAssistantWidget';
 import { useAuth } from '../../src/context/AuthContext';
 import { apiService, type NewsItem } from '../../src/utils/api';
 import {
@@ -329,7 +328,6 @@ export default function NewsScreen() {
             <Text style={styles.headerTitle}>{t('news.title')}</Text>
             <Text style={styles.headerSubtitle}>{t('news.subtitle')}</Text>
           </View>
-          <AIAssistantHeaderButton />
         </View>
         <SearchBar
           value={searchInput}

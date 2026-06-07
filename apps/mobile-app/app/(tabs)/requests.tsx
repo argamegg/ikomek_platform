@@ -23,7 +23,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { apiService, Request, Message } from '../../src/utils/api';
-import { AIAssistantHeaderButton } from '../../src/components/AIAssistantWidget';
 import { RequestCard } from '../../src/components/RequestCard';
 import { StatusBadge } from '../../src/components/StatusBadge';
 import {
@@ -506,7 +505,6 @@ export default function RequestsScreen() {
           <Text style={styles.headerTitle}>{t('myRequests.title')}</Text>
           <Text style={styles.headerSubtitle}>{t('myRequests.totalRequestsCount', { count: filteredRequests.length })}</Text>
         </View>
-        <AIAssistantHeaderButton />
       </View>
 
       <View style={styles.searchPanel}>

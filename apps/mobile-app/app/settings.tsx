@@ -26,6 +26,7 @@ import {
   type LocationPickerCoordinate,
   type LocationPickerMapRef,
 } from '../src/components/LocationPickerMap';
+import { useAIAssistant } from '../src/components/AIAssistantWidget';
 import { useAuth } from '../src/context/AuthContext';
 import { apiService, getApiErrorMessage, SavedLocation } from '../src/utils/api';
 import {
@@ -49,6 +50,12 @@ type PasswordForm = {
   newPassword: string;
   confirmPassword: string;
 };
+type SettingsLocale = 'ru' | 'kz' | 'en';
+type FaqAudience = 'citizen' | 'staff';
+type FaqItem = {
+  question: string;
+  answer: string;
+};
 
 const EMPTY_PASSWORD_FORM: PasswordForm = {
   currentPassword: '',
@@ -70,13 +77,151 @@ const LANGUAGES = [
   { code: 'en', name: 'English', flag: '🇬🇧' },
 ];
 
+const SETTINGS_COPY: Record<SettingsLocale, { faqTitle: string; faqSubtitle: string }> = {
+  ru: {
+    faqTitle: 'FAQ',
+    faqSubtitle: 'Ответы на частые вопросы по вашей роли в iKOMEK 109.',
+  },
+  kz: {
+    faqTitle: 'FAQ',
+    faqSubtitle: 'iKOMEK 109 жүйесіндегі рөліңіз бойынша жиі қойылатын сұрақтарға жауаптар.',
+  },
+  en: {
+    faqTitle: 'FAQ',
+    faqSubtitle: 'Answers to common iKOMEK 109 questions for your role.',
+  },
+};
+
+const FAQ_ITEMS: Record<FaqAudience, Record<SettingsLocale, FaqItem[]>> = {
+  citizen: {
+    ru: [
+      {
+        question: 'Как создать обращение?',
+        answer: 'Откройте вкладку «Создать», выберите категорию, укажите адрес на карте, добавьте описание и при необходимости фото.',
+      },
+      {
+        question: 'Как отследить статус заявки?',
+        answer: 'Во вкладке «Заявки» отображаются ваши обращения и статусы: ожидает, в работе или закрыто.',
+      },
+      {
+        question: 'Где написать оператору?',
+        answer: 'Откройте нужную заявку и перейдите в чат. Сообщения и вложения сохраняются в истории обращения.',
+      },
+      {
+        question: 'Почему адрес ограничен Астаной?',
+        answer: 'Платформа обслуживает городскую зону iKOMEK 109, поэтому обращения принимаются только в Астане и рядом с городом.',
+      },
+    ],
+    kz: [
+      {
+        question: 'Өтінішті қалай жасауға болады?',
+        answer: '«Жасау» бөліміне өтіп, санатты таңдаңыз, картадан мекенжайды белгілеңіз, сипаттама және қажет болса фото қосыңыз.',
+      },
+      {
+        question: 'Өтініш мәртебесін қалай бақылауға болады?',
+        answer: '«Өтініштер» бөлімінде барлық өтініштеріңіз және олардың мәртебелері көрсетіледі: күтуде, жұмыста немесе жабық.',
+      },
+      {
+        question: 'Операторға қайдан жазамын?',
+        answer: 'Қажетті өтінішті ашып, чатқа өтіңіз. Хабарламалар мен тіркемелер өтініш тарихында сақталады.',
+      },
+      {
+        question: 'Неге мекенжай тек Астанамен шектелген?',
+        answer: 'Платформа iKOMEK 109 қалалық аймағына арналған, сондықтан өтініштер Астана ішінде және қала маңында қабылданады.',
+      },
+    ],
+    en: [
+      {
+        question: 'How do I create a request?',
+        answer: 'Open Create, choose a category, set the address on the map, add a description, and attach photos if needed.',
+      },
+      {
+        question: 'How can I track request status?',
+        answer: 'Open Requests to see your submissions and their statuses: pending, in progress, or closed.',
+      },
+      {
+        question: 'Where can I message an operator?',
+        answer: 'Open the request and go to chat. Messages and attachments stay in the request history.',
+      },
+      {
+        question: 'Why is the address limited to Astana?',
+        answer: 'The platform serves the iKOMEK 109 city zone, so requests are accepted only in Astana and nearby areas.',
+      },
+    ],
+  },
+  staff: {
+    ru: [
+      {
+        question: 'Где обрабатывать обращения?',
+        answer: 'Операторы работают в панели оператора: там видны очередь, фильтры, детали заявки и обновление статуса.',
+      },
+      {
+        question: 'Что видит гражданин после обновления статуса?',
+        answer: 'Гражданин видит новый статус, публичные комментарии и сообщения в чате по своей заявке.',
+      },
+      {
+        question: 'Где смотреть аналитику?',
+        answer: 'Администраторы видят сводные показатели, категории, нагрузку операторов и динамику обращений в админ-разделе.',
+      },
+      {
+        question: 'Как публиковать новости?',
+        answer: 'Администратор может создать новость в разделе управления новостями, добавить тип, период, локацию и переводы.',
+      },
+    ],
+    kz: [
+      {
+        question: 'Өтініштер қайда өңделеді?',
+        answer: 'Операторлар оператор панелінде жұмыс істейді: кезек, сүзгілер, өтініш мәліметтері және мәртебені жаңарту сонда.',
+      },
+      {
+        question: 'Мәртебе жаңарғаннан кейін тұрғын не көреді?',
+        answer: 'Тұрғын жаңа мәртебені, жария түсініктемелерді және өтініш чатындағы хабарламаларды көреді.',
+      },
+      {
+        question: 'Аналитиканы қайдан көремін?',
+        answer: 'Әкімшілер админ бөлімінде жалпы көрсеткіштерді, санаттарды, операторлар жүктемесін және өтініш динамикасын көреді.',
+      },
+      {
+        question: 'Жаңалықты қалай жариялауға болады?',
+        answer: 'Әкімші жаңалықтарды басқару бөлімінде жаңалық жасап, түрін, кезеңін, локациясын және аудармаларын қоса алады.',
+      },
+    ],
+    en: [
+      {
+        question: 'Where are requests processed?',
+        answer: 'Operators work in the operator dashboard with the queue, filters, request details, and status updates.',
+      },
+      {
+        question: 'What does a citizen see after a status update?',
+        answer: 'The citizen sees the new status, public resolution notes, and chat messages for their request.',
+      },
+      {
+        question: 'Where can analytics be viewed?',
+        answer: 'Admins can view platform metrics, categories, operator workload, and request trends in the admin area.',
+      },
+      {
+        question: 'How are news posts published?',
+        answer: 'An admin can create news in the news management area, then add type, period, location, and translations.',
+      },
+    ],
+  },
+};
+
+function getSettingsLocale(language?: string): SettingsLocale {
+  if (language?.startsWith('kz') || language?.startsWith('kk')) return 'kz';
+  if (language?.startsWith('en')) return 'en';
+  return 'ru';
+}
+
 export default function SettingsScreen() {
   const { t, i18n } = useTranslation();
   const { user, token, logout, setLocalPassword, changePassword, updateLanguage, isCitizen } = useAuth();
+  const { openAssistant } = useAIAssistant();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]);
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
+  const [isFaqModalOpen, setIsFaqModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isPasswordSaving, setIsPasswordSaving] = useState(false);
   const [showPasswordFields, setShowPasswordFields] = useState(false);
@@ -451,6 +596,10 @@ export default function SettingsScreen() {
   };
 
   const currentLanguage = LANGUAGES.find((language) => language.code === (user?.language || i18n.language)) || LANGUAGES[0];
+  const settingsLocale = getSettingsLocale(user?.language || i18n.language);
+  const settingsCopy = SETTINGS_COPY[settingsLocale];
+  const faqAudience: FaqAudience = user?.role === 'operator' || user?.role === 'admin' ? 'staff' : 'citizen';
+  const faqItems = FAQ_ITEMS[faqAudience][settingsLocale];
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -536,7 +685,7 @@ export default function SettingsScreen() {
             <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingItem}>
+          <TouchableOpacity style={styles.settingItem} onPress={openAssistant}>
             <View style={[styles.settingIcon, { backgroundColor: '#34C75920' }]}>
               <Ionicons name="help-circle" size={20} color="#34C759" />
             </View>
@@ -544,11 +693,11 @@ export default function SettingsScreen() {
             <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingItem}>
+          <TouchableOpacity style={styles.settingItem} onPress={() => setIsFaqModalOpen(true)}>
             <View style={[styles.settingIcon, { backgroundColor: '#8E8E9320' }]}>
-              <Ionicons name="document-text" size={20} color="#8E8E93" />
+              <Ionicons name="help-buoy" size={20} color="#8E8E93" />
             </View>
-            <Text style={styles.settingText}>{t('profile.termsPrivacy')}</Text>
+            <Text style={styles.settingText}>{t('profile.faq')}</Text>
             <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
           </TouchableOpacity>
         </View>
@@ -588,6 +737,33 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             ))}
             <TouchableOpacity style={styles.langCloseBtn} onPress={() => setIsLanguageModalOpen(false)}>
+              <Text style={styles.langCloseText}>{t('common.close')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={isFaqModalOpen} transparent animationType="slide" onRequestClose={() => setIsFaqModalOpen(false)}>
+        <View style={styles.langModalOverlay}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setIsFaqModalOpen(false)}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.close')}
+          />
+          <View style={[styles.langModalContent, styles.faqModalContent, { paddingBottom: insets.bottom + 16 }]}>
+            <View style={styles.langModalHandle} />
+            <Text style={styles.langModalTitle}>{settingsCopy.faqTitle}</Text>
+            <Text style={styles.faqSubtitle}>{settingsCopy.faqSubtitle}</Text>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.faqList}>
+              {faqItems.map((item) => (
+                <View key={item.question} style={styles.faqItem}>
+                  <Text style={styles.faqQuestion}>{item.question}</Text>
+                  <Text style={styles.faqAnswer}>{item.answer}</Text>
+                </View>
+              ))}
+            </ScrollView>
+            <TouchableOpacity style={styles.langCloseBtn} onPress={() => setIsFaqModalOpen(false)}>
               <Text style={styles.langCloseText}>{t('common.close')}</Text>
             </TouchableOpacity>
           </View>
@@ -924,6 +1100,12 @@ const styles = StyleSheet.create({
   keyboardAvoidingOverlay: { flex: 1 },
   langModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   langModalContent: { backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
+  faqModalContent: { maxHeight: '82%' },
+  faqSubtitle: { color: '#64748B', fontSize: 14, lineHeight: 20, marginTop: -8, marginBottom: 14 },
+  faqList: { paddingBottom: 4 },
+  faqItem: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 16, backgroundColor: '#F8FAFC', padding: 14, marginBottom: 10 },
+  faqQuestion: { color: '#0F172A', fontSize: 15, fontWeight: '800', lineHeight: 20, marginBottom: 6 },
+  faqAnswer: { color: '#64748B', fontSize: 14, lineHeight: 20 },
   addressModalContent: { maxHeight: '88%' },
   addressModalScrollContent: { paddingBottom: 12 },
   modalSwipeHandleArea: { alignItems: 'center', paddingTop: 4, paddingBottom: 20 },

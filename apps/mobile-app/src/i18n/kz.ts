@@ -606,6 +606,7 @@ export const kz = {
     passwordMin: 'Жаңа құпиясөз кемінде 6 таңба болуы керек',
     passwordMismatch: 'Жаңа құпиясөздер сәйкес келмейді',
     helpSupport: 'Көмек және қолдау',
+    faq: 'FAQ',
     termsPrivacy: 'Шарттар мен құпиялылық',
     version: 'Нұсқа',
     logout: 'Шығу',

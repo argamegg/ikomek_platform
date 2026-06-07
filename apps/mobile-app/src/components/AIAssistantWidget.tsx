@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -13,6 +14,7 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   View,
+  type KeyboardEvent,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
@@ -24,7 +26,30 @@ import { useAuth } from '../context/AuthContext';
 import { apiService, AIAssistantAction, AIAssistantMessage, getApiErrorMessage } from '../utils/api';
 
 const ORANGE = '#FF6B00';
-const ASSISTANT_ROUTES = new Set(['/', '/map', '/requests']);
+const ASSISTANT_ROUTES = new Set(['/settings']);
+
+const MOBILE_ROUTE_ALIASES: Record<string, Href> = {
+  '/': '/(tabs)',
+  '/news': '/(tabs)',
+  '/dashboard': '/(tabs)/profile',
+  '/requests': '/(tabs)/requests',
+  '/requests/new': '/(tabs)/create',
+  '/map': '/(tabs)/map',
+  '/profile': '/(tabs)/profile',
+  '/settings': '/settings',
+  '/auth': '/(auth)/login',
+  '/operator': '/(operator)/dashboard',
+  '/admin': '/(admin)/analytics',
+  '/(tabs)': '/(tabs)',
+  '/(tabs)/settings': '/settings',
+  '/(tabs)/requests': '/(tabs)/requests',
+  '/(tabs)/create': '/(tabs)/create',
+  '/(tabs)/map': '/(tabs)/map',
+  '/(tabs)/profile': '/(tabs)/profile',
+  '/(auth)/login': '/(auth)/login',
+  '/(operator)': '/(operator)/dashboard',
+  '/(admin)': '/(admin)/analytics',
+};
 
 type AIAssistantContextValue = {
   openAssistant: () => void;
@@ -78,7 +103,7 @@ export function AIAssistantHeaderButton({ style }: { style?: StyleProp<ViewStyle
   const pathname = usePathname();
   const { user } = useAuth();
 
-  if (user?.role !== 'citizen' || !ASSISTANT_ROUTES.has(pathname)) {
+  if (!user || !ASSISTANT_ROUTES.has(pathname)) {
     return null;
   }
 
@@ -108,14 +133,22 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [configured, setConfigured] = useState(true);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const openProgress = useRef(new Animated.Value(0)).current;
   const [messages, setMessages] = useState<AIAssistantMessage[]>([
     { role: 'assistant', content: copy.greeting },
   ]);
   const scrollRef = useRef<ScrollView | null>(null);
   const panelWidth = Math.min(width - 28, 380);
-  const panelHeight = Math.min(Math.round(height * 0.6), 480);
-  const panelTop = insets.top + 58;
+  const basePanelTop = insets.top + 58;
+  const defaultPanelHeight = Math.min(Math.round(height * 0.6), 480);
+  const keyboardGap = keyboardHeight > 0 ? 12 : 0;
+  const availableHeight = height - basePanelTop - keyboardHeight - keyboardGap;
+  const panelHeight = Math.max(240, Math.min(defaultPanelHeight, availableHeight));
+  const panelTop =
+    keyboardHeight > 0 && availableHeight < 240
+      ? Math.max(insets.top + 8, height - keyboardHeight - keyboardGap - 240)
+      : basePanelTop;
   const translateX = openProgress.interpolate({
     inputRange: [0, 1],
     outputRange: [panelWidth / 2, 0],
@@ -124,8 +157,7 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
     inputRange: [0, 1],
     outputRange: [-panelHeight / 2, 0],
   });
-  const isCitizen = user?.role === 'citizen';
-  const showAssistant = isCitizen && ASSISTANT_ROUTES.has(pathname);
+  const showAssistant = Boolean(user) && ASSISTANT_ROUTES.has(pathname);
 
   const closeAssistant = useCallback(() => {
     Animated.timing(openProgress, {
@@ -159,6 +191,27 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
       closeAssistant();
     }
   }, [closeAssistant, panelVisible, showAssistant]);
+
+  useEffect(() => {
+    const handleKeyboardChange = (event: KeyboardEvent) => {
+      const coordinates = event.endCoordinates;
+      const screenY = coordinates?.screenY;
+      const heightFromScreenY =
+        typeof screenY === 'number' && screenY > 0 && screenY < height ? Math.max(0, height - screenY) : 0;
+      const nextHeight = heightFromScreenY || coordinates?.height || 0;
+      setKeyboardHeight(nextHeight);
+    };
+    const handleKeyboardHide = () => setKeyboardHeight(0);
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillChangeFrame' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSubscription = Keyboard.addListener(showEvent, handleKeyboardChange);
+    const hideSubscription = Keyboard.addListener(hideEvent, handleKeyboardHide);
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, [height]);
 
   useEffect(() => {
     setMessages((current) => {
@@ -204,10 +257,21 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
     }
   };
 
+  const resolveActionPath = (action: AIAssistantAction): Href | null => {
+    const rawPath = action.mobile_path || action.web_path;
+    if (!rawPath) return null;
+
+    if (action.request_id || /^\/requests\/[^/]+/.test(rawPath)) {
+      return '/(tabs)/requests';
+    }
+
+    return MOBILE_ROUTE_ALIASES[rawPath] ?? (rawPath as Href);
+  };
+
   const handleActionPress = (action: AIAssistantAction) => {
-    const path = action.mobile_path;
+    const path = resolveActionPath(action);
     if (!path) return;
-    router.push(path as Href);
+    router.push(path);
     closeAssistant();
   };
 
@@ -267,17 +331,20 @@ export function AIAssistantProvider({ children }: { children: React.ReactNode })
                     <Text style={styles.messageText}>{message.content}</Text>
                     {message.actions?.length ? (
                       <View style={styles.actionsRow}>
-                        {message.actions.map((action, actionIndex) => (
-                          <TouchableOpacity
-                            key={`${action.label}-${actionIndex}`}
-                            activeOpacity={0.82}
-                            disabled={!action.mobile_path}
-                            style={[styles.actionButton, !action.mobile_path && styles.actionButtonDisabled]}
-                            onPress={() => handleActionPress(action)}
-                          >
-                            <Text style={styles.actionButtonText}>{action.label}</Text>
-                          </TouchableOpacity>
-                        ))}
+                        {message.actions.map((action, actionIndex) => {
+                          const actionPath = resolveActionPath(action);
+                          return (
+                            <TouchableOpacity
+                              key={`${action.label}-${actionIndex}`}
+                              activeOpacity={0.82}
+                              disabled={!actionPath}
+                              style={[styles.actionButton, !actionPath && styles.actionButtonDisabled]}
+                              onPress={() => handleActionPress(action)}
+                            >
+                              <Text style={styles.actionButtonText}>{action.label}</Text>
+                            </TouchableOpacity>
+                          );
+                        })}
                       </View>
                     ) : null}
                   </View>
