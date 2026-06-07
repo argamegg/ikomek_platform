@@ -190,6 +190,8 @@ export const ru = {
       categories: 'Типы заявок',
       allCategories: 'Все категории',
       status: 'Статусы',
+      priority: 'Приоритет',
+      allPriorities: 'Все приоритеты',
       today: 'Сегодня',
       week: 'Неделя',
       month: 'Месяц',

@@ -190,6 +190,8 @@ export const kz = {
       categories: 'Өтініш түрлері',
       allCategories: 'Барлық санаттар',
       status: 'Статустар',
+      priority: 'Басымдық',
+      allPriorities: 'Барлық басымдықтар',
       today: 'Бүгін',
       week: 'Апта',
       month: 'Ай',

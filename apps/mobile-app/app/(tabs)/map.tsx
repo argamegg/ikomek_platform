@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
-import { apiService, MapPoint, Request } from '../../src/utils/api';
+import { apiService, MapPoint, Request, type RequestPriority } from '../../src/utils/api';
 import { RequestsMap } from '../../src/components/RequestsMap';
 import { StatusBadge } from '../../src/components/StatusBadge';
 import {
@@ -44,6 +44,7 @@ const PRIORITY_BADGE_STYLES = {
   medium: { background: '#FEF9C3', text: '#CA8A04', border: '#FDE047' },
   high: { background: '#FEE2E2', text: '#DC2626', border: '#FCA5A5' },
 } as const;
+const MAP_PRIORITY_OPTIONS: RequestPriority[] = ['unset', 'high', 'medium', 'low'];
 
 const ANALYTICS_MONTHS = 12;
 const HOUR_MARKS = ['00', '06', '12', '18'];
@@ -57,6 +58,15 @@ type LocaleKey = keyof typeof LOCALE_TAGS;
 type Hotspot = { address: string; count: number; points: MapPoint[] };
 type CategoryOption = { id: string; label: string; color: string };
 type StatusOption = { key: string; label: string; count: number; color: string };
+type PriorityOption = {
+  key: RequestPriority;
+  label: string;
+  count: number;
+  background: string;
+  text: string;
+  border: string;
+};
+type MapPriorityFilter = 'all' | RequestPriority;
 type DateRange = { from: string; to: string };
 type TimelineMode = 'period' | 'months';
 type TimelineGranularity = 'hours' | 'weekdays' | 'months';
@@ -474,14 +484,16 @@ type MapFilterSheetProps = {
   visible: boolean;
   categoryOptions: CategoryOption[];
   statusOptions: StatusOption[];
+  priorityOptions: PriorityOption[];
   selectedCategory: string;
   selectedStatus: string | null;
+  selectedPriority: MapPriorityFilter;
   selectedDateRange: DateRange;
   resultCount: number;
   hasActiveFilters: boolean;
   bottomInset: number;
   onClose: () => void;
-  onApply: (value: { category: string; status: string | null; dateRange: DateRange }) => void;
+  onApply: (value: { category: string; status: string | null; priority: MapPriorityFilter; dateRange: DateRange }) => void;
   onReset: () => void;
 };
 
@@ -489,8 +501,10 @@ function MapFilterSheet({
   visible,
   categoryOptions,
   statusOptions,
+  priorityOptions,
   selectedCategory,
   selectedStatus,
+  selectedPriority,
   selectedDateRange,
   resultCount,
   hasActiveFilters,
@@ -503,19 +517,26 @@ function MapFilterSheet({
   const locale = normalizeLocale(i18n.language);
   const [draftCategory, setDraftCategory] = useState(selectedCategory);
   const [draftStatus, setDraftStatus] = useState<string | null>(selectedStatus);
+  const [draftPriority, setDraftPriority] = useState<MapPriorityFilter>(selectedPriority);
   const [draftDateRange, setDraftDateRange] = useState<DateRange>(selectedDateRange);
   const translateY = useRef(new Animated.Value(0)).current;
   const statusTotal = statusOptions.reduce((sum, item) => sum + item.count, 0);
-  const canResetFilters = hasActiveFilters || draftCategory !== 'all' || draftStatus !== null || !isDefaultDateRange(draftDateRange);
+  const priorityTotal = priorityOptions.reduce((sum, item) => sum + item.count, 0);
+  const canResetFilters = hasActiveFilters
+    || draftCategory !== 'all'
+    || draftStatus !== null
+    || draftPriority !== 'all'
+    || !isDefaultDateRange(draftDateRange);
 
   useEffect(() => {
     if (visible) {
       setDraftCategory(selectedCategory);
       setDraftStatus(selectedStatus);
+      setDraftPriority(selectedPriority);
       setDraftDateRange(selectedDateRange);
       translateY.setValue(0);
     }
-  }, [selectedCategory, selectedDateRange, selectedStatus, translateY, visible]);
+  }, [selectedCategory, selectedDateRange, selectedPriority, selectedStatus, translateY, visible]);
 
   const closeAnimated = useCallback(() => {
     Animated.timing(translateY, {
@@ -571,6 +592,7 @@ function MapFilterSheet({
               onPress={() => {
                 setDraftCategory('all');
                 setDraftStatus(null);
+                setDraftPriority('all');
                 setDraftDateRange(getDefaultDateRange());
                 onReset();
               }}
@@ -676,12 +698,75 @@ function MapFilterSheet({
                 })}
               </View>
             </View>
+
+            <View style={styles.mapFilterSeparator} />
+
+            <View style={styles.mapFilterSection}>
+              <Text style={styles.mapFilterSectionTitle}>{t('map.filters.priority')}</Text>
+              <View style={styles.mapStatusGrid}>
+                <TouchableOpacity
+                  style={[styles.mapStatusOption, draftPriority === 'all' && styles.mapStatusOptionActive]}
+                  onPress={() => setDraftPriority('all')}
+                  activeOpacity={0.78}
+                >
+                  <View style={[styles.mapStatusOptionDot, { backgroundColor: '#94A3B8' }]} />
+                  <Text style={[styles.mapStatusOptionText, draftPriority === 'all' && styles.mapStatusOptionTextActive]} numberOfLines={1}>
+                    {t('map.filters.allPriorities')}
+                  </Text>
+                  <Text style={[styles.mapStatusOptionCount, draftPriority === 'all' && styles.mapStatusOptionCountActive]}>
+                    {priorityTotal}
+                  </Text>
+                </TouchableOpacity>
+
+                {priorityOptions.map((item) => {
+                  const active = draftPriority === item.key;
+                  return (
+                    <TouchableOpacity
+                      key={item.key}
+                      style={[
+                        styles.mapStatusOption,
+                        active && styles.mapStatusOptionActive,
+                        active && { backgroundColor: item.background, borderColor: item.border },
+                      ]}
+                      onPress={() => setDraftPriority(active ? 'all' : item.key)}
+                      activeOpacity={0.78}
+                    >
+                      <View style={[styles.mapStatusOptionDot, { backgroundColor: item.text }]} />
+                      <Text
+                        style={[
+                          styles.mapStatusOptionText,
+                          active && styles.mapStatusOptionTextActive,
+                          active && { color: item.text },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {item.label}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.mapStatusOptionCount,
+                          active && styles.mapStatusOptionCountActive,
+                          active && { color: item.text },
+                        ]}
+                      >
+                        {item.count}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
           </ScrollView>
 
           <TouchableOpacity
             style={styles.mapFilterApply}
             onPress={() => {
-              onApply({ category: draftCategory, status: draftStatus, dateRange: normalizeDateRange(draftDateRange) });
+              onApply({
+                category: draftCategory,
+                status: draftStatus,
+                priority: draftPriority,
+                dateRange: normalizeDateRange(draftDateRange),
+              });
               closeAnimated();
             }}
             activeOpacity={0.82}
@@ -712,6 +797,7 @@ export default function MapScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'my'>('all');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [priorityFilter, setPriorityFilter] = useState<MapPriorityFilter>('all');
   const [selectedPoint, setSelectedPoint] = useState<MapPoint | null>(null);
   const [selectedPointRequest, setSelectedPointRequest] = useState<Request | null>(null);
   const [isPointRequestLoading, setIsPointRequestLoading] = useState(false);
@@ -755,11 +841,12 @@ export default function MapScreen() {
     let filtered = points.filter((point) => isPointInDateRange(point, dateRange));
     if (filter === 'my') filtered = filtered.filter(p => p.is_mine);
     if (statusFilter) filtered = filtered.filter(p => p.status === statusFilter);
+    if (priorityFilter !== 'all') filtered = filtered.filter(p => (p.priority ?? 'unset') === priorityFilter);
     if (categoryFilter !== 'all') filtered = filtered.filter(p => p.category === categoryFilter);
     filtered = filtered.slice().sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     setFilteredPoints(filtered);
-  }, [categoryFilter, dateRange, filter, points, statusFilter]);
+  }, [categoryFilter, dateRange, filter, points, priorityFilter, statusFilter]);
 
   const timeScopedPoints = useMemo(
     () => points.filter((point) => isPointInDateRange(point, dateRange)),
@@ -790,7 +877,8 @@ export default function MapScreen() {
     const scopedPoints = timeScopedPoints.filter((point) => {
       const matchesOwnership = filter !== 'my' || point.is_mine;
       const matchesCategory = categoryFilter === 'all' || point.category === categoryFilter;
-      return matchesOwnership && matchesCategory;
+      const matchesPriority = priorityFilter === 'all' || (point.priority ?? 'unset') === priorityFilter;
+      return matchesOwnership && matchesCategory && matchesPriority;
     });
 
     return [
@@ -798,18 +886,35 @@ export default function MapScreen() {
       { key: 'in_progress', label: t('status.inProgress'), count: scopedPoints.filter((point) => point.status === 'in_progress').length, color: STATUS_COLORS.in_progress },
       { key: 'closed', label: t('status.closed'), count: scopedPoints.filter((point) => point.status === 'closed').length, color: STATUS_COLORS.closed },
     ];
-  }, [categoryFilter, filter, t, timeScopedPoints]);
+  }, [categoryFilter, filter, priorityFilter, t, timeScopedPoints]);
 
-  const hasMapFilters = Boolean(statusFilter) || categoryFilter !== 'all' || !isDefaultDateRange(dateRange);
+  const mapFilterPriorityOptions = useMemo(() => {
+    const scopedPoints = timeScopedPoints.filter((point) => {
+      const matchesOwnership = filter !== 'my' || point.is_mine;
+      const matchesCategory = categoryFilter === 'all' || point.category === categoryFilter;
+      const matchesStatus = !statusFilter || point.status === statusFilter;
+      return matchesOwnership && matchesCategory && matchesStatus;
+    });
+
+    return MAP_PRIORITY_OPTIONS.map((priority) => ({
+      key: priority,
+      label: localizeRequestPriority(priority, t),
+      count: scopedPoints.filter((point) => (point.priority ?? 'unset') === priority).length,
+      ...PRIORITY_BADGE_STYLES[priority],
+    }));
+  }, [categoryFilter, filter, statusFilter, t, timeScopedPoints]);
+
+  const hasMapFilters = Boolean(statusFilter) || priorityFilter !== 'all' || categoryFilter !== 'all' || !isDefaultDateRange(dateRange);
 
   const timelineMonthPoints = useMemo(
     () => allTimelinePoints.filter((point) => {
       const matchesOwnership = filter !== 'my' || point.is_mine;
       const matchesStatus = !statusFilter || point.status === statusFilter;
       const matchesCategory = categoryFilter === 'all' || point.category === categoryFilter;
-      return matchesOwnership && matchesStatus && matchesCategory;
+      const matchesPriority = priorityFilter === 'all' || (point.priority ?? 'unset') === priorityFilter;
+      return matchesOwnership && matchesStatus && matchesCategory && matchesPriority;
     }),
-    [allTimelinePoints, categoryFilter, filter, statusFilter],
+    [allTimelinePoints, categoryFilter, filter, priorityFilter, statusFilter],
   );
 
   const timelineSourcePoints = timelineMode === 'months' ? timelineMonthPoints : filteredPoints;
@@ -857,14 +962,16 @@ export default function MapScreen() {
   const resetMapFilters = useCallback(() => {
     clearMapFocus();
     setStatusFilter(null);
+    setPriorityFilter('all');
     setCategoryFilter('all');
     setDateRange(getDefaultDateRange());
   }, [clearMapFocus]);
 
-  const applyMapFilters = useCallback((value: { category: string; status: string | null; dateRange: DateRange }) => {
+  const applyMapFilters = useCallback((value: { category: string; status: string | null; priority: MapPriorityFilter; dateRange: DateRange }) => {
     clearMapFocus();
     setCategoryFilter(value.category);
     setStatusFilter(value.status);
+    setPriorityFilter(value.priority);
     setDateRange(normalizeDateRange(value.dateRange));
   }, [clearMapFocus]);
 
@@ -934,7 +1041,7 @@ export default function MapScreen() {
 
   useEffect(() => {
     setListPage(1);
-  }, [categoryFilter, dateRange, filter, statusFilter, viewMode]);
+  }, [categoryFilter, dateRange, filter, priorityFilter, statusFilter, viewMode]);
 
   const listTotalPages = Math.max(1, Math.ceil(filteredPoints.length / MAP_LIST_PAGE_SIZE));
   const safeListPage = Math.min(listPage, listTotalPages);
@@ -1375,8 +1482,10 @@ export default function MapScreen() {
         visible={isMapFiltersOpen}
         categoryOptions={categoryOptions}
         statusOptions={mapFilterStatusOptions}
+        priorityOptions={mapFilterPriorityOptions}
         selectedCategory={categoryFilter}
         selectedStatus={statusFilter}
+        selectedPriority={priorityFilter}
         selectedDateRange={dateRange}
         resultCount={filteredPoints.length}
         hasActiveFilters={hasMapFilters}

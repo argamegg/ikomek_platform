@@ -190,6 +190,8 @@ export const en = {
       categories: 'Request types',
       allCategories: 'All categories',
       status: 'Statuses',
+      priority: 'Priority',
+      allPriorities: 'All priorities',
       today: 'Today',
       week: 'Week',
       month: 'Month',
