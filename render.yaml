@@ -16,5 +16,9 @@ services:
         generateValue: true
       - key: MONGO_URL
         sync: false
+      - key: SEED_OPERATOR_PASSWORD
+        sync: false
+      - key: SEED_ADMIN_PASSWORD
+        sync: false
       - key: CORS_ORIGINS
         sync: false

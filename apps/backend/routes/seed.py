@@ -2,12 +2,13 @@ from datetime import datetime, timedelta
 import random
 import uuid
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from core.config import db
 from data import CATEGORIES
 from helpers import get_password_hash
 from news_fixtures import build_news_fixtures
+from seed_credentials import SeedCredentialError, get_system_seed_passwords
 from schemas import ROLE_ADMIN, ROLE_CITIZEN, ROLE_OPERATOR
 
 router = APIRouter()
@@ -21,6 +22,11 @@ async def seed_demo_data():
     existing = await db.requests.count_documents({})
     if existing > 0:
         return {"message": "Data already seeded", "count": existing}
+
+    try:
+        system_passwords = get_system_seed_passwords()
+    except SeedCredentialError as error:
+        raise HTTPException(status_code=500, detail=str(error)) from error
     
     # Real Astana locations
     astana_locations = [
@@ -94,7 +100,7 @@ async def seed_demo_data():
         {
             "id": demo_operator_id,
             "email": "operator@ikomek.kz",
-            "password": get_password_hash("operator123"),
+            "password": get_password_hash(system_passwords["operator"]),
             "full_name": "Оператор Колл-центра",
             "phone": "+7 777 111 2222",
             "role": ROLE_OPERATOR,
@@ -107,7 +113,7 @@ async def seed_demo_data():
         {
             "id": demo_admin_id,
             "email": "admin@ikomek.kz",
-            "password": get_password_hash("admin123"),
+            "password": get_password_hash(system_passwords["admin"]),
             "full_name": "Администратор",
             "phone": "+7 777 000 0000",
             "role": ROLE_ADMIN,
@@ -208,7 +214,7 @@ async def seed_demo_data():
         "news": len(news_items),
         "users": {
             "citizen": "demo@ikomek.kz / demo123",
-            "operator": "operator@ikomek.kz / operator123",
-            "admin": "admin@ikomek.kz / admin123"
+            "operator": "operator@ikomek.kz / password from SEED_OPERATOR_PASSWORD",
+            "admin": "admin@ikomek.kz / password from SEED_ADMIN_PASSWORD"
         }
     }

@@ -182,7 +182,15 @@ eas build --platform ios --profile production
 After backend deploy and Mongo connection are ready:
 
 ```bash
+export SEED_OPERATOR_PASSWORD="$(openssl rand -base64 36)"
+export SEED_ADMIN_PASSWORD="$(openssl rand -base64 36)"
 curl -X POST https://<your-render-service>.onrender.com/api/seed-demo
+```
+
+If the database is already seeded and you only need to rotate the operator/admin passwords, run this on the backend host instead of reseeding requests:
+
+```bash
+python apps/backend/scripts/rotate_system_passwords.py
 ```
 
 Then verify:

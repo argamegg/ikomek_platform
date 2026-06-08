@@ -48,5 +48,5 @@ Build a "Smart City Service App" for Astana called "iKomek 109" - a cross-platfo
 | Role | Email | Password |
 |------|-------|----------|
 | Citizen | demo@ikomek.kz | demo123 |
-| Operator | operator@ikomek.kz | operator123 |
-| Admin | admin@ikomek.kz | admin123 |
+| Operator | operator@ikomek.kz | SEED_OPERATOR_PASSWORD |
+| Admin | admin@ikomek.kz | SEED_ADMIN_PASSWORD |

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime
+import os
 from pathlib import Path
 import sys
 
@@ -29,8 +30,10 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-url", default="http://localhost:8001/api")
     parser.add_argument("--email", default="admin@ikomek.kz")
-    parser.add_argument("--password", default="admin123")
+    parser.add_argument("--password", default=os.environ.get("SEED_ADMIN_PASSWORD"))
     args = parser.parse_args()
+    if not args.password:
+        parser.error("--password or SEED_ADMIN_PASSWORD is required")
 
     session = requests.Session()
 

@@ -3,12 +3,13 @@ from datetime import datetime, timedelta
 import random
 import uuid
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from core.config import db
 from data import CATEGORIES
 from geo import is_within_astana_request_zone
 from helpers import get_password_hash
+from seed_credentials import SeedCredentialError, get_system_seed_passwords
 from schemas import ROLE_ADMIN, ROLE_CITIZEN, ROLE_OPERATOR
 
 router = APIRouter()
@@ -553,10 +554,22 @@ def make_request_doc(
 
 async def ensure_system_user(email: str, role: str, full_name: str, password: str) -> dict:
     existing = await db.users.find_one({"email": email})
+    now = datetime.utcnow()
+
     if existing:
+        update_data = {
+            "password": get_password_hash(password),
+            "role": role,
+            "full_name": existing.get("full_name") or full_name,
+            "has_local_password": True,
+            "is_verified": True,
+            "verified_at": existing.get("verified_at") or now,
+            "updated_at": now,
+        }
+        await db.users.update_one({"email": email}, {"$set": update_data})
+        existing.update(update_data)
         return existing
 
-    now = datetime.utcnow()
     user = {
         "id": str(uuid.uuid4()),
         "email": email,
@@ -646,6 +659,11 @@ async def seed_realistic_demo_data():
     if len(DEMO_NAMES) != 50 or len(DEMO_EMAILS) != 50:
         return {"message": "Demo seed is misconfigured", "demo_names": len(DEMO_NAMES), "demo_emails": len(DEMO_EMAILS)}
 
+    try:
+        system_passwords = get_system_seed_passwords()
+    except SeedCredentialError as error:
+        raise HTTPException(status_code=500, detail=str(error)) from error
+
     rng = random.Random(42)
     now = datetime.utcnow()
 
@@ -658,8 +676,18 @@ async def seed_realistic_demo_data():
         {"role": ROLE_CITIZEN, "email": {"$ne": REAL_CITIZEN_EMAIL}}
     )
 
-    operator = await ensure_system_user(OPERATOR_EMAIL, ROLE_OPERATOR, "Оператор Колл-центра", "operator123")
-    await ensure_system_user(ADMIN_EMAIL, ROLE_ADMIN, "Администратор", "admin123")
+    operator = await ensure_system_user(
+        OPERATOR_EMAIL,
+        ROLE_OPERATOR,
+        "Оператор Колл-центра",
+        system_passwords["operator"],
+    )
+    await ensure_system_user(
+        ADMIN_EMAIL,
+        ROLE_ADMIN,
+        "Администратор",
+        system_passwords["admin"],
+    )
     operator_id = operator.get("id") or str(operator.get("_id"))
 
     demo_users = []

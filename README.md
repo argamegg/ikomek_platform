@@ -372,8 +372,15 @@ curl -X POST http://localhost:8001/api/seed-demo
 | Роль | Email | Пароль |
 | --- | --- | --- |
 | Citizen | `demo@ikomek.kz` | `demo123` |
-| Operator | `operator@ikomek.kz` | `operator123` |
-| Admin | `admin@ikomek.kz` | `admin123` |
+| Operator | `operator@ikomek.kz` | значение `SEED_OPERATOR_PASSWORD` |
+| Admin | `admin@ikomek.kz` | значение `SEED_ADMIN_PASSWORD` |
+
+Перед запуском seed задайте длинные системные пароли в окружении backend:
+
+```bash
+export SEED_OPERATOR_PASSWORD="$(openssl rand -base64 36)"
+export SEED_ADMIN_PASSWORD="$(openssl rand -base64 36)"
+```
 
 Для реалистичного seed также создаются граждане:
 
@@ -387,7 +394,7 @@ demo1@ikomek.kz ... demo49@ikomek.kz
 demo123
 ```
 
-Seed endpoints открыты в коде и предназначены для разработки/демо. Для production их нужно закрыть или отключить.
+Seed endpoints открыты в коде и предназначены для разработки/демо. Для production их нужно закрыть или отключить. Если нужно только сменить пароли оператора и админа без пересоздания заявок, запустите `python apps/backend/scripts/rotate_system_passwords.py` на сервере с теми же env-переменными.
 
 ## API
 

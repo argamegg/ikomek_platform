@@ -352,14 +352,14 @@ export default function LoginScreen() {
                     <Text style={styles.demoEmail}>demo@ikomek.kz</Text>
                   </View>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.demoCard} onPress={() => { setEmail('operator@ikomek.kz'); setPassword('operator123'); }}>
+                <TouchableOpacity style={styles.demoCard} onPress={() => { setEmail('operator@ikomek.kz'); setPassword(''); }}>
                   <View style={[styles.roleDot, { backgroundColor: '#007AFF' }]} />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.demoRole}>{t('auth.operator')}</Text>
                     <Text style={styles.demoEmail}>operator@ikomek.kz</Text>
                   </View>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.demoCard} onPress={() => { setEmail('admin@ikomek.kz'); setPassword('admin123'); }}>
+                <TouchableOpacity style={styles.demoCard} onPress={() => { setEmail('admin@ikomek.kz'); setPassword(''); }}>
                   <View style={[styles.roleDot, { backgroundColor: '#FF3B30' }]} />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.demoRole}>{t('auth.admin')}</Text>
