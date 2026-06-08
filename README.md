@@ -327,6 +327,36 @@ python3 scripts/start_system.py --mobile-port 8082
 python3 scripts/start_system.py --dry-run
 ```
 
+### 5.1 Docker-Запуск Локально
+
+Если нужно запустить проект локально из Docker-образов, используйте:
+
+```bash
+./setup.sh --docker
+```
+
+Будут собраны и запущены:
+
+| Сервис | URL / порт |
+| --- | --- |
+| Backend | `http://localhost:8001` |
+| Web | `http://localhost:8080` |
+| MongoDB | `mongodb://localhost:27018` |
+
+Полезные Docker-команды:
+
+```bash
+./setup.sh --docker up -d
+./setup.sh --docker logs backend
+./setup.sh --docker reset-news
+./setup.sh --docker seed-demo
+./setup.sh --docker rotate-passwords
+./setup.sh --docker down
+./setup.sh --docker down -v
+```
+
+`reset-news`, `seed-demo` и `rotate-passwords` выполняются внутри backend-контейнера и используют значения из `apps/backend/.env`.
+
 ### 6. Ручной запуск
 
 Backend:

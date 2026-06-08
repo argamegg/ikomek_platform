@@ -107,6 +107,36 @@ python3 scripts/start_system.py --mobile-port 8082
 python3 scripts/start_system.py --dry-run
 ```
 
+## 3.1 Start Locally With Docker Images
+
+From the project root:
+
+```bash
+./setup.sh --docker
+```
+
+This builds and starts:
+
+- backend on `http://localhost:8001`
+- web app on `http://localhost:8080`
+- MongoDB on `mongodb://localhost:27018`
+
+Useful Docker commands:
+
+```bash
+./setup.sh --docker up -d
+./setup.sh --docker logs backend
+./setup.sh --docker ps
+./setup.sh --docker reset-news
+./setup.sh --docker seed-demo
+./setup.sh --docker rotate-passwords
+./setup.sh --docker shell
+./setup.sh --docker down
+./setup.sh --docker down -v
+```
+
+The Docker backend uses `apps/backend/.env`, but `docker-compose.yml` overrides `MONGO_URL` to `mongodb://mongo:27017` so the container talks to the local Mongo container.
+
 ## 4. Manual Start Commands
 
 If you prefer separate terminals:

@@ -1,0 +1,53 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: ikomek-mongo
+    restart: unless-stopped
+    ports:
+      - "27018:27017"
+    volumes:
+      - ikomek_mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    image: ikomek-backend:local
+    container_name: ikomek-backend
+    restart: unless-stopped
+    env_file:
+      - apps/backend/.env
+    environment:
+      MONGO_URL: mongodb://mongo:27017
+      EXPO_PUBLIC_BACKEND_URL: http://localhost:8001
+      CORS_ORIGINS: http://localhost:8080,http://127.0.0.1:8080,http://localhost:5173,http://127.0.0.1:5173
+    ports:
+      - "8001:8001"
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./apps/web-app
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:8001
+        VITE_WS_BASE_URL: ws://localhost:8001
+    image: ikomek-web:local
+    container_name: ikomek-web
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  ikomek_mongo_data:
