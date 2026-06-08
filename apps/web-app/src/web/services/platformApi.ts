@@ -958,6 +958,7 @@ export const platformApi = {
       end_at: payload.endAt,
       source_lang: payload.sourceLang ?? getCurrentLang(),
       translation_status: payload.translationStatus,
+      skip_translation: payload.skipTranslation ?? false,
     });
     return normalizeNews(response.data);
   },

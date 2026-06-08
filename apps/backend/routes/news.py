@@ -20,6 +20,114 @@ router = APIRouter()
 # NEWS ENDPOINTS
 # ================================
 
+NEWS_TRANSLATION_LANGUAGES = ("ru", "kk", "en")
+NEWS_LOCALIZED_SUFFIXES = {
+    "ru": "ru",
+    "kk": "kz",
+    "en": "en",
+}
+
+
+def _clean_text(value) -> str:
+    return str(value).strip() if value is not None else ""
+
+
+def _localized_news_field(base: str, language: str) -> str:
+    return f"{base}_{NEWS_LOCALIZED_SUFFIXES[language]}"
+
+
+def _first_localized_value(news_dict: dict, base: str) -> str:
+    for language in NEWS_TRANSLATION_LANGUAGES:
+        value = _clean_text(news_dict.get(_localized_news_field(base, language)))
+        if value:
+            return value
+    return ""
+
+
+def _pick_news_source_text(news_dict: dict, base: str, source_lang: Optional[str]) -> str:
+    if source_lang:
+        value = _clean_text(news_dict.get(_localized_news_field(base, source_lang)))
+        if value:
+            return value
+
+    return _clean_text(news_dict.get(base)) or _first_localized_value(news_dict, base)
+
+
+def _has_localized_fields(news_dict: dict, bases: tuple[str, ...]) -> bool:
+    return all(
+        _clean_text(news_dict.get(_localized_news_field(base, language)))
+        for base in bases
+        for language in NEWS_TRANSLATION_LANGUAGES
+    )
+
+
+def _needs_translation(news_dict: dict, base: str, language: str, source_text: str, source_lang: str) -> bool:
+    current = _clean_text(news_dict.get(_localized_news_field(base, language)))
+    if not current:
+        return True
+    return language != source_lang and current == source_text
+
+
+async def _ensure_news_field_translations(
+    news_dict: dict,
+    base: str,
+    source_text: str,
+    source_lang: str,
+) -> bool:
+    if not source_text:
+        return False
+
+    if not any(
+        _needs_translation(news_dict, base, language, source_text, source_lang)
+        for language in NEWS_TRANSLATION_LANGUAGES
+    ):
+        return False
+
+    translations = await translate_to_all_languages(source_text, source_lang)
+    for language in NEWS_TRANSLATION_LANGUAGES:
+        if _needs_translation(news_dict, base, language, source_text, source_lang):
+            news_dict[_localized_news_field(base, language)] = translations[language]
+
+    return True
+
+
+async def _ensure_news_translations(
+    news_dict: dict,
+    *,
+    source_title: str,
+    source_content: str,
+    source_summary: str,
+    source_lang: str,
+) -> None:
+    await _ensure_news_field_translations(news_dict, "title", source_title, source_lang)
+    await _ensure_news_field_translations(news_dict, "content", source_content, source_lang)
+    await _ensure_news_field_translations(news_dict, "summary", source_summary, source_lang)
+
+
+def _set_news_translation_status(news_dict: dict, source_summary: str) -> None:
+    text_translated = _has_localized_fields(news_dict, ("title", "content"))
+    summary_translated = not source_summary or _has_localized_fields(news_dict, ("summary",))
+    news_dict["translation_status"] = "translated" if text_translated and summary_translated else "failed"
+
+
+def _prepare_news_source_fields(news_dict: dict) -> tuple[str, str, str, str]:
+    requested_source_lang = (
+        normalize_translation_language(news_dict.get("source_lang"))
+        if news_dict.get("source_lang")
+        else None
+    )
+    source_title = _pick_news_source_text(news_dict, "title", requested_source_lang)
+    source_content = _pick_news_source_text(news_dict, "content", requested_source_lang)
+    source_summary = _pick_news_source_text(news_dict, "summary", requested_source_lang)
+    source_lang = requested_source_lang or detect_language(f"{source_title} {source_content}".strip() or source_summary)
+
+    return (
+        _pick_news_source_text(news_dict, "title", source_lang),
+        _pick_news_source_text(news_dict, "content", source_lang),
+        _pick_news_source_text(news_dict, "summary", source_lang),
+        source_lang,
+    )
+
 @router.get("/news")
 async def get_news(
     lang: str = "ru",
@@ -141,39 +249,22 @@ async def translate_preview(
 @router.post("/admin/news", response_model=NewsItem)
 async def create_news(news_data: NewsCreate, current_user: dict = Depends(require_role([ROLE_ADMIN]))):
     news_dict = news_data.dict()
-    source_title = (news_dict.get("title") or "").strip()
-    source_content = (news_dict.get("content") or "").strip()
-    source_summary = (news_dict.get("summary") or "").strip()
-    source_lang = normalize_translation_language(news_dict.get("source_lang")) if news_dict.get("source_lang") else detect_language(f"{source_title} {source_content}".strip())
+    source_title, source_content, source_summary, source_lang = _prepare_news_source_fields(news_dict)
 
-    has_translations = all(
-        news_dict.get(field)
-        for field in ("title_ru", "title_kz", "title_en", "content_ru", "content_kz", "content_en")
-    )
-
-    if not news_dict.get("skip_translation") and not has_translations and source_title:
+    if news_dict.get("skip_translation"):
+        news_dict["translation_status"] = "skipped"
+    elif source_title or source_content or source_summary:
         try:
-            title_translations = await translate_to_all_languages(source_title, source_lang)
-            content_translations = await translate_to_all_languages(source_content, source_lang)
-
-            news_dict["title_ru"] = title_translations["ru"]
-            news_dict["title_kz"] = title_translations["kk"]
-            news_dict["title_en"] = title_translations["en"]
-            news_dict["content_ru"] = content_translations["ru"]
-            news_dict["content_kz"] = content_translations["kk"]
-            news_dict["content_en"] = content_translations["en"]
-            if source_summary:
-                summary_translations = await translate_to_all_languages(source_summary, source_lang)
-                news_dict["summary_ru"] = summary_translations["ru"]
-                news_dict["summary_kz"] = summary_translations["kk"]
-                news_dict["summary_en"] = summary_translations["en"]
-            news_dict["translation_status"] = "translated"
+            await _ensure_news_translations(
+                news_dict,
+                source_title=source_title,
+                source_content=source_content,
+                source_summary=source_summary,
+                source_lang=source_lang,
+            )
+            _set_news_translation_status(news_dict, source_summary)
         except Exception:
             news_dict["translation_status"] = "failed"
-    elif has_translations:
-        news_dict["translation_status"] = "translated"
-    elif news_dict.get("skip_translation"):
-        news_dict["translation_status"] = "skipped"
     else:
         news_dict["translation_status"] = news_dict.get("translation_status") or "failed"
 
@@ -206,10 +297,41 @@ async def update_news(
                 update_data[date_field] = dateparser.parse(update_data[date_field])
             except Exception:
                 pass
+
+    skip_translation = bool(update_data.pop("skip_translation", False))
+    merged = dict(existing)
+    merged.update(update_data)
+    source_title, source_content, source_summary, source_lang = _prepare_news_source_fields(merged)
+
+    if skip_translation:
+        update_data["translation_status"] = "skipped"
+    elif merged.get("translation_status") != "skipped" and (source_title or source_content or source_summary):
+        try:
+            await _ensure_news_translations(
+                merged,
+                source_title=source_title,
+                source_content=source_content,
+                source_summary=source_summary,
+                source_lang=source_lang,
+            )
+            _set_news_translation_status(merged, source_summary)
+
+            for base in ("title", "content", "summary"):
+                for language in NEWS_TRANSLATION_LANGUAGES:
+                    field = _localized_news_field(base, language)
+                    update_data[field] = merged.get(field)
+            update_data["translation_status"] = merged.get("translation_status")
+        except Exception:
+            update_data["translation_status"] = "failed"
+
+    update_data["title"] = source_title or merged.get("title_ru") or merged.get("title_kz") or merged.get("title_en")
+    update_data["content"] = source_content or merged.get("content_ru") or merged.get("content_kz") or merged.get("content_en")
+    update_data["summary"] = source_summary or merged.get("summary_ru") or merged.get("summary_kz") or merged.get("summary_en") or (update_data["content"] or "")[:180]
+    update_data["source_lang"] = source_lang
     update_data["updated_at"] = datetime.utcnow()
     await db.news.update_one({"id": news_id}, {"$set": update_data})
     updated = await db.news.find_one({"id": news_id})
-    return NewsItem(**localize_news_document(updated, existing.get("source_lang")))
+    return NewsItem(**localize_news_document(updated, updated.get("source_lang")))
 
 @router.delete("/admin/news/{news_id}")
 async def delete_news(news_id: str, current_user: dict = Depends(require_role([ROLE_ADMIN]))):

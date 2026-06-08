@@ -18,12 +18,20 @@ from news_fixtures import build_news_fixtures
 def serialize_payload(item: dict) -> dict:
     payload = dict(item)
     for key in ("id", "created_at", "is_active"):
-      payload.pop(key, None)
+        payload.pop(key, None)
     for key in ("start_at", "end_at", "period_start", "period_end"):
         value = payload.get(key)
         if value is not None:
             payload[key] = value.isoformat()
     return payload
+
+
+def read_news_items(payload) -> list[dict]:
+    if isinstance(payload, list):
+        return payload
+    if isinstance(payload, dict) and isinstance(payload.get("news"), list):
+        return payload["news"]
+    return []
 
 
 def main() -> int:
@@ -46,9 +54,9 @@ def main() -> int:
     token = login_response.json()["access_token"]
     session.headers.update({"Authorization": f"Bearer {token}"})
 
-    existing_response = session.get(f"{args.base_url}/news", timeout=15)
+    existing_response = session.get(f"{args.base_url}/news", params={"limit": 100}, timeout=15)
     existing_response.raise_for_status()
-    existing_items = existing_response.json()
+    existing_items = read_news_items(existing_response.json())
 
     for item in existing_items:
         delete_response = session.delete(f"{args.base_url}/admin/news/{item['id']}", timeout=15)

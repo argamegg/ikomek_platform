@@ -18,6 +18,7 @@ REAL_CITIZEN_EMAIL = "armanbezhanov@gmail.com"
 OPERATOR_EMAIL = "operator@ikomek.kz"
 ADMIN_EMAIL = "admin@ikomek.kz"
 DEMO_PASSWORD = "demo123"
+SEED_DATE_WINDOW_DAYS = 90
 
 DEMO_NAMES = [
     "Арман Беков",
@@ -73,8 +74,6 @@ DEMO_NAMES = [
 ]
 
 DEMO_EMAILS = ["demo@ikomek.kz", *[f"demo{index}@ikomek.kz" for index in range(1, 50)]]
-DATE_FROM = datetime(2026, 2, 24, 7, 0, 0)
-DATE_TO = datetime(2026, 5, 15, 23, 59, 59)
 RIGHT_BANK_SHARE = 0.18
 
 # Coordinates were resolved via Nominatim before embedding them here.
@@ -436,6 +435,17 @@ ASTANA_BOUNDS = {
 }
 
 
+def get_seed_date_bounds(now: datetime | None = None) -> tuple[datetime, datetime]:
+    date_to = (now or datetime.utcnow()).replace(hour=23, minute=59, second=59, microsecond=999000)
+    date_from = (date_to - timedelta(days=SEED_DATE_WINDOW_DAYS)).replace(
+        hour=7,
+        minute=0,
+        second=0,
+        microsecond=0,
+    )
+    return date_from, date_to
+
+
 def weighted_choice(rng: random.Random, choices: list[tuple[str, float]]) -> str:
     values = [value for value, _ in choices]
     weights = [weight for _, weight in choices]
@@ -452,12 +462,13 @@ def offset_coordinate(value: float, rng: random.Random, radius: float) -> float:
 
 def make_created_at(
     rng: random.Random,
+    date_from: datetime,
     latest: datetime,
     used_timestamps: set[datetime],
     sequence: int,
 ) -> datetime:
-    total_seconds = max(int((latest - DATE_FROM).total_seconds()), 0)
-    created_at = (DATE_FROM + timedelta(seconds=rng.randint(0, total_seconds))).replace(
+    total_seconds = max(int((latest - date_from).total_seconds()), 0)
+    created_at = (date_from + timedelta(seconds=rng.randint(0, total_seconds))).replace(
         hour=rng.randint(7, 23),
         minute=rng.randint(0, 59),
         second=rng.randint(0, 59),
@@ -477,6 +488,8 @@ def make_created_at(
 def make_dates(
     rng: random.Random,
     status: str,
+    date_from: datetime,
+    date_to: datetime,
     used_timestamps: set[datetime],
     sequence: int,
 ) -> tuple[datetime, datetime, datetime | None]:
@@ -484,15 +497,15 @@ def make_dates(
 
     if status == "closed":
         close_delta = timedelta(days=rng.randint(1, 14))
-        created_at = make_created_at(rng, DATE_TO - close_delta, used_timestamps, sequence)
+        created_at = make_created_at(rng, date_from, date_to - close_delta, used_timestamps, sequence)
         closed_at = created_at + close_delta
         updated_at = closed_at
     elif status == "in_progress":
         progress_delta = timedelta(days=rng.randint(1, 7))
-        created_at = make_created_at(rng, DATE_TO - progress_delta, used_timestamps, sequence)
+        created_at = make_created_at(rng, date_from, date_to - progress_delta, used_timestamps, sequence)
         updated_at = created_at + progress_delta
     else:
-        created_at = make_created_at(rng, DATE_TO, used_timestamps, sequence)
+        created_at = make_created_at(rng, date_from, date_to, used_timestamps, sequence)
         updated_at = created_at
 
     return created_at, updated_at, closed_at
@@ -510,6 +523,8 @@ def make_request_doc(
     status: str,
     priority: str,
     operator_id: str | None,
+    date_from: datetime,
+    date_to: datetime,
     used_timestamps: set[datetime],
     sequence: int,
     cluster: bool = False,
@@ -518,7 +533,7 @@ def make_request_doc(
     radius = 0.0001 if cluster else 0.00035
     latitude = offset_coordinate(address_data["lat"], rng, radius)
     longitude = offset_coordinate(address_data["lng"], rng, radius)
-    created_at, updated_at, closed_at = make_dates(rng, status, used_timestamps, sequence)
+    created_at, updated_at, closed_at = make_dates(rng, status, date_from, date_to, used_timestamps, sequence)
     assigned_operator_id = operator_id if status in {"in_progress", "closed"} else None
 
     return {
@@ -587,7 +602,13 @@ async def ensure_system_user(email: str, role: str, full_name: str, password: st
     return user
 
 
-async def build_validations(real_before: dict | None, operator_before: dict | None, admin_before: dict | None) -> dict:
+async def build_validations(
+    real_before: dict | None,
+    operator_before: dict | None,
+    admin_before: dict | None,
+    date_from: datetime,
+    date_to: datetime,
+) -> dict:
     real_after = await db.users.find_one({"email": REAL_CITIZEN_EMAIL})
     operator_after = await db.users.find_one({"email": OPERATOR_EMAIL})
     admin_after = await db.users.find_one({"email": ADMIN_EMAIL})
@@ -618,8 +639,8 @@ async def build_validations(real_before: dict | None, operator_before: dict | No
     outside_seed_date_range = await db.requests.count_documents(
         {
             "$or": [
-                {"created_at": {"$lt": DATE_FROM}},
-                {"created_at": {"$gt": DATE_TO}},
+                {"created_at": {"$lt": date_from}},
+                {"created_at": {"$gt": date_to}},
             ]
         }
     )
@@ -647,6 +668,8 @@ async def build_validations(real_before: dict | None, operator_before: dict | No
         "orphan_request_user_ids": sorted(request_user_ids - existing_user_ids),
         "coordinates_outside_astana_bounds": coordinates_outside_astana,
         "coordinates_outside_request_zone": outside_request_zone,
+        "seed_date_from": date_from.isoformat(),
+        "seed_date_to": date_to.isoformat(),
         "created_at_outside_seed_range": outside_seed_date_range,
         "right_bank_requests": right_bank_requests,
         "duplicate_created_at_groups": duplicate_timestamps[0]["duplicates"] if duplicate_timestamps else 0,
@@ -666,6 +689,7 @@ async def seed_realistic_demo_data():
 
     rng = random.Random(42)
     now = datetime.utcnow()
+    date_from, date_to = get_seed_date_bounds(now)
 
     real_before = await db.users.find_one({"email": REAL_CITIZEN_EMAIL})
     operator_before = await db.users.find_one({"email": OPERATOR_EMAIL})
@@ -734,6 +758,8 @@ async def seed_realistic_demo_data():
                     status=status,
                     priority=priority,
                     operator_id=operator_id,
+                    date_from=date_from,
+                    date_to=date_to,
                     used_timestamps=used_timestamps,
                     sequence=sequence,
                     cluster=True,
@@ -769,6 +795,8 @@ async def seed_realistic_demo_data():
                     status=status,
                     priority=priority,
                     operator_id=operator_id,
+                    date_from=date_from,
+                    date_to=date_to,
                     used_timestamps=used_timestamps,
                     sequence=sequence,
                 )
@@ -778,7 +806,7 @@ async def seed_realistic_demo_data():
             sequence += 1
 
     await db.requests.insert_many(requests_to_insert)
-    validations = await build_validations(real_before, operator_before, admin_before)
+    validations = await build_validations(real_before, operator_before, admin_before, date_from, date_to)
 
     return {
         "message": "Realistic demo data seeded",

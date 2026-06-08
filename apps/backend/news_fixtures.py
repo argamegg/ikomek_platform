@@ -8,6 +8,14 @@ from typing import Any
 def build_news_fixtures(now: datetime | None = None) -> list[dict[str, Any]]:
     base_now = now or datetime.utcnow()
 
+    def first_sentence(text: str) -> str:
+        stripped = text.strip()
+        for separator in (".", "!", "?"):
+            index = stripped.find(separator)
+            if index != -1:
+                return stripped[: index + 1]
+        return stripped[:180]
+
     def make_item(
         *,
         title: str,
@@ -26,22 +34,31 @@ def build_news_fixtures(now: datetime | None = None) -> list[dict[str, Any]]:
     ) -> dict[str, Any]:
         start_at = base_now + timedelta(hours=start_offset_hours) if start_offset_hours is not None else None
         end_at = base_now + timedelta(hours=end_offset_hours) if end_offset_hours is not None else None
+        created_at = base_now - timedelta(hours=created_hours_ago)
         return {
             "id": str(uuid.uuid4()),
-            "title": title,
+            "title": title_ru,
             "title_ru": title_ru,
             "title_kz": title_kz,
-            "content": content,
+            "title_en": title,
+            "content": content_ru,
             "content_ru": content_ru,
             "content_kz": content_kz,
+            "content_en": content,
             "summary": summary,
+            "summary_ru": summary,
+            "summary_kz": first_sentence(content_kz),
+            "summary_en": first_sentence(content),
+            "source_lang": "ru",
+            "translation_status": "translated",
             "category": category,
             "types": types,
             "location": location,
             "image": None,
             "start_at": start_at,
             "end_at": end_at,
-            "created_at": base_now - timedelta(hours=created_hours_ago),
+            "created_at": created_at,
+            "updated_at": created_at,
             "is_active": True,
         }
 
