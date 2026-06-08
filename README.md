@@ -307,35 +307,7 @@ npm install
 python3 scripts/start_system.py
 ```
 
-Будут запущены:
-
-| Сервис | URL / порт |
-| --- | --- |
-| Backend | `http://localhost:8001` |
-| Web | `http://localhost:5173` |
-| Mobile | Expo dev server, обычно `8081` |
-
-Полезные опции:
-
-```bash
-python3 scripts/start_system.py --skip-mobile
-python3 scripts/start_system.py --skip-web
-python3 scripts/start_system.py --skip-backend
-python3 scripts/start_system.py --backend-port 8001
-python3 scripts/start_system.py --web-port 5173
-python3 scripts/start_system.py --mobile-port 8082
-python3 scripts/start_system.py --dry-run
-```
-
-### 5.1 Docker-Запуск Локально
-
-Если нужно запустить проект локально из Docker-образов, используйте:
-
-```bash
-./setup.sh --docker
-```
-
-Будут собраны и запущены:
+По умолчанию команда собирает и запускает Docker-образы:
 
 | Сервис | URL / порт |
 | --- | --- |
@@ -343,19 +315,32 @@ python3 scripts/start_system.py --dry-run
 | Web | `http://localhost:8080` |
 | MongoDB | `mongodb://localhost:27018` |
 
-Полезные Docker-команды:
+Полезные опции:
 
 ```bash
-./setup.sh --docker up -d
-./setup.sh --docker logs backend
-./setup.sh --docker reset-news
-./setup.sh --docker seed-demo
-./setup.sh --docker rotate-passwords
-./setup.sh --docker down
-./setup.sh --docker down -v
+python3 scripts/start_system.py up -d
+python3 scripts/start_system.py logs backend
+python3 scripts/start_system.py reset-news
+python3 scripts/start_system.py seed-demo
+python3 scripts/start_system.py rotate-passwords
+python3 scripts/start_system.py shell
+python3 scripts/start_system.py down
+python3 scripts/start_system.py down -v
 ```
 
 `reset-news`, `seed-demo` и `rotate-passwords` выполняются внутри backend-контейнера и используют значения из `apps/backend/.env`.
+
+Если нужен старый запуск без Docker:
+
+```bash
+python3 scripts/start_system.py dev --skip-mobile
+python3 scripts/start_system.py dev --skip-web
+python3 scripts/start_system.py dev --skip-backend
+python3 scripts/start_system.py dev --backend-port 8001
+python3 scripts/start_system.py dev --web-port 5173
+python3 scripts/start_system.py dev --mobile-port 8082
+python3 scripts/start_system.py dev --dry-run
+```
 
 ### 6. Ручной запуск
 

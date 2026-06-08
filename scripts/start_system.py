@@ -17,6 +17,79 @@ ROOT = Path(__file__).resolve().parents[1]
 BACKEND_DIR = ROOT / "apps" / "backend"
 MOBILE_DIR = ROOT / "apps" / "mobile-app"
 WEB_DIR = ROOT / "apps" / "web-app"
+COMPOSE_FILE = ROOT / "docker-compose.yml"
+PROJECT_NAME = "ikomek-local"
+LOCAL_API_URL = "http://127.0.0.1:8001/api"
+
+
+def docker_compose_command() -> list[str]:
+    docker = shutil.which("docker")
+    if docker:
+        probe = subprocess.run(
+            [docker, "compose", "version"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        if probe.returncode == 0:
+            return [docker, "compose"]
+
+    docker_compose = shutil.which("docker-compose")
+    if docker_compose:
+        return [docker_compose]
+
+    raise RuntimeError("Docker Compose was not found. Install Docker Desktop or docker compose.")
+
+
+def compose_args(*args: str) -> list[str]:
+    return [
+        *docker_compose_command(),
+        "--project-name",
+        PROJECT_NAME,
+        "--file",
+        str(COMPOSE_FILE),
+        *args,
+    ]
+
+
+def run_command(command: list[str]) -> int:
+    print(f"[docker] {' '.join(command)}", flush=True)
+    return subprocess.run(command, cwd=ROOT, check=False).returncode
+
+
+def exec_backend(*args: str, tty: bool = False) -> int:
+    exec_args = ["exec"]
+    if not tty:
+        exec_args.append("-T")
+    return run_command(compose_args(*exec_args, "backend", *args))
+
+
+def print_docker_urls() -> None:
+    print("")
+    print("Backend: http://localhost:8001")
+    print("Web:     http://localhost:8080")
+    print("Mongo:   mongodb://localhost:27018")
+    print("")
+
+
+def seed_demo_via_backend() -> int:
+    code = """
+import json
+import sys
+import urllib.request
+import urllib.error
+
+request = urllib.request.Request("http://127.0.0.1:8001/api/seed-demo", method="POST")
+try:
+    with urllib.request.urlopen(request, timeout=180) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+except urllib.error.HTTPError as error:
+    body = error.read().decode("utf-8", errors="replace")
+    print(f"HTTP {error.code}: {body}", file=sys.stderr)
+    raise SystemExit(1)
+"""
+    return exec_backend("python", "-c", code)
 
 
 def npm_executable() -> str:
@@ -161,11 +234,7 @@ def validate_layout(specs: list[ServiceSpec]) -> None:
     if missing:
         raise RuntimeError(f"Missing application directories: {', '.join(missing)}")
 
-# Parse CLI arguments for system startup xddd
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Start the iKOMEK backend, web app, and mobile app from one command."
-    )
+def add_dev_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--skip-backend", action="store_true", help="Do not start the backend.")
     parser.add_argument("--skip-web", action="store_true", help="Do not start the web frontend.")
     parser.add_argument("--skip-mobile", action="store_true", help="Do not start the mobile frontend.")
@@ -173,7 +242,47 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--web-port", type=int, default=5173, help="Web app port.")
     parser.add_argument("--mobile-port", type=int, default=8081, help="Preferred Expo dev server port.")
     parser.add_argument("--dry-run", action="store_true", help="Print commands without starting them.")
-    return parser.parse_args()
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Start iKOMEK locally from Docker images. Use `dev` for the old Python/NPM runner."
+    )
+    subparsers = parser.add_subparsers(dest="command")
+
+    up = subparsers.add_parser("up", help="Build and start Mongo, backend, and web containers.")
+    up.add_argument("services", nargs="*", help="Optional service names: mongo, backend, web.")
+    up.add_argument("-d", "--detach", action="store_true", help="Run containers in the background.")
+    up.add_argument("--no-build", action="store_true", help="Start existing images without rebuilding.")
+    up.add_argument("--force-recreate", action="store_true", help="Recreate containers to reload env files.")
+
+    build = subparsers.add_parser("build", help="Build Docker images.")
+    build.add_argument("services", nargs="*", help="Optional service names: backend, web.")
+
+    down = subparsers.add_parser("down", help="Stop and remove containers.")
+    down.add_argument("-v", "--volumes", action="store_true", help="Also remove the Mongo volume.")
+
+    logs = subparsers.add_parser("logs", help="Follow container logs.")
+    logs.add_argument("services", nargs="*", help="Optional service names: mongo, backend, web.")
+    logs.add_argument("--tail", default="150", help="Number of log lines to show first.")
+
+    subparsers.add_parser("ps", help="Show container status.")
+    subparsers.add_parser("seed-demo", help="Run POST /api/seed-demo inside the backend container.")
+    subparsers.add_parser("reset-news", help="Recreate demo news through the local backend API.")
+    subparsers.add_parser("rotate-passwords", help="Apply SEED_OPERATOR_PASSWORD and SEED_ADMIN_PASSWORD to local DB.")
+    subparsers.add_parser("shell", help="Open a shell in the backend container.")
+
+    dev = subparsers.add_parser("dev", help="Start services directly with Python/NPM instead of Docker.")
+    add_dev_arguments(dev)
+
+    if not argv:
+        argv = ["up"]
+    elif argv[0] == "--docker":
+        argv = argv[1:] or ["up"]
+    elif argv[0].startswith("--") and argv[0] not in {"-h", "--help"}:
+        argv = ["dev", *argv]
+
+    return parser.parse_args(argv)
 
 
 def terminate_processes(processes: list[subprocess.Popen[str]]) -> None:
@@ -191,8 +300,7 @@ def terminate_processes(processes: list[subprocess.Popen[str]]) -> None:
                 process.kill()
 
 
-def main() -> int:
-    args = parse_args()
+def run_dev_services(args: argparse.Namespace) -> int:
     specs = build_service_specs(args)
     validate_layout(specs)
 
@@ -260,8 +368,68 @@ def main() -> int:
         return 0
 
 
+def run_docker_command(args: argparse.Namespace) -> int:
+    if not COMPOSE_FILE.exists():
+        print(f"Compose file was not found: {COMPOSE_FILE}", file=sys.stderr)
+        return 1
+
+    try:
+        if args.command == "up":
+            command = ["up"]
+            if not args.no_build:
+                command.append("--build")
+            if args.detach:
+                command.append("--detach")
+            if args.force_recreate:
+                command.append("--force-recreate")
+            command.extend(args.services)
+            print_docker_urls()
+            return run_command(compose_args(*command))
+
+        if args.command == "build":
+            return run_command(compose_args("build", *args.services))
+
+        if args.command == "down":
+            command = ["down"]
+            if args.volumes:
+                command.append("--volumes")
+            return run_command(compose_args(*command))
+
+        if args.command == "logs":
+            return run_command(compose_args("logs", "--follow", "--tail", args.tail, *args.services))
+
+        if args.command == "ps":
+            return run_command(compose_args("ps"))
+
+        if args.command == "seed-demo":
+            return seed_demo_via_backend()
+
+        if args.command == "reset-news":
+            return exec_backend(
+                "python",
+                "scripts/reset_news_via_api.py",
+                "--base-url",
+                LOCAL_API_URL,
+            )
+
+        if args.command == "rotate-passwords":
+            return exec_backend("python", "scripts/rotate_system_passwords.py")
+
+        if args.command == "shell":
+            return exec_backend("sh", tty=True)
+
+        raise RuntimeError(f"Unknown command: {args.command}")
+    except RuntimeError as error:
+        print(str(error), file=sys.stderr)
+        return 1
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(list(argv if argv is not None else sys.argv[1:]))
+    if args.command == "dev":
+        return run_dev_services(args)
+    return run_docker_command(args)
+
+
 if __name__ == "__main__":
     raise SystemExit(main())
-
-if False:
-    print("unreachable")

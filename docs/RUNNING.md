@@ -92,50 +92,48 @@ python3 scripts/start_system.py
 What it starts:
 
 - backend on `http://localhost:8001`
+- web app on `http://localhost:8080`
+- MongoDB on `mongodb://localhost:27018`
+
+By default this command builds and runs the Docker images from `docker-compose.yml`.
+
+Useful options:
+
+```bash
+python3 scripts/start_system.py up -d
+python3 scripts/start_system.py logs backend
+python3 scripts/start_system.py ps
+python3 scripts/start_system.py reset-news
+python3 scripts/start_system.py seed-demo
+python3 scripts/start_system.py rotate-passwords
+python3 scripts/start_system.py shell
+python3 scripts/start_system.py down
+python3 scripts/start_system.py down -v
+```
+
+The Docker backend uses `apps/backend/.env`, but `docker-compose.yml` overrides `MONGO_URL` to `mongodb://mongo:27017` so the container talks to the local Mongo container.
+
+## 3.1 Start Without Docker
+
+```bash
+python3 scripts/start_system.py dev
+```
+
+This starts:
+
+- backend on `http://localhost:8001`
 - web app on `http://localhost:5173`
 - interactive Expo mobile dev server in `apps/mobile-app`
 
 The mobile dev server prints the QR code directly in the terminal. You can scan it from a development build, or use Expo keyboard shortcuts such as `i` for iOS Simulator and `a` for Android Emulator.
 
-Useful options:
-
 ```bash
-python3 scripts/start_system.py --skip-mobile
-python3 scripts/start_system.py --skip-web
-python3 scripts/start_system.py --skip-backend
-python3 scripts/start_system.py --mobile-port 8082
-python3 scripts/start_system.py --dry-run
+python3 scripts/start_system.py dev --skip-mobile
+python3 scripts/start_system.py dev --skip-web
+python3 scripts/start_system.py dev --skip-backend
+python3 scripts/start_system.py dev --mobile-port 8082
+python3 scripts/start_system.py dev --dry-run
 ```
-
-## 3.1 Start Locally With Docker Images
-
-From the project root:
-
-```bash
-./setup.sh --docker
-```
-
-This builds and starts:
-
-- backend on `http://localhost:8001`
-- web app on `http://localhost:8080`
-- MongoDB on `mongodb://localhost:27018`
-
-Useful Docker commands:
-
-```bash
-./setup.sh --docker up -d
-./setup.sh --docker logs backend
-./setup.sh --docker ps
-./setup.sh --docker reset-news
-./setup.sh --docker seed-demo
-./setup.sh --docker rotate-passwords
-./setup.sh --docker shell
-./setup.sh --docker down
-./setup.sh --docker down -v
-```
-
-The Docker backend uses `apps/backend/.env`, but `docker-compose.yml` overrides `MONGO_URL` to `mongodb://mongo:27017` so the container talks to the local Mongo container.
 
 ## 4. Manual Start Commands
 

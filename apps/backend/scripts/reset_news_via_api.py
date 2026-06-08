@@ -17,7 +17,7 @@ from news_fixtures import build_news_fixtures
 
 def serialize_payload(item: dict) -> dict:
     payload = dict(item)
-    for key in ("id", "created_at", "is_active"):
+    for key in ("id", "created_at", "updated_at", "is_active"):
         payload.pop(key, None)
     for key in ("start_at", "end_at", "period_start", "period_end"):
         value = payload.get(key)
