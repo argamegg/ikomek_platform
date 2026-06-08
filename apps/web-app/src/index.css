@@ -2617,6 +2617,34 @@ button {
   font-weight: 600;
 }
 
+.field__label-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.field__label-meta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.field__label-meta--required {
+  color: var(--primary-strong);
+  background: rgba(255, 107, 0, 0.1);
+}
+
+.field__label-meta--optional {
+  color: var(--text-faint);
+  background: rgba(100, 116, 139, 0.1);
+}
+
 .field__control {
   display: flex;
   align-items: center;

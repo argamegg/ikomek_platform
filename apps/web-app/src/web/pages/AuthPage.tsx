@@ -138,6 +138,8 @@ export function AuthPage() {
     ],
     [],
   );
+  const requiredFieldLabel = t("auth.fields.required");
+  const optionalFieldLabel = t("auth.fields.optional");
 
   function handleAuthSuccess(result: Awaited<ReturnType<typeof platformApi.login>>) {
     startTransition(() => {
@@ -416,6 +418,8 @@ export function AuthPage() {
                   >
                     <Input
                       label={t("auth.fields.name")}
+                      labelMeta={requiredFieldLabel}
+                      labelMetaTone="required"
                       icon={<User2 size={16} />}
                       value={registerForm.name}
                       onChange={(event) => setRegisterForm((value) => ({ ...value, name: event.target.value }))}
@@ -423,6 +427,8 @@ export function AuthPage() {
                     />
                     <Input
                       label={t("auth.fields.email")}
+                      labelMeta={requiredFieldLabel}
+                      labelMetaTone="required"
                       type="email"
                       icon={<Mail size={16} />}
                       value={registerForm.email}
@@ -431,6 +437,8 @@ export function AuthPage() {
                     />
                     <Input
                       label={t("auth.fields.phone")}
+                      labelMeta={optionalFieldLabel}
+                      labelMetaTone="optional"
                       type="tel"
                       icon={<Smartphone size={16} />}
                       value={registerForm.phone}
@@ -438,6 +446,8 @@ export function AuthPage() {
                     />
                     <Input
                       label={t("auth.fields.password")}
+                      labelMeta={requiredFieldLabel}
+                      labelMetaTone="required"
                       type="password"
                       icon={<LockKeyhole size={16} />}
                       value={registerForm.password}
@@ -448,6 +458,8 @@ export function AuthPage() {
                     />
                     <Select
                       label={t("auth.fields.language")}
+                      labelMeta={requiredFieldLabel}
+                      labelMetaTone="required"
                       value={registerForm.language}
                       onChange={(event) =>
                         setRegisterForm((value) => ({

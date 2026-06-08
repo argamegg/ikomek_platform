@@ -439,6 +439,8 @@ const resources = {
           password: "Password",
           phone: "Phone",
           language: "Preferred language",
+          required: "Required",
+          optional: "Optional",
         },
       },
       dashboard: {
@@ -1616,6 +1618,8 @@ const resources = {
           password: "Пароль",
           phone: "Телефон",
           language: "Предпочитаемый язык",
+          required: "Обязательно",
+          optional: "Необязательно",
         },
       },
       dashboard: {
@@ -2796,6 +2800,8 @@ const resources = {
           password: "Құпиясөз",
           phone: "Телефон",
           language: "Қалаулы тіл",
+          required: "Міндетті",
+          optional: "Міндетті емес",
         },
       },
       dashboard: {
