@@ -141,21 +141,6 @@ function addMapLayers(map: maplibregl.Map, clustered: boolean) {
     });
 
     map.addLayer({
-      id: CLUSTER_COUNT_LAYER_ID,
-      type: "symbol",
-      source: CLUSTER_SOURCE_ID,
-      filter: ["has", "point_count"],
-      layout: {
-        "text-field": ["get", "point_count_abbreviated"],
-        "text-size": 12,
-        "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
-      },
-      paint: {
-        "text-color": "#ffffff",
-      },
-    });
-
-    map.addLayer({
       id: UNCLUSTERED_LAYER_ID,
       type: "circle",
       source: CLUSTER_SOURCE_ID,
@@ -167,6 +152,25 @@ function addMapLayers(map: maplibregl.Map, clustered: boolean) {
         "circle-stroke-width": 3,
       },
     });
+
+    try {
+      map.addLayer({
+        id: CLUSTER_COUNT_LAYER_ID,
+        type: "symbol",
+        source: CLUSTER_SOURCE_ID,
+        filter: ["has", "point_count"],
+        layout: {
+          "text-field": ["get", "point_count_abbreviated"],
+          "text-size": 12,
+          "text-font": ["Open Sans Semibold"],
+        },
+        paint: {
+          "text-color": "#ffffff",
+        },
+      });
+    } catch (error) {
+      console.warn("Map cluster labels could not be initialized.", error);
+    }
   } else {
     map.addLayer({
       id: POINT_LAYER_ID,

@@ -5,6 +5,7 @@ export const ASTANA_CENTER: [number, number] = [71.4304, 51.1282];
 
 export const REQUEST_MAP_STYLE: StyleSpecification = {
   version: 8,
+  glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
   sources: {
     osm: {
       type: "raster",
