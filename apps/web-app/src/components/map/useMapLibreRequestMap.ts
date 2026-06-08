@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useMemo, useRef } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, type MutableRefObject } from "react";
 import maplibregl, { type GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { CivicRequest, MapMode } from "../../types/platform";
@@ -6,6 +6,9 @@ import {
   ASTANA_CENTER,
   buildRequestFeatureCollection,
   getFilteredRequests,
+  getRequestColor,
+  getRequestCoordinate,
+  getRequestStrokeColor,
   type RequestMapPalette,
   REQUEST_MAP_STYLE,
 } from "./requestMapConfig";
@@ -17,6 +20,7 @@ const HEATMAP_LAYER_ID = "request-heatmap";
 const CLUSTER_LAYER_ID = "request-clusters";
 const CLUSTER_COUNT_LAYER_ID = "request-cluster-count";
 const UNCLUSTERED_LAYER_ID = "request-unclustered-points";
+const REQUEST_MARKER_CLASS = "request-dom-marker";
 const CLUSTER_COLOR = "rgba(255, 149, 0, 0.92)";
 const DEFAULT_STROKE_COLOR = "rgba(255,255,255,0.92)";
 
@@ -244,6 +248,109 @@ function getFitSignature(requests: CivicRequest[]) {
     .join("|");
 }
 
+function createRequestMarkerElement(
+  request: CivicRequest,
+  currentUserId: string | undefined,
+  palette: RequestMapPalette,
+  mineRadius: number,
+  defaultRadius: number,
+) {
+  const radius = request.citizenId === currentUserId ? mineRadius : defaultRadius;
+  const size = Math.max(radius * 2, 16);
+  const element = document.createElement("button");
+  element.type = "button";
+  element.className = REQUEST_MARKER_CLASS;
+  element.setAttribute("aria-label", request.title || request.address || "Request marker");
+  element.style.width = `${size}px`;
+  element.style.height = `${size}px`;
+  element.style.borderRadius = "999px";
+  element.style.border = "3px solid";
+  element.style.borderColor = getRequestStrokeColor(request, currentUserId, palette);
+  element.style.background = getRequestColor(request, palette);
+  element.style.boxShadow = "0 8px 20px rgba(15, 23, 42, 0.28)";
+  element.style.cursor = "pointer";
+  element.style.position = "absolute";
+  element.style.transform = "translate(-50%, -50%)";
+  element.style.zIndex = "2";
+  element.style.padding = "0";
+  element.style.pointerEvents = "auto";
+  return element;
+}
+
+function clearDomMarkers(markerRefs: MutableRefObject<globalThis.Map<string, HTMLButtonElement>>) {
+  markerRefs.current.forEach((marker) => marker.remove());
+  markerRefs.current.clear();
+}
+
+function ensureMarkerOverlay(
+  container: HTMLDivElement,
+  overlayRef: MutableRefObject<HTMLDivElement | null>,
+) {
+  if (overlayRef.current && overlayRef.current.isConnected) {
+    return overlayRef.current;
+  }
+
+  const overlay = document.createElement("div");
+  overlay.className = "request-marker-overlay";
+  container.appendChild(overlay);
+  overlayRef.current = overlay;
+  return overlay;
+}
+
+function positionDomMarker(map: maplibregl.Map, marker: HTMLButtonElement, request: CivicRequest) {
+  const point = map.project(getRequestCoordinate(request));
+  marker.style.left = `${point.x}px`;
+  marker.style.top = `${point.y}px`;
+}
+
+function positionDomMarkers(
+  map: maplibregl.Map,
+  markerRefs: MutableRefObject<globalThis.Map<string, HTMLButtonElement>>,
+  requests: CivicRequest[],
+) {
+  const requestById = new Map(requests.map((request) => [request.id, request]));
+
+  markerRefs.current.forEach((marker, requestId) => {
+    const request = requestById.get(requestId);
+    if (request) {
+      positionDomMarker(map, marker, request);
+    }
+  });
+}
+
+function syncDomMarkers(
+  map: maplibregl.Map,
+  overlayRef: MutableRefObject<HTMLDivElement | null>,
+  markerRefs: MutableRefObject<globalThis.Map<string, HTMLButtonElement>>,
+  requests: CivicRequest[],
+  currentUserId: string | undefined,
+  mode: MapMode,
+  palette: RequestMapPalette,
+  mineRadius: number,
+  defaultRadius: number,
+  onSelect: (request: CivicRequest) => void,
+) {
+  clearDomMarkers(markerRefs);
+  const overlay = overlayRef.current;
+
+  if (mode === "heatmap" || !overlay) {
+    return;
+  }
+
+  for (const request of requests) {
+    const element = createRequestMarkerElement(request, currentUserId, palette, mineRadius, defaultRadius);
+    positionDomMarker(map, element, request);
+    element.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      onSelect(request);
+    });
+
+    overlay.appendChild(element);
+    markerRefs.current.set(request.id, element);
+  }
+}
+
 export function useMapLibreRequestMap({
   requests,
   currentUserId,
@@ -258,6 +365,8 @@ export function useMapLibreRequestMap({
 }: UseMapLibreRequestMapOptions) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const overlayRef = useRef<HTMLDivElement | null>(null);
+  const markerRefs = useRef<globalThis.Map<string, HTMLButtonElement>>(new Map());
   const fitSignatureRef = useRef<string | null>(null);
   const filteredRequests = useMemo(
     () => getFilteredRequests(requests, currentUserId, mode),
@@ -275,11 +384,13 @@ export function useMapLibreRequestMap({
       ),
     [currentUserId, defaultRadius, filteredRequests, mineRadius, palette],
   );
+  const featureCollectionRef = useRef(featureCollection);
   const handleSelectRequest = useEffectEvent((request: CivicRequest) => onSelectRequest?.(request));
 
   useEffect(() => {
     filteredRequestsRef.current = filteredRequests;
-  }, [filteredRequests]);
+    featureCollectionRef.current = featureCollection;
+  }, [featureCollection, filteredRequests]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) {
@@ -299,6 +410,7 @@ export function useMapLibreRequestMap({
     });
 
     mapRef.current = map;
+    ensureMarkerOverlay(containerRef.current, overlayRef);
 
     const handleClick = (event: maplibregl.MapMouseEvent) => {
       const layers = getInteractiveLayerIds(map, clustered);
@@ -364,15 +476,19 @@ export function useMapLibreRequestMap({
       canvas.style.cursor = features.length > 0 ? "pointer" : "";
     };
 
+    const handleMarkerPositionUpdate = () => {
+      positionDomMarkers(map, markerRefs, filteredRequestsRef.current);
+    };
+
     map.on("load", () => {
       addMapLayers(map, clustered);
 
       const rawSource = map.getSource(RAW_SOURCE_ID) as GeoJSONSource | undefined;
-      rawSource?.setData(featureCollection as GeoJSON.FeatureCollection);
+      rawSource?.setData(featureCollectionRef.current as GeoJSON.FeatureCollection);
 
       if (clustered) {
         const clusterSource = map.getSource(CLUSTER_SOURCE_ID) as GeoJSONSource | undefined;
-        clusterSource?.setData(featureCollection as GeoJSON.FeatureCollection);
+        clusterSource?.setData(featureCollectionRef.current as GeoJSON.FeatureCollection);
       }
 
       setLayerVisibility(map, HEATMAP_LAYER_ID, mode === "heatmap");
@@ -380,15 +496,30 @@ export function useMapLibreRequestMap({
       setLayerVisibility(map, CLUSTER_LAYER_ID, mode !== "heatmap");
       setLayerVisibility(map, CLUSTER_COUNT_LAYER_ID, mode !== "heatmap");
       setLayerVisibility(map, UNCLUSTERED_LAYER_ID, mode !== "heatmap");
+      syncDomMarkers(
+        map,
+        overlayRef,
+        markerRefs,
+        filteredRequestsRef.current,
+        currentUserId,
+        mode,
+        palette,
+        mineRadius,
+        defaultRadius,
+        handleSelectRequest,
+      );
       fitSignatureRef.current = getFitSignature(filteredRequestsRef.current);
       fitMapToRequests(map, filteredRequestsRef.current, fitToData);
     });
 
     map.on("click", handleClick);
     map.on("mousemove", handleMove);
+    map.on("move", handleMarkerPositionUpdate);
+    map.on("resize", handleMarkerPositionUpdate);
 
     const resizeObserver = new ResizeObserver(() => {
       map.resize();
+      handleMarkerPositionUpdate();
     });
     resizeObserver.observe(containerRef.current);
     requestAnimationFrame(() => map.resize());
@@ -397,15 +528,20 @@ export function useMapLibreRequestMap({
       resizeObserver.disconnect();
       map.off("click", handleClick);
       map.off("mousemove", handleMove);
+      map.off("move", handleMarkerPositionUpdate);
+      map.off("resize", handleMarkerPositionUpdate);
+      clearDomMarkers(markerRefs);
+      overlayRef.current?.remove();
+      overlayRef.current = null;
       map.remove();
       mapRef.current = null;
     };
-  }, [clustered, featureCollection, fitToData, mode]);
+  }, [clustered, currentUserId, defaultRadius, fitToData, handleSelectRequest, mineRadius, mode, palette]);
 
   useEffect(() => {
     const map = mapRef.current;
 
-    if (!map || !map.isStyleLoaded()) {
+    if (!map) {
       return;
     }
 
@@ -422,12 +558,24 @@ export function useMapLibreRequestMap({
     setLayerVisibility(map, CLUSTER_LAYER_ID, mode !== "heatmap");
     setLayerVisibility(map, CLUSTER_COUNT_LAYER_ID, mode !== "heatmap");
     setLayerVisibility(map, UNCLUSTERED_LAYER_ID, mode !== "heatmap");
+    syncDomMarkers(
+      map,
+      overlayRef,
+      markerRefs,
+      filteredRequests,
+      currentUserId,
+      mode,
+      palette,
+      mineRadius,
+      defaultRadius,
+      handleSelectRequest,
+    );
     const nextFitSignature = getFitSignature(filteredRequests);
     if (fitSignatureRef.current !== nextFitSignature) {
       fitSignatureRef.current = nextFitSignature;
       fitMapToRequests(map, filteredRequests, fitToData);
     }
-  }, [clustered, featureCollection, filteredRequests, fitToData, mode]);
+  }, [clustered, currentUserId, defaultRadius, featureCollection, filteredRequests, fitToData, handleSelectRequest, mineRadius, mode, palette]);
 
   useEffect(() => {
     const map = mapRef.current;

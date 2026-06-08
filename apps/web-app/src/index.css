@@ -4918,9 +4918,27 @@ button {
 }
 
 .map-canvas {
+  position: relative;
   width: 100%;
   height: 100%;
   min-height: 460px;
+}
+
+.request-marker-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.request-dom-marker {
+  display: block;
+  appearance: none;
+}
+
+.request-dom-marker:focus-visible {
+  outline: 3px solid rgba(15, 23, 42, 0.42);
+  outline-offset: 3px;
 }
 
 .map-controls {

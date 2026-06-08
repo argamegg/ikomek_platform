@@ -10,6 +10,13 @@ type IssueMapProps = {
   focusRequestId?: string | null;
 };
 
+const ISSUE_MAP_PALETTE = {
+  mine: "rgba(15, 23, 42, 0.92)",
+  public: "rgba(255, 255, 255, 0.92)",
+  critical: "rgba(225, 29, 72, 0.9)",
+  default: "rgba(15, 23, 42, 0.75)",
+};
+
 export function IssueMap({ requests, currentUserId, mode, onSelectRequest, focusRequestId }: IssueMapProps) {
   const { t } = useTranslation();
   const { containerRef, zoomIn, zoomOut, locateUser } = useMapLibreRequestMap({
@@ -18,12 +25,7 @@ export function IssueMap({ requests, currentUserId, mode, onSelectRequest, focus
     mode,
     onSelectRequest,
     focusRequestId,
-    palette: {
-      mine: "rgba(15, 23, 42, 0.92)",
-      public: "rgba(255, 255, 255, 0.92)",
-      critical: "rgba(225, 29, 72, 0.9)",
-      default: "rgba(15, 23, 42, 0.75)",
-    },
+    palette: ISSUE_MAP_PALETTE,
     mineRadius: 10,
     defaultRadius: 10,
     clustered: true,
