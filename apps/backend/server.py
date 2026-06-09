@@ -50,11 +50,16 @@ async def migrate_request_priorities():
         },
         {"$set": {"priority": "unset"}},
     )
-    if normal_result.modified_count or missing_or_invalid_result.modified_count:
+    assigned_unset_result = await db.requests.update_many(
+        {"status": {"$in": ["in_progress", "closed"]}, "priority": "unset"},
+        {"$set": {"priority": "medium"}},
+    )
+    if normal_result.modified_count or missing_or_invalid_result.modified_count or assigned_unset_result.modified_count:
         logger.info(
-            "Request priority migration updated normal=%s invalid=%s.",
+            "Request priority migration updated normal=%s invalid=%s assigned_unset=%s.",
             normal_result.modified_count,
             missing_or_invalid_result.modified_count,
+            assigned_unset_result.modified_count,
         )
 
 

@@ -528,6 +528,14 @@ async def update_request_operator(
     request = await db.requests.find_one({"id": request_id})
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
+
+    effective_priority = (
+        status_update.priority.value
+        if status_update.priority is not None
+        else request.get("priority", "unset")
+    )
+    if status_update.status in {"in_progress", "closed"} and effective_priority not in {"low", "medium", "high"}:
+        raise HTTPException(status_code=400, detail="Assigned requests must have a priority")
     
     update_data = {
         "status": status_update.status,

@@ -31,8 +31,11 @@ async def migrate_request_priorities(dry_run: bool) -> None:
             ],
         }
         invalid_count = await db.requests.count_documents(invalid_query)
+        assigned_unset_query = {"status": {"$in": ["in_progress", "closed"]}, "priority": "unset"}
+        assigned_unset_count = await db.requests.count_documents(assigned_unset_query)
         normal_modified = 0
         invalid_modified = 0
+        assigned_unset_modified = 0
 
         if not dry_run:
             normal_result = await db.requests.update_many(
@@ -51,11 +54,18 @@ async def migrate_request_priorities(dry_run: bool) -> None:
             )
             normal_modified = normal_result.modified_count
             invalid_modified = invalid_result.modified_count
+            assigned_unset_result = await db.requests.update_many(
+                assigned_unset_query,
+                {"$set": {"priority": "medium"}},
+            )
+            assigned_unset_modified = assigned_unset_result.modified_count
 
         print(f"normal_to_medium_found={normal_count}")
         print(f"invalid_to_unset_found={invalid_count}")
+        print(f"assigned_unset_to_medium_found={assigned_unset_count}")
         print(f"normal_to_medium_modified={normal_modified}")
         print(f"invalid_to_unset_modified={invalid_modified}")
+        print(f"assigned_unset_to_medium_modified={assigned_unset_modified}")
         print(f"dry_run={'true' if dry_run else 'false'}")
     finally:
         client.close()

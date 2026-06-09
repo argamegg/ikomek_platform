@@ -3088,6 +3088,15 @@ button {
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
 }
 
+.operator-priority-options button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.operator-priority-options button:disabled:hover {
+  box-shadow: none;
+}
+
 .operator-priority-options button.is-active {
   transform: translateY(-1px);
 }

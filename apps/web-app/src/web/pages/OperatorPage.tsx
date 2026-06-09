@@ -78,6 +78,10 @@ function toOperatorStatus(status: RequestStatus): OperatorStatus {
   return "pending";
 }
 
+function requiresResolvedPriority(status: OperatorStatus) {
+  return status === "in_progress" || status === "closed";
+}
+
 export function OperatorPage() {
   const { t, i18n } = useTranslation();
   const locale = normalizeLocale(i18n.language);
@@ -158,10 +162,16 @@ export function OperatorPage() {
     setCurrentPage((page) => Math.min(page, totalPages));
   }, [totalPages]);
 
+  useEffect(() => {
+    if (requiresResolvedPriority(statusDraft) && priorityDraft === "unset") {
+      setPriorityDraft("medium");
+    }
+  }, [priorityDraft, statusDraft]);
+
   function openUpdateModal(request: CivicRequest) {
     setSelectedRequestId(request.id);
     setStatusDraft(toOperatorStatus(request.status));
-    setPriorityDraft(request.priority);
+    setPriorityDraft(requiresResolvedPriority(toOperatorStatus(request.status)) && request.priority === "unset" ? "medium" : request.priority);
     setDepartmentName(request.assignment?.departmentName ?? "");
     setInternalNote(request.internalNote ?? "");
     setResolutionNote("");
@@ -183,6 +193,9 @@ export function OperatorPage() {
       const trimmedResolutionNote = resolutionNote.trim();
       if (statusDraft === "closed" && !trimmedResolutionNote) {
         throw new Error(t("operator.closeCommentRequired"));
+      }
+      if (requiresResolvedPriority(statusDraft) && priorityDraft === "unset") {
+        throw new Error(t("operator.statusPriorityRequired"));
       }
 
       return platformApi.updateRequestStatus(selectedRequestId, {
@@ -439,6 +452,7 @@ export function OperatorPage() {
                     key={item}
                     type="button"
                     className={`operator-priority-option operator-priority-option--${item}${priorityDraft === item ? " is-active" : ""}`}
+                    disabled={requiresResolvedPriority(statusDraft) && item === "unset"}
                     onClick={() => setPriorityDraft(item)}
                     aria-pressed={priorityDraft === item}
                   >

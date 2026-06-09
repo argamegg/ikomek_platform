@@ -55,6 +55,7 @@ async def seed_demo_data():
     categories = ["electricity", "water", "heating", "public_order", "sewage", "waste", "roads", "street_lighting"]
     statuses = ["pending", "in_progress", "closed"]
     priorities = ["unset", "low", "medium", "high"]
+    resolved_priorities = ["low", "medium", "high"]
     
     problem_types_ru = {
         "electricity": ["Отключение света", "Скачки напряжения", "Повреждение кабеля", "Не работает фонарь"],
@@ -136,7 +137,7 @@ async def seed_demo_data():
         
         category = random.choice(categories)
         status = random.choice(statuses)
-        priority = random.choice(priorities)
+        priority = random.choice(resolved_priorities if status != "pending" else priorities)
         problem_type = random.choice(problem_types_ru[category])
         reason = random.choice(reasons_ru[category])
         
@@ -175,6 +176,10 @@ async def seed_demo_data():
         lng = 71.4 + random.uniform(-0.15, 0.15)
         category = random.choice(categories)
         status = random.choice(statuses)
+        priority = random.choice(resolved_priorities if status != "pending" else priorities)
+        created_at = datetime.utcnow() - timedelta(days=random.randint(0, 30))
+        closed_at = created_at + timedelta(days=random.randint(1, 7)) if status == "closed" else None
+        updated_at = closed_at or (created_at + timedelta(hours=random.randint(1, 48)) if status == "in_progress" else created_at)
         
         request_obj = {
             "id": str(uuid.uuid4()),
@@ -191,13 +196,13 @@ async def seed_demo_data():
             "description": "Автоматически сгенерированная заявка.",
             "photos": [],
             "status": status,
-            "priority": random.choice(priorities),
-            "created_at": datetime.utcnow() - timedelta(days=random.randint(0, 30)),
-            "updated_at": datetime.utcnow(),
-            "closed_at": None,
-            "operator_id": None,
-            "operator_notes": None,
-            "resolution_notes": None,
+            "priority": priority,
+            "created_at": created_at,
+            "updated_at": updated_at,
+            "closed_at": closed_at,
+            "operator_id": demo_operator_id if status != "pending" else None,
+            "operator_notes": "Передано в соответствующую службу" if status != "pending" else None,
+            "resolution_notes": "Проблема устранена бригадой." if status == "closed" else None,
             "resolution_photos": []
         }
         requests_to_insert.append(request_obj)

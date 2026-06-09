@@ -426,6 +426,7 @@ DEPARTMENTS = {
 
 STATUS_WEIGHTS = [("pending", 0.5), ("in_progress", 0.3), ("closed", 0.2)]
 PRIORITY_WEIGHTS = [("unset", 0.25), ("medium", 0.35), ("high", 0.25), ("low", 0.15)]
+RESOLVED_PRIORITY_WEIGHTS = [("medium", 0.45), ("high", 0.35), ("low", 0.2)]
 PLACE_TYPES = ["Квартира", "Подъезд", "Двор", "Улица", "Паркинг", "Детская площадка"]
 ASTANA_BOUNDS = {
     "min_lat": 51.05,
@@ -450,6 +451,10 @@ def weighted_choice(rng: random.Random, choices: list[tuple[str, float]]) -> str
     values = [value for value, _ in choices]
     weights = [weight for _, weight in choices]
     return rng.choices(values, weights=weights, k=1)[0]
+
+
+def choose_priority_for_status(rng: random.Random, status: str) -> str:
+    return weighted_choice(rng, RESOLVED_PRIORITY_WEIGHTS if status in {"in_progress", "closed"} else PRIORITY_WEIGHTS)
 
 
 def get_address(address: str) -> dict:
@@ -745,7 +750,7 @@ async def seed_realistic_demo_data():
         for description in cluster["descriptions"]:
             user = demo_users[cluster_user_index % len(demo_users)]
             status = weighted_choice(rng, STATUS_WEIGHTS)
-            priority = weighted_choice(rng, PRIORITY_WEIGHTS)
+            priority = choose_priority_for_status(rng, status)
             requests_to_insert.append(
                 make_request_doc(
                     rng=rng,
@@ -780,7 +785,7 @@ async def seed_realistic_demo_data():
             problem_type = rng.choice(template["problem_types"])
             reason = rng.choice(template["reasons"])
             status = weighted_choice(rng, STATUS_WEIGHTS)
-            priority = weighted_choice(rng, PRIORITY_WEIGHTS)
+            priority = choose_priority_for_status(rng, status)
             description = f"{problem_type} по адресу {address_data['address']}. {reason}."
 
             requests_to_insert.append(
