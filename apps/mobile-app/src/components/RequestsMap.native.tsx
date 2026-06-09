@@ -399,29 +399,34 @@ export function RequestsMap({
         hitbox={{ width: 44, height: 44 }}
       >
         {renderMode === 'heatmap' && heatmapColorMode === 'density' ? (
-          <MapLibre.HeatmapLayer id="request-heatmap" style={heatmapLayerStyle} />
+          <MapLibre.HeatmapLayer id="request-heatmap" sourceID="requests" style={heatmapLayerStyle} />
         ) : null}
         {renderMode === 'heatmap' && heatmapColorMode === 'priority' ? (
-          <MapLibre.CircleLayer id="request-priority-heatmap" style={priorityHeatmapStyle} />
+          <MapLibre.CircleLayer id="request-priority-heatmap" sourceID="requests" style={priorityHeatmapStyle} />
         ) : null}
         {renderMode !== 'heatmap' ? (
-          <>
-            <MapLibre.CircleLayer
-              id="request-clusters"
-              filter={['has', 'point_count'] as any}
-              style={clusterCircleStyle}
-            />
-            <MapLibre.SymbolLayer
-              id="request-cluster-count"
-              filter={['has', 'point_count'] as any}
-              style={clusterCountStyle}
-            />
-            <MapLibre.CircleLayer
-              id="request-points"
-              filter={['!', ['has', 'point_count']] as any}
-              style={unclusteredPointStyle}
-            />
-          </>
+          <MapLibre.CircleLayer
+            id="request-clusters"
+            sourceID="requests"
+            filter={['has', 'point_count'] as any}
+            style={clusterCircleStyle}
+          />
+        ) : null}
+        {renderMode !== 'heatmap' ? (
+          <MapLibre.SymbolLayer
+            id="request-cluster-count"
+            sourceID="requests"
+            filter={['has', 'point_count'] as any}
+            style={clusterCountStyle}
+          />
+        ) : null}
+        {renderMode !== 'heatmap' ? (
+          <MapLibre.CircleLayer
+            id="request-points"
+            sourceID="requests"
+            filter={['!', ['has', 'point_count']] as any}
+            style={unclusteredPointStyle}
+          />
         ) : null}
       </MapLibre.ShapeSource>
     </MapLibre.MapView>

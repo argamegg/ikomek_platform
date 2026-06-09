@@ -325,7 +325,15 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         argv = ["up"]
     elif argv[0] == "--docker":
         argv = argv[1:] or ["up"]
-    elif argv[0] in {"--skip-mobile", "--mobile-port", "--mobile-api-url", "--expo-host", "--clear-mobile-cache"}:
+    elif argv[0] in {
+        "--skip-mobile",
+        "--mobile-port",
+        "--mobile-api-url",
+        "--expo-host",
+        "--clear-mobile-cache",
+        "--no-build",
+        "--force-recreate",
+    }:
         argv = ["up", *argv]
     elif argv[0].startswith("--") and argv[0] not in {"-h", "--help"}:
         argv = ["dev", *argv]
@@ -455,6 +463,13 @@ def run_docker_command(args: argparse.Namespace) -> int:
                 not requested_services or "mobile" in requested_services
             )
             compose_services = [service for service in requested_services if service != "mobile"]
+            docker_requested = not requested_services or bool(compose_services)
+            if start_mobile and not docker_requested:
+                mobile_api_url = args.mobile_api_url or default_mobile_api_url(8001)
+                print(f"Mobile API for Expo: {mobile_api_url}")
+                print("[system] Starting Expo only. Docker services are not touched.")
+                return run_mobile_service(args, backend_port=8001)
+
             command = ["up"]
             if not args.no_build:
                 command.append("--build")
