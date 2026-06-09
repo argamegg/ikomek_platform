@@ -31,6 +31,8 @@ export type RequestMapPalette = {
   default: string;
 };
 
+export type HeatmapColorMode = "density" | "priority";
+
 const STATUS_COLORS: Partial<Record<CivicRequest["status"], string>> = {
   pending: "rgba(255, 149, 0, 0.92)",
   in_progress: "rgba(0, 122, 255, 0.88)",
@@ -55,10 +57,14 @@ export function getRequestWeight(request: CivicRequest) {
   return request.priority === "high"
     ? 1
     : request.priority === "medium"
-      ? 0.66
+      ? 0.85
       : request.priority === "low"
-        ? 0.4
-        : 0.24;
+        ? 0.72
+        : 0.68;
+}
+
+export function getHeatmapWeight(request: CivicRequest, heatmapColorMode: HeatmapColorMode) {
+  return heatmapColorMode === "density" ? 0.65 : getRequestWeight(request);
 }
 
 export function getRequestColor(
@@ -87,6 +93,7 @@ export function buildRequestFeatureCollection(
   palette: RequestMapPalette,
   mineRadius: number,
   defaultRadius: number,
+  heatmapColorMode: HeatmapColorMode = "priority",
 ) {
   return {
     type: "FeatureCollection",
@@ -101,7 +108,7 @@ export function buildRequestFeatureCollection(
         status: request.status,
         color: getRequestColor(request, palette),
         strokeColor: getRequestStrokeColor(request, currentUserId, palette),
-        weight: getRequestWeight(request),
+        weight: getHeatmapWeight(request, heatmapColorMode),
         radius: request.citizenId === currentUserId ? mineRadius : defaultRadius,
       },
     })),

@@ -1,6 +1,7 @@
 import type { CivicRequest, MapMode } from "../../../types/platform";
 import { useMapLibreRequestMap } from "../../../components/map/useMapLibreRequestMap";
 import { useTranslation } from "react-i18next";
+import type { HeatmapColorMode } from "../../../components/map/requestMapConfig";
 
 type IssueMapProps = {
   requests: CivicRequest[];
@@ -8,6 +9,7 @@ type IssueMapProps = {
   mode: MapMode;
   onSelectRequest?: (request: CivicRequest) => void;
   focusRequestId?: string | null;
+  heatmapColorMode?: HeatmapColorMode;
 };
 
 const ISSUE_MAP_PALETTE = {
@@ -17,7 +19,14 @@ const ISSUE_MAP_PALETTE = {
   default: "rgba(15, 23, 42, 0.75)",
 };
 
-export function IssueMap({ requests, currentUserId, mode, onSelectRequest, focusRequestId }: IssueMapProps) {
+export function IssueMap({
+  requests,
+  currentUserId,
+  mode,
+  onSelectRequest,
+  focusRequestId,
+  heatmapColorMode = "priority",
+}: IssueMapProps) {
   const { t } = useTranslation();
   const { containerRef, zoomIn, zoomOut, locateUser } = useMapLibreRequestMap({
     requests,
@@ -30,6 +39,7 @@ export function IssueMap({ requests, currentUserId, mode, onSelectRequest, focus
     defaultRadius: 10,
     clustered: true,
     fitToData: true,
+    heatmapColorMode,
   });
 
   return (

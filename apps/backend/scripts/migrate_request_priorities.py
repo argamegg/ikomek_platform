@@ -31,19 +31,8 @@ async def migrate_request_priorities(dry_run: bool) -> None:
             ],
         }
         invalid_count = await db.requests.count_documents(invalid_query)
-        untouched_medium_query = {
-            "status": "pending",
-            "priority": "medium",
-            "$or": [
-                {"operator_id": {"$exists": False}},
-                {"operator_id": None},
-            ],
-        }
-        untouched_medium_count = await db.requests.count_documents(untouched_medium_query)
-
         normal_modified = 0
         invalid_modified = 0
-        untouched_medium_modified = 0
 
         if not dry_run:
             normal_result = await db.requests.update_many(
@@ -60,20 +49,13 @@ async def migrate_request_priorities(dry_run: bool) -> None:
                 },
                 {"$set": {"priority": "unset"}},
             )
-            untouched_medium_result = await db.requests.update_many(
-                untouched_medium_query,
-                {"$set": {"priority": "unset"}},
-            )
             normal_modified = normal_result.modified_count
             invalid_modified = invalid_result.modified_count
-            untouched_medium_modified = untouched_medium_result.modified_count
 
         print(f"normal_to_medium_found={normal_count}")
         print(f"invalid_to_unset_found={invalid_count}")
-        print(f"untouched_medium_to_unset_found={untouched_medium_count}")
         print(f"normal_to_medium_modified={normal_modified}")
         print(f"invalid_to_unset_modified={invalid_modified}")
-        print(f"untouched_medium_to_unset_modified={untouched_medium_modified}")
         print(f"dry_run={'true' if dry_run else 'false'}")
     finally:
         client.close()
@@ -81,7 +63,7 @@ async def migrate_request_priorities(dry_run: bool) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Normalize request priorities and move untouched pending medium requests to unset.",
+        description="Normalize legacy request priority values.",
     )
     parser.add_argument(
         "--dry-run",

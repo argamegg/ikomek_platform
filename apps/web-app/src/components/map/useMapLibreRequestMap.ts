@@ -6,9 +6,12 @@ import {
   ASTANA_CENTER,
   buildRequestFeatureCollection,
   getFilteredRequests,
+  getHeatmapWeight,
   getRequestColor,
   getRequestCoordinate,
+  getRequestWeight,
   getRequestStrokeColor,
+  type HeatmapColorMode,
   type RequestMapPalette,
   REQUEST_MAP_STYLE,
 } from "./requestMapConfig";
@@ -17,12 +20,15 @@ const RAW_SOURCE_ID = "requests-raw";
 const CLUSTER_SOURCE_ID = "requests-clusters";
 const POINT_LAYER_ID = "request-points";
 const HEATMAP_LAYER_ID = "request-heatmap";
+const HEATMAP_HALO_LAYER_ID = "request-heatmap-halos";
 const CLUSTER_LAYER_ID = "request-clusters";
 const CLUSTER_COUNT_LAYER_ID = "request-cluster-count";
 const UNCLUSTERED_LAYER_ID = "request-unclustered-points";
 const REQUEST_MARKER_CLASS = "request-dom-marker";
+const HEATMAP_BLOB_CLASS = "request-heatmap-blob";
 const CLUSTER_COLOR = "rgba(255, 149, 0, 0.92)";
 const DEFAULT_STROKE_COLOR = "rgba(255,255,255,0.92)";
+const HEATMAP_DENSITY_RADIUS_METERS = 1900;
 
 type UseMapLibreRequestMapOptions = {
   requests: CivicRequest[];
@@ -35,6 +41,7 @@ type UseMapLibreRequestMapOptions = {
   defaultRadius: number;
   clustered?: boolean;
   fitToData?: boolean;
+  heatmapColorMode?: HeatmapColorMode;
 };
 
 function setLayerVisibility(map: maplibregl.Map, layerId: string, isVisible: boolean) {
@@ -80,43 +87,76 @@ function addMapLayers(map: maplibregl.Map, clustered: boolean) {
         ["linear"],
         ["zoom"],
         10,
-        0.95,
+        1.65,
         15,
-        1.45,
+        3.15,
       ],
       "heatmap-radius": [
         "interpolate",
         ["linear"],
         ["zoom"],
         10,
-        28,
+        38,
         15,
-        58,
+        82,
       ],
-      "heatmap-opacity": 0.74,
+      "heatmap-opacity": 0.88,
       "heatmap-color": [
         "interpolate",
         ["linear"],
         ["heatmap-density"],
         0,
-        "rgba(8, 145, 178, 0)",
-        0.08,
-        "rgba(6, 182, 212, 0.34)",
-        0.22,
-        "rgba(45, 212, 191, 0.55)",
-        0.38,
-        "rgba(132, 204, 22, 0.6)",
+        "rgba(254, 249, 195, 0)",
+        0.015,
+        "rgba(254, 240, 138, 0.38)",
+        0.09,
+        "rgba(253, 224, 71, 0.52)",
+        0.2,
+        "rgba(250, 204, 21, 0.64)",
+        0.36,
+        "rgba(251, 146, 60, 0.76)",
         0.54,
-        "rgba(250, 204, 21, 0.68)",
-        0.7,
-        "rgba(251, 146, 60, 0.74)",
-        0.84,
-        "rgba(239, 68, 68, 0.84)",
-        0.94,
-        "rgba(220, 38, 38, 0.9)",
+        "rgba(249, 115, 22, 0.84)",
+        0.72,
+        "rgba(239, 68, 68, 0.92)",
+        0.88,
+        "rgba(153, 27, 27, 0.95)",
         1,
-        "rgba(185, 28, 28, 0.94)",
+        "rgba(69, 10, 10, 0.96)",
       ],
+    },
+  });
+
+  map.addLayer({
+    id: HEATMAP_HALO_LAYER_ID,
+    type: "circle",
+    source: RAW_SOURCE_ID,
+    paint: {
+      "circle-color": [
+        "interpolate",
+        ["linear"],
+        ["coalesce", ["get", "weight"], 0.7],
+        0.65,
+        "rgba(254, 240, 138, 0.32)",
+        0.85,
+        "rgba(251, 146, 60, 0.36)",
+        1,
+        "rgba(153, 27, 27, 0.42)",
+      ],
+      "circle-radius": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        10,
+        18,
+        13,
+        32,
+        15,
+        46,
+      ],
+      "circle-blur": 0.9,
+      "circle-opacity": 0.78,
+      "circle-stroke-width": 0,
     },
   });
 
@@ -282,6 +322,11 @@ function clearDomMarkers(markerRefs: MutableRefObject<globalThis.Map<string, HTM
   markerRefs.current.clear();
 }
 
+function clearHeatmapBlobs(blobRefs: MutableRefObject<globalThis.Map<string, HTMLDivElement>>) {
+  blobRefs.current.forEach((blob) => blob.remove());
+  blobRefs.current.clear();
+}
+
 function ensureMarkerOverlay(
   container: HTMLDivElement,
   overlayRef: MutableRefObject<HTMLDivElement | null>,
@@ -301,6 +346,132 @@ function positionDomMarker(map: maplibregl.Map, marker: HTMLButtonElement, reque
   const point = map.project(getRequestCoordinate(request));
   marker.style.left = `${point.x}px`;
   marker.style.top = `${point.y}px`;
+}
+
+function getApproxDistanceMeters(first: CivicRequest, second: CivicRequest) {
+  const firstLat = first.point.lat || ASTANA_CENTER[1];
+  const firstLng = first.point.lng || ASTANA_CENTER[0];
+  const secondLat = second.point.lat || ASTANA_CENTER[1];
+  const secondLng = second.point.lng || ASTANA_CENTER[0];
+  const latMeters = (firstLat - secondLat) * 111_320;
+  const lngMeters = (firstLng - secondLng) * 111_320 * Math.cos((firstLat * Math.PI) / 180);
+
+  return Math.hypot(latMeters, lngMeters);
+}
+
+function getHeatmapBlobDensityLevels(requests: CivicRequest[]) {
+  const rawScores = requests.map((request) => {
+    const neighborScore = requests.reduce((total, candidate) => {
+      if (candidate.id === request.id) {
+        return total;
+      }
+
+      const distance = getApproxDistanceMeters(request, candidate);
+
+      if (distance > HEATMAP_DENSITY_RADIUS_METERS) {
+        return total;
+      }
+
+      const closeness = 1 - distance / HEATMAP_DENSITY_RADIUS_METERS;
+      return total + closeness * closeness;
+    }, 0);
+
+    return { id: request.id, score: neighborScore };
+  });
+  const maxScore = Math.max(...rawScores.map((item) => item.score), 0);
+  const levels = new Map<string, number>();
+
+  rawScores.forEach(({ id, score }) => {
+    levels.set(id, maxScore > 0 ? score / maxScore : 0);
+  });
+
+  return levels;
+}
+
+function setDensityBlobPalette(element: HTMLDivElement, densityLevel: number) {
+  if (densityLevel >= 0.82) {
+    element.style.setProperty("--heatmap-blob-core", "69, 10, 10");
+    element.style.setProperty("--heatmap-blob-mid", "153, 27, 27");
+    element.style.setProperty("--heatmap-blob-edge", "249, 115, 22");
+  } else if (densityLevel >= 0.58) {
+    element.style.setProperty("--heatmap-blob-core", "153, 27, 27");
+    element.style.setProperty("--heatmap-blob-mid", "239, 68, 68");
+    element.style.setProperty("--heatmap-blob-edge", "251, 146, 60");
+  } else if (densityLevel >= 0.34) {
+    element.style.setProperty("--heatmap-blob-core", "249, 115, 22");
+    element.style.setProperty("--heatmap-blob-mid", "251, 146, 60");
+    element.style.setProperty("--heatmap-blob-edge", "250, 204, 21");
+  } else if (densityLevel >= 0.12) {
+    element.style.setProperty("--heatmap-blob-core", "250, 204, 21");
+    element.style.setProperty("--heatmap-blob-mid", "253, 224, 71");
+    element.style.setProperty("--heatmap-blob-edge", "254, 240, 138");
+  } else {
+    element.style.setProperty("--heatmap-blob-core", "254, 240, 138");
+    element.style.setProperty("--heatmap-blob-mid", "254, 249, 195");
+    element.style.setProperty("--heatmap-blob-edge", "254, 252, 232");
+  }
+}
+
+function createHeatmapBlobElement(
+  request: CivicRequest,
+  heatmapColorMode: HeatmapColorMode,
+  densityLevel = 0,
+) {
+  const weight = getHeatmapWeight(request, heatmapColorMode);
+  const size = heatmapColorMode === "density"
+    ? Math.round(112 + densityLevel * 52)
+    : Math.round(78 + getRequestWeight(request) * 74);
+  const element = document.createElement("div");
+  element.className = HEATMAP_BLOB_CLASS;
+  element.style.width = `${size}px`;
+  element.style.height = `${size}px`;
+  element.style.setProperty(
+    "--heatmap-blob-opacity",
+    String(heatmapColorMode === "density" ? 0.42 + densityLevel * 0.24 : 0.5 + weight * 0.16),
+  );
+
+  if (heatmapColorMode === "density") {
+    setDensityBlobPalette(element, densityLevel);
+  } else if (weight >= 0.98) {
+    element.style.setProperty("--heatmap-blob-core", "153, 27, 27");
+    element.style.setProperty("--heatmap-blob-mid", "239, 68, 68");
+    element.style.setProperty("--heatmap-blob-edge", "251, 146, 60");
+  } else if (weight >= 0.82) {
+    element.style.setProperty("--heatmap-blob-core", "249, 115, 22");
+    element.style.setProperty("--heatmap-blob-mid", "251, 146, 60");
+    element.style.setProperty("--heatmap-blob-edge", "250, 204, 21");
+  } else if (weight >= 0.72) {
+    element.style.setProperty("--heatmap-blob-core", "250, 204, 21");
+    element.style.setProperty("--heatmap-blob-mid", "253, 224, 71");
+    element.style.setProperty("--heatmap-blob-edge", "254, 240, 138");
+  } else {
+    element.style.setProperty("--heatmap-blob-core", "254, 240, 138");
+    element.style.setProperty("--heatmap-blob-mid", "254, 249, 195");
+    element.style.setProperty("--heatmap-blob-edge", "254, 252, 232");
+  }
+
+  return element;
+}
+
+function positionHeatmapBlob(map: maplibregl.Map, blob: HTMLDivElement, request: CivicRequest) {
+  const point = map.project(getRequestCoordinate(request));
+  blob.style.left = `${point.x}px`;
+  blob.style.top = `${point.y}px`;
+}
+
+function positionHeatmapBlobs(
+  map: maplibregl.Map,
+  blobRefs: MutableRefObject<globalThis.Map<string, HTMLDivElement>>,
+  requests: CivicRequest[],
+) {
+  const requestById = new Map(requests.map((request) => [request.id, request]));
+
+  blobRefs.current.forEach((blob, requestId) => {
+    const request = requestById.get(requestId);
+    if (request) {
+      positionHeatmapBlob(map, blob, request);
+    }
+  });
 }
 
 function positionDomMarkers(
@@ -351,6 +522,31 @@ function syncDomMarkers(
   }
 }
 
+function syncHeatmapBlobs(
+  map: maplibregl.Map,
+  overlayRef: MutableRefObject<HTMLDivElement | null>,
+  blobRefs: MutableRefObject<globalThis.Map<string, HTMLDivElement>>,
+  requests: CivicRequest[],
+  mode: MapMode,
+  heatmapColorMode: HeatmapColorMode,
+) {
+  clearHeatmapBlobs(blobRefs);
+  const overlay = overlayRef.current;
+
+  if (mode !== "heatmap" || !overlay) {
+    return;
+  }
+
+  const densityLevels = heatmapColorMode === "density" ? getHeatmapBlobDensityLevels(requests) : new Map<string, number>();
+
+  for (const request of requests) {
+    const element = createHeatmapBlobElement(request, heatmapColorMode, densityLevels.get(request.id) ?? 0);
+    positionHeatmapBlob(map, element, request);
+    overlay.appendChild(element);
+    blobRefs.current.set(request.id, element);
+  }
+}
+
 export function useMapLibreRequestMap({
   requests,
   currentUserId,
@@ -362,11 +558,13 @@ export function useMapLibreRequestMap({
   defaultRadius,
   clustered = false,
   fitToData = true,
+  heatmapColorMode = "priority",
 }: UseMapLibreRequestMapOptions) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const markerRefs = useRef<globalThis.Map<string, HTMLButtonElement>>(new Map());
+  const heatmapBlobRefs = useRef<globalThis.Map<string, HTMLDivElement>>(new Map());
   const fitSignatureRef = useRef<string | null>(null);
   const filteredRequests = useMemo(
     () => getFilteredRequests(requests, currentUserId, mode),
@@ -381,8 +579,9 @@ export function useMapLibreRequestMap({
         palette,
         mineRadius,
         defaultRadius,
+        heatmapColorMode,
       ),
-    [currentUserId, defaultRadius, filteredRequests, mineRadius, palette],
+    [currentUserId, defaultRadius, filteredRequests, heatmapColorMode, mineRadius, palette],
   );
   const featureCollectionRef = useRef(featureCollection);
   const handleSelectRequest = useEffectEvent((request: CivicRequest) => onSelectRequest?.(request));
@@ -478,6 +677,7 @@ export function useMapLibreRequestMap({
 
     const handleMarkerPositionUpdate = () => {
       positionDomMarkers(map, markerRefs, filteredRequestsRef.current);
+      positionHeatmapBlobs(map, heatmapBlobRefs, filteredRequestsRef.current);
     };
 
     map.on("load", () => {
@@ -492,6 +692,7 @@ export function useMapLibreRequestMap({
       }
 
       setLayerVisibility(map, HEATMAP_LAYER_ID, mode === "heatmap");
+      setLayerVisibility(map, HEATMAP_HALO_LAYER_ID, mode === "heatmap");
       setLayerVisibility(map, POINT_LAYER_ID, mode !== "heatmap");
       setLayerVisibility(map, CLUSTER_LAYER_ID, mode !== "heatmap");
       setLayerVisibility(map, CLUSTER_COUNT_LAYER_ID, mode !== "heatmap");
@@ -507,6 +708,14 @@ export function useMapLibreRequestMap({
         mineRadius,
         defaultRadius,
         handleSelectRequest,
+      );
+      syncHeatmapBlobs(
+        map,
+        overlayRef,
+        heatmapBlobRefs,
+        filteredRequestsRef.current,
+        mode,
+        heatmapColorMode,
       );
       fitSignatureRef.current = getFitSignature(filteredRequestsRef.current);
       fitMapToRequests(map, filteredRequestsRef.current, fitToData);
@@ -531,12 +740,13 @@ export function useMapLibreRequestMap({
       map.off("move", handleMarkerPositionUpdate);
       map.off("resize", handleMarkerPositionUpdate);
       clearDomMarkers(markerRefs);
+      clearHeatmapBlobs(heatmapBlobRefs);
       overlayRef.current?.remove();
       overlayRef.current = null;
       map.remove();
       mapRef.current = null;
     };
-  }, [clustered, currentUserId, defaultRadius, fitToData, handleSelectRequest, mineRadius, mode, palette]);
+  }, [clustered, currentUserId, defaultRadius, fitToData, handleSelectRequest, heatmapColorMode, mineRadius, mode, palette]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -554,6 +764,7 @@ export function useMapLibreRequestMap({
     }
 
     setLayerVisibility(map, HEATMAP_LAYER_ID, mode === "heatmap");
+    setLayerVisibility(map, HEATMAP_HALO_LAYER_ID, mode === "heatmap");
     setLayerVisibility(map, POINT_LAYER_ID, mode !== "heatmap");
     setLayerVisibility(map, CLUSTER_LAYER_ID, mode !== "heatmap");
     setLayerVisibility(map, CLUSTER_COUNT_LAYER_ID, mode !== "heatmap");
@@ -570,12 +781,20 @@ export function useMapLibreRequestMap({
       defaultRadius,
       handleSelectRequest,
     );
+    syncHeatmapBlobs(
+      map,
+      overlayRef,
+      heatmapBlobRefs,
+      filteredRequests,
+      mode,
+      heatmapColorMode,
+    );
     const nextFitSignature = getFitSignature(filteredRequests);
     if (fitSignatureRef.current !== nextFitSignature) {
       fitSignatureRef.current = nextFitSignature;
       fitMapToRequests(map, filteredRequests, fitToData);
     }
-  }, [clustered, currentUserId, defaultRadius, featureCollection, filteredRequests, fitToData, handleSelectRequest, mineRadius, mode, palette]);
+  }, [clustered, currentUserId, defaultRadius, featureCollection, filteredRequests, fitToData, handleSelectRequest, heatmapColorMode, mineRadius, mode, palette]);
 
   useEffect(() => {
     const map = mapRef.current;

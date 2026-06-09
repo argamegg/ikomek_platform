@@ -40,6 +40,22 @@ const TIMELINE_COLORS = {
 
 const PRIORITY_OPTIONS = ["all", "unset", "low", "medium", "high"] as const;
 const WEEKDAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+const KAZAKH_MONTHS = [
+  "қаңтар",
+  "ақпан",
+  "наурыз",
+  "сәуір",
+  "мамыр",
+  "маусым",
+  "шілде",
+  "тамыз",
+  "қыркүйек",
+  "қазан",
+  "қараша",
+  "желтоқсан",
+] as const;
+const KAZAKH_MONTHS_SHORT = ["қаң", "ақп", "нау", "сәу", "мам", "мау", "шіл", "там", "қыр", "қаз", "қар", "жел"] as const;
+const KAZAKH_WEEKDAYS_SHORT = ["дс", "сс", "ср", "бс", "жм", "сб", "жс"] as const;
 const MAX_DATE_RANGE_DAYS = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -53,9 +69,21 @@ type TimelineGranularity = "hours" | "weekdays" | "months";
 type TimelinePoint = { key: string; label: string; all: number; pending: number; closed: number };
 
 function normalizeLocale(language: string) {
-  if (language.startsWith("kk") || language.startsWith("kz")) return "kk";
-  if (language.startsWith("en")) return "en";
-  return "ru";
+  if (language.startsWith("kk") || language.startsWith("kz")) return "kk-KZ";
+  if (language.startsWith("en")) return "en-US";
+  return "ru-RU";
+}
+
+function isKazakhLanguage(language: string) {
+  return language.startsWith("kk") || language.startsWith("kz");
+}
+
+function capitalizeFirst(value: string) {
+  return value ? `${value[0].toUpperCase()}${value.slice(1)}` : value;
+}
+
+function formatKazakhMonth(date: Date, variant: "long" | "short" = "long") {
+  return variant === "long" ? KAZAKH_MONTHS[date.getMonth()] : KAZAKH_MONTHS_SHORT[date.getMonth()];
 }
 
 function getMonthKey(date: Date) {
@@ -74,12 +102,19 @@ function formatMonth(month: string, language: string) {
   const [year, monthNumber] = month.split("-").map(Number);
   const date = new Date(year, monthNumber - 1, 1);
   if (Number.isNaN(date.getTime())) return month;
+  if (isKazakhLanguage(language)) return formatKazakhMonth(date, "short");
   return new Intl.DateTimeFormat(normalizeLocale(language), { month: "short" }).format(date);
 }
 
 function formatRequestDate(value: string, language: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
+  if (isKazakhLanguage(language)) {
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${day} ${formatKazakhMonth(date, "short")} ${hours}:${minutes}`;
+  }
   return new Intl.DateTimeFormat(normalizeLocale(language), {
     day: "2-digit",
     month: "short",
@@ -89,6 +124,7 @@ function formatRequestDate(value: string, language: string) {
 }
 
 function formatWeekday(dayIndex: number, language: string) {
+  if (isKazakhLanguage(language)) return KAZAKH_WEEKDAYS_SHORT[dayIndex];
   const monday = new Date(2026, 0, 5 + dayIndex);
   return new Intl.DateTimeFormat(normalizeLocale(language), { weekday: "short" }).format(monday);
 }
@@ -197,6 +233,9 @@ function getCalendarCells(monthDate: Date) {
 }
 
 function formatCalendarMonth(date: Date, language: string) {
+  if (isKazakhLanguage(language)) {
+    return `${capitalizeFirst(formatKazakhMonth(date))} ${date.getFullYear()}`;
+  }
   return new Intl.DateTimeFormat(normalizeLocale(language), {
     month: "long",
     year: "numeric",
@@ -208,6 +247,15 @@ function formatDateRangeLabel(range: DateRange, language: string) {
   const to = parseDateKey(range.to);
   if (!from || !to) return "";
   const locale = normalizeLocale(language);
+  if (isKazakhLanguage(language)) {
+    if (range.from === range.to) {
+      return `${from.getDate()} ${formatKazakhMonth(from)} ${from.getFullYear()}`;
+    }
+    if (from.getFullYear() === to.getFullYear() && from.getMonth() === to.getMonth()) {
+      return `${from.getDate()}-${to.getDate()} ${formatKazakhMonth(to)} ${to.getFullYear()}`;
+    }
+    return `${from.getDate()} ${formatKazakhMonth(from, "short")} - ${to.getDate()} ${formatKazakhMonth(to, "short")} ${to.getFullYear()}`;
+  }
   if (range.from === range.to) {
     return new Intl.DateTimeFormat(locale, { day: "numeric", month: "long", year: "numeric" }).format(from);
   }
@@ -342,13 +390,11 @@ function getTimelineTotals(data: TimelinePoint[]) {
 }
 
 function formatRequestCount(count: number, language: string) {
-  const locale = normalizeLocale(language);
-
-  if (locale === "en") {
+  if (language.startsWith("en")) {
     return `${count} ${count === 1 ? "request" : "requests"}`;
   }
 
-  if (locale === "kk") {
+  if (isKazakhLanguage(language)) {
     return `${count} өтініш`;
   }
 
@@ -375,6 +421,10 @@ function getPriorityMatch(request: CivicRequest, priority: PriorityFilter) {
 
 function getStatusCount(requests: CivicRequest[], status: RequestStatus) {
   return requests.filter((request) => request.status === status).length;
+}
+
+function isOpenMapRequest(request: CivicRequest) {
+  return request.status === "pending" || request.status === "in_progress";
 }
 
 export function MapPage() {
@@ -454,6 +504,7 @@ export function MapPage() {
   const isLoading = publicRequestsQuery.isLoading;
   const [filtersVisible, setFiltersVisible] = useState(true);
   const hasActiveFilters = mapMode !== "all" || category !== "all" || status !== "all" || priority !== "all" || !isDefaultDateRange(dateRange);
+  const hasHeatmapDataFilters = category !== "all" || status !== "all" || priority !== "all" || !isDefaultDateRange(dateRange);
 
   const statusCounts = useMemo(
     () => ({
@@ -527,9 +578,15 @@ export function MapPage() {
     () => hotspots.find((item) => item.address === selectedHotspotAddress) ?? null,
     [hotspots, selectedHotspotAddress],
   );
-  const selectedRequest = selectedHotspot ? null : filteredRequests.find((request) => request.id === selectedId) ?? null;
-  const mapRequests = filteredRequests;
+  const mapRequests = useMemo(
+    () => (mapMode === "heatmap" && !hasHeatmapDataFilters
+      ? filteredRequests.filter(isOpenMapRequest)
+      : filteredRequests),
+    [filteredRequests, hasHeatmapDataFilters, mapMode],
+  );
+  const selectedRequest = selectedHotspot ? null : mapRequests.find((request) => request.id === selectedId) ?? null;
   const activeMapMode: MapMode = mapMode;
+  const heatmapColorMode = mapMode === "heatmap" && !hasHeatmapDataFilters ? "density" : "priority";
 
   const activityData = useMemo(() => {
     const matrix = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0));
@@ -609,6 +666,7 @@ export function MapPage() {
             setSelectedId(request.id);
           }}
           focusRequestId={null}
+          heatmapColorMode={heatmapColorMode}
         />
 
         {filtersVisible ? (

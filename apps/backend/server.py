@@ -50,24 +50,11 @@ async def migrate_request_priorities():
         },
         {"$set": {"priority": "unset"}},
     )
-    untouched_medium_result = await db.requests.update_many(
-        {
-            "status": "pending",
-            "priority": "medium",
-            "$or": [
-                {"operator_id": {"$exists": False}},
-                {"operator_id": None},
-            ],
-        },
-        {"$set": {"priority": "unset"}},
-    )
-
-    if normal_result.modified_count or missing_or_invalid_result.modified_count or untouched_medium_result.modified_count:
+    if normal_result.modified_count or missing_or_invalid_result.modified_count:
         logger.info(
-            "Request priority migration updated normal=%s invalid=%s untouched_medium=%s.",
+            "Request priority migration updated normal=%s invalid=%s.",
             normal_result.modified_count,
             missing_or_invalid_result.modified_count,
-            untouched_medium_result.modified_count,
         )
 
 

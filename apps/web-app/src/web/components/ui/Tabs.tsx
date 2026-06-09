@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
+import type { CSSProperties } from "react";
 import { useId } from "react";
 import { cn } from "../../lib/cn";
 
@@ -16,9 +17,10 @@ type TabsProps = {
 
 export function Tabs({ value, options, onChange, className }: TabsProps) {
   const tabsId = useId();
+  const style = { "--tabs-count": options.length } as CSSProperties;
 
   return (
-    <div className={cn("ui-tabs", className)}>
+    <div className={cn("ui-tabs", className)} style={style}>
       {options.map((option) => {
         const active = option.key === value;
 
