@@ -166,8 +166,9 @@ VITE_API_BASE_URL=http://localhost:8001
 
 Use the startup guide:
 
-- [RUNNING.md](/Users/argame/Documents/ikomek-project/docs/RUNNING.md)
-- [PROJECT_OVERVIEW.md](/Users/argame/Documents/ikomek-project/docs/PROJECT_OVERVIEW.md)
+- [RUNNING.md](docs/RUNNING.md)
+- [PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md)
+- [Documentation hub](docs/README.md)
 
 Or start everything with the helper script:
 
@@ -192,9 +193,8 @@ curl -X POST http://localhost:8001/api/seed
 
 ## Helpful Files
 
-- [backend service](/Users/argame/Documents/ikomek-project/apps/backend/server.py)
-- [mobile app](/Users/argame/Documents/ikomek-project/apps/mobile-app/package.json)
-- [web app](/Users/argame/Documents/ikomek-project/apps/web-app/package.json)
-- [startup guide](/Users/argame/Documents/ikomek-project/docs/RUNNING.md)
-- [launcher script](/Users/argame/Documents/ikomek-project/scripts/start_system.py)
-
+- [backend service](apps/backend/server.py)
+- [mobile app](apps/mobile-app/package.json)
+- [web app](apps/web-app/package.json)
+- [startup guide](docs/RUNNING.md)
+- [launcher script](scripts/start_system.py)
