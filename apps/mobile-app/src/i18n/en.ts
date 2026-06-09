@@ -810,6 +810,7 @@ export const en = {
     invalidEmail: 'Invalid email',
     passwordMismatch: 'Passwords do not match',
     networkError: 'Network error',
+    backendUnavailable: 'Could not connect to the server. Check that the phone can reach the backend URL and that the server is running.',
     tryAgain: 'Try again',
   },
 };

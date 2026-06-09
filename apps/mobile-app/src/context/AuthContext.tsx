@@ -1,12 +1,21 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios, { isAxiosError } from 'axios';
-import Constants from 'expo-constants';
 import i18n from '../i18n';
 import { signOutClerkIfAvailable } from './ClerkContext';
+import { API_BASE_URL } from '../utils/apiConfig';
 
-const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || Constants.expoConfig?.extra?.backendUrl || '';
 const PENDING_VERIFICATION_KEY = 'pendingVerification';
+const STARTUP_AUTH_TIMEOUT_MS = 4000;
+const AUTH_REQUEST_TIMEOUT_MS = 12000;
+
+const authApi = axios.create({
+  baseURL: `${API_BASE_URL}/auth`,
+  timeout: AUTH_REQUEST_TIMEOUT_MS,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
 export interface User {
   id: string;
@@ -122,13 +131,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(JSON.parse(storedUser));
         
         try {
-          const response = await axios.get(`${API_URL}/api/auth/me`, {
-            headers: { Authorization: `Bearer ${storedToken}` }
+          const response = await authApi.get('/me', {
+            headers: { Authorization: `Bearer ${storedToken}` },
+            timeout: STARTUP_AUTH_TIMEOUT_MS,
           });
           setUser(response.data);
           i18n.changeLanguage(response.data.language || 'ru');
         } catch (error) {
-          await logout();
+          await clearLocalAuth();
         }
       }
     } catch (error) {
@@ -167,9 +177,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     i18n.changeLanguage(userData.language || 'ru');
   };
 
+  const clearLocalAuth = async () => {
+    await AsyncStorage.removeItem('token');
+    await AsyncStorage.removeItem('user');
+    await AsyncStorage.removeItem(PENDING_VERIFICATION_KEY);
+    setToken(null);
+    setUser(null);
+    setPendingVerification(null);
+  };
+
   const login = async (email: string, password: string) => {
     try {
-      const response = await axios.post(`${API_URL}/api/auth/login`, {
+      const response = await authApi.post('/login', {
         email,
         password
       });
@@ -193,7 +212,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const loginWithClerk = async (payload: ClerkLoginInput) => {
-    const response = await axios.post(`${API_URL}/api/auth/clerk`, {
+    const response = await authApi.post('/clerk', {
       token: payload.token,
       email: payload.email,
       full_name: payload.fullName,
@@ -210,7 +229,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const register = async (email: string, password: string, fullName: string, phone?: string) => {
-    const response = await axios.post(`${API_URL}/api/auth/register`, {
+    const response = await authApi.post('/register', {
       email,
       password,
       full_name: fullName,
@@ -228,7 +247,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       throw new Error('No pending verification');
     }
 
-    const response = await axios.post(`${API_URL}/api/auth/verify-email`, {
+    const response = await authApi.post('/verify-email', {
       registration_id: pendingVerification.registrationId,
       code,
     });
@@ -242,7 +261,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       throw new Error('No pending verification');
     }
 
-    const response = await axios.post(`${API_URL}/api/auth/resend-verification`, {
+    const response = await authApi.post('/resend-verification', {
       registration_id: pendingVerification.registrationId,
     });
 
@@ -256,20 +275,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    await signOutClerkIfAvailable();
-    await AsyncStorage.removeItem('token');
-    await AsyncStorage.removeItem('user');
-    await AsyncStorage.removeItem(PENDING_VERIFICATION_KEY);
-    setToken(null);
-    setUser(null);
-    setPendingVerification(null);
+    await Promise.race([
+      signOutClerkIfAvailable(),
+      new Promise((resolve) => setTimeout(resolve, 3000)),
+    ]);
+    await clearLocalAuth();
   };
 
   const setLocalPassword = async (newPassword: string) => {
     if (!token) return;
 
-    const response = await axios.put(
-      `${API_URL}/api/auth/local-password`,
+    const response = await authApi.put(
+      '/local-password',
       { new_password: newPassword },
       { headers: { Authorization: `Bearer ${token}` } }
     );
@@ -282,8 +299,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const changePassword = async (currentPassword: string, newPassword: string) => {
     if (!token) return;
 
-    await axios.put(
-      `${API_URL}/api/auth/password`,
+    await authApi.put(
+      '/password',
       {
         current_password: currentPassword,
         new_password: newPassword,
@@ -304,13 +321,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       avatar_url: payload.avatarUrl,
     };
     
-    await axios.put(
-      `${API_URL}/api/auth/profile`,
+    await authApi.put(
+      '/profile',
       profilePayload,
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    const response = await axios.get(`${API_URL}/api/auth/me`, {
+    const response = await authApi.get('/me', {
       headers: { Authorization: `Bearer ${token}` }
     });
     
@@ -322,8 +339,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!token) return;
     
     try {
-      await axios.put(
-        `${API_URL}/api/auth/language`,
+      await authApi.put(
+        '/language',
         { language },
         { headers: { Authorization: `Bearer ${token}` } }
       );

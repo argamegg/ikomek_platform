@@ -178,20 +178,24 @@ def build_mobile_service_spec(args: argparse.Namespace, *, backend_port: int) ->
 
     mobile_api_url = args.mobile_api_url or default_mobile_api_url(backend_port)
 
+    command = [
+        npm_executable(),
+        "run",
+        "start",
+        "--",
+        "--dev-client",
+        "--host",
+        args.expo_host,
+        "--port",
+        str(mobile_port),
+    ]
+    if args.clear_mobile_cache:
+        command.append("--clear")
+
     return ServiceSpec(
         name="mobile",
         cwd=MOBILE_DIR,
-        command=[
-            npm_executable(),
-            "run",
-            "start",
-            "--",
-            "--dev-client",
-            "--host",
-            args.expo_host,
-            "--port",
-            str(mobile_port),
-        ],
+        command=command,
         extra_env={
             "EXPO_NO_TELEMETRY": "1",
             "EXPO_PUBLIC_BACKEND_URL": mobile_api_url,
@@ -265,6 +269,7 @@ def add_dev_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--web-port", type=int, default=5173, help="Web app port.")
     parser.add_argument("--mobile-port", type=int, default=8081, help="Preferred Expo dev server port.")
     parser.add_argument("--mobile-api-url", help="Backend base URL injected into the Expo app.")
+    parser.add_argument("--clear-mobile-cache", action="store_true", help="Start Expo with a cleared Metro cache.")
     parser.add_argument(
         "--expo-host",
         default=DEFAULT_EXPO_HOST,
@@ -288,6 +293,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     up.add_argument("--skip-mobile", action="store_true", help="Do not start Expo after Docker services.")
     up.add_argument("--mobile-port", type=int, default=8081, help="Preferred Expo dev server port.")
     up.add_argument("--mobile-api-url", help="Backend base URL injected into the Expo app.")
+    up.add_argument("--clear-mobile-cache", action="store_true", help="Start Expo with a cleared Metro cache.")
     up.add_argument(
         "--expo-host",
         default=DEFAULT_EXPO_HOST,
@@ -319,7 +325,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         argv = ["up"]
     elif argv[0] == "--docker":
         argv = argv[1:] or ["up"]
-    elif argv[0] in {"--skip-mobile", "--mobile-port", "--mobile-api-url", "--expo-host"}:
+    elif argv[0] in {"--skip-mobile", "--mobile-port", "--mobile-api-url", "--expo-host", "--clear-mobile-cache"}:
         argv = ["up", *argv]
     elif argv[0].startswith("--") and argv[0] not in {"-h", "--help"}:
         argv = ["dev", *argv]
@@ -421,6 +427,8 @@ def run_mobile_service(args: argparse.Namespace, *, backend_port: int = 8001) ->
     print(f"  cmd: {' '.join(spec.command)}")
     print("")
     print("[mobile] Expo QR code and logs will appear below.")
+    print("[mobile] Scan the Expo/Metro QR code, or paste the Expo URL printed by Metro.")
+    print("[mobile] Do not paste the backend URL into the dev client; it returns HTML, not a JS bundle.")
     print("[mobile] Stop Expo with Ctrl+C. Docker services will keep running; use `./setup.sh down` to stop them.")
     print("")
 

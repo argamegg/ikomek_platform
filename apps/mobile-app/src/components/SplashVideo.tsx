@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useEventListener } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
@@ -16,14 +16,21 @@ export function SplashVideo({ onFinish }: SplashVideoProps) {
     instance.play();
   });
 
-  useEventListener(player, 'playToEnd', () => {
+  const finishSplash = () => {
     if (hasFinishedRef.current) {
       return;
     }
 
     hasFinishedRef.current = true;
     onFinish();
+  };
+
+  useEffect(() => {
+    const timeout = setTimeout(finishSplash, 4200);
+    return () => clearTimeout(timeout);
   });
+
+  useEventListener(player, 'playToEnd', finishSplash);
 
   return (
     <View style={styles.container}>

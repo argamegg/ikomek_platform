@@ -38,4 +38,8 @@ EXPO_PUBLIC_BACKEND_URL=https://ikomekservice.kz
 
 For local testing on a physical phone, use your computer LAN IP instead of `localhost`, for example `http://192.168.1.25:8001`. The app appends `/api` internally, so do not include `/api` in this value.
 
+Do not paste the backend URL into the Expo development client. The client must open the Expo/Metro URL printed by `npm run start` or shown in the QR code. If it opens `https://ikomekservice.kz`, it receives HTML instead of a JavaScript bundle and React Native shows `Expected MIME-Type to be application/javascript, but got text/html`.
+
+Use the installed development build for this app, not Expo Go, because the project includes native modules.
+
 For full project instructions, see the root [README](/Users/argame/Documents/ikomek-project/README.md) and [RUNNING guide](/Users/argame/Documents/ikomek-project/docs/RUNNING.md).

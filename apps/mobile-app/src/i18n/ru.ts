@@ -810,6 +810,7 @@ export const ru = {
     invalidEmail: 'Неверный email',
     passwordMismatch: 'Пароли не совпадают',
     networkError: 'Ошибка сети',
+    backendUnavailable: 'Не удалось подключиться к серверу. Проверьте, что телефон видит backend URL и что сервер запущен.',
     tryAgain: 'Попробуйте еще раз',
   },
 };

@@ -125,6 +125,8 @@ The Docker backend uses `apps/backend/.env`, but `docker-compose.yml` overrides 
 
 The mobile app reads `EXPO_PUBLIC_BACKEND_URL` and appends `/api` internally. Do not include `/api` in this value.
 
+Important: `EXPO_PUBLIC_BACKEND_URL` is only the API address inside the app. Do not paste `https://ikomekservice.kz` into the Expo development client. The development client must open the Expo/Metro URL printed in the terminal, usually from the QR code. If you paste the backend or web URL there, React Native will receive HTML instead of JavaScript and show `Expected MIME-Type to be application/javascript, but got text/html`.
+
 ## 3.1 Start Without Docker
 
 ```bash
@@ -138,6 +140,8 @@ This starts:
 - interactive Expo mobile dev server in `apps/mobile-app`
 
 The mobile dev server prints the QR code directly in the terminal. You can scan it from a development build, or use Expo keyboard shortcuts such as `i` for iOS Simulator and `a` for Android Emulator.
+
+This app uses native modules, so use the installed development build rather than Expo Go. If the phone cannot reach your computer on LAN, start with `--expo-host tunnel`. If an old or blank bundle keeps opening, restart with `--clear-mobile-cache`.
 
 ```bash
 python3 scripts/start_system.py dev --skip-mobile

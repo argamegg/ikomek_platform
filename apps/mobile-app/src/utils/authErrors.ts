@@ -1,5 +1,6 @@
 import { isAxiosError } from 'axios';
 import type { TFunction } from 'i18next';
+import { API_URL } from './apiConfig';
 
 export function getAuthErrorMessage(error: unknown, t: TFunction): string {
   if (!isAxiosError(error)) {
@@ -9,6 +10,12 @@ export function getAuthErrorMessage(error: unknown, t: TFunction): string {
   const data = error.response?.data ?? {};
   const detail = typeof data.detail === 'string' ? data.detail : '';
   const code = typeof data.code === 'string' ? data.code : '';
+
+  if (!error.response) {
+    const apiLabel = API_URL || 'not configured';
+    const errorLabel = error.code || error.message;
+    return `${t('errors.backendUnavailable')}\nAPI: ${apiLabel}${errorLabel ? `\n${errorLabel}` : ''}`;
+  }
 
   if (code === 'email_not_verified') {
     return t('auth.emailNotVerified');

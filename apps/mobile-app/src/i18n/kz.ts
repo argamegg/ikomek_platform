@@ -810,6 +810,7 @@ export const kz = {
     invalidEmail: 'Қате email',
     passwordMismatch: 'Құпия сөздер сәйкес келмейді',
     networkError: 'Желі қатесі',
+    backendUnavailable: 'Серверге қосылу мүмкін болмады. Телефон backend URL-ды көретінін және сервер қосулы екенін тексеріңіз.',
     tryAgain: 'Қайталап көріңіз',
   },
 };
