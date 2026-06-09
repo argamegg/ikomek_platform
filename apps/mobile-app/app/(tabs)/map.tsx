@@ -71,6 +71,7 @@ type DateRange = { from: string; to: string };
 type TimelineMode = 'period' | 'months';
 type TimelineGranularity = 'hours' | 'weekdays' | 'months';
 type TimelinePoint = { key: string; label: string; all: number; pending: number; closed: number };
+type MapDisplayMode = 'markers' | 'heatmap';
 
 const normalizeLocale = (language?: string): LocaleKey => {
   if (language?.startsWith('en')) return 'en';
@@ -147,6 +148,8 @@ const isDefaultDateRange = (range: DateRange) => {
   const fallback = getDefaultDateRange();
   return range.from === fallback.from && range.to === fallback.to;
 };
+
+const isOpenMapPoint = (point: MapPoint) => point.status === 'pending' || point.status === 'in_progress';
 
 const getDateRangeBounds = (range: DateRange) => {
   const normalized = normalizeDateRange(range);
@@ -803,6 +806,7 @@ export default function MapScreen() {
   const [isPointRequestLoading, setIsPointRequestLoading] = useState(false);
   const [isPointExpanded, setIsPointExpanded] = useState(false);
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
+  const [mapDisplayMode, setMapDisplayMode] = useState<MapDisplayMode>('markers');
   const [activeHotspotAddress, setActiveHotspotAddress] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [dateRange, setDateRange] = useState<DateRange>(() => getDefaultDateRange());
@@ -905,6 +909,7 @@ export default function MapScreen() {
   }, [categoryFilter, filter, statusFilter, t, timeScopedPoints]);
 
   const hasMapFilters = Boolean(statusFilter) || priorityFilter !== 'all' || categoryFilter !== 'all' || !isDefaultDateRange(dateRange);
+  const heatmapColorMode = mapDisplayMode === 'heatmap' && !hasMapFilters ? 'density' : 'priority';
 
   const timelineMonthPoints = useMemo(
     () => allTimelinePoints.filter((point) => {
@@ -1037,7 +1042,10 @@ export default function MapScreen() {
     ]).filter((item) => item.count > 0);
   }, [activeHotspot, t]);
 
-  const mapPoints = activeHotspot ? activeHotspot.points : filteredPoints;
+  const baseMapPoints = activeHotspot ? activeHotspot.points : filteredPoints;
+  const mapPoints = mapDisplayMode === 'heatmap' && !hasMapFilters
+    ? baseMapPoints.filter(isOpenMapPoint)
+    : baseMapPoints;
 
   useEffect(() => {
     setListPage(1);
@@ -1140,6 +1148,17 @@ export default function MapScreen() {
             <TouchableOpacity style={[styles.viewToggle, viewMode === 'list' && styles.viewToggleActive]} onPress={() => setViewMode('list')} data-testid="list-view-toggle">
               <Ionicons name="list" size={18} color={viewMode === 'list' ? '#FFF' : '#64748B'} />
             </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.viewToggle, mapDisplayMode === 'heatmap' && styles.viewToggleActive]}
+              onPress={() => {
+                setViewMode('map');
+                setMapDisplayMode((mode) => (mode === 'heatmap' ? 'markers' : 'heatmap'));
+              }}
+              data-testid="heatmap-view-toggle"
+              accessibilityLabel={t('map.heatmap')}
+            >
+              <Ionicons name="flame" size={18} color={mapDisplayMode === 'heatmap' ? '#FFF' : '#64748B'} />
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -1197,6 +1216,8 @@ export default function MapScreen() {
               statusColors={STATUS_COLORS}
               onPointPress={openPointDetail}
               focusPoints={activeHotspot?.points ?? null}
+              renderMode={mapDisplayMode === 'heatmap' ? 'heatmap' : 'markers'}
+              heatmapColorMode={heatmapColorMode}
             />
             <TouchableOpacity
               style={[styles.mapFilterFab, hasMapFilters && styles.mapFilterFabActive]}
@@ -1253,12 +1274,21 @@ export default function MapScreen() {
             ) : null}
             {!activeHotspot ? (
               <View style={[styles.legend, isCompact && styles.legendCompact]}>
-                {Object.entries(STATUS_COLORS).map(([key, color]) => (
-                  <View key={key} style={styles.legendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: color }]} />
-                    <Text style={styles.legendText}>{t(`status.${key === 'in_progress' ? 'inProgress' : key}`)}</Text>
-                  </View>
-                ))}
+                {mapDisplayMode === 'heatmap' ? (
+                  <>
+                    <View style={[styles.heatmapLegendGradient, heatmapColorMode === 'priority' && styles.heatmapLegendPriority]} />
+                    <Text style={styles.legendText}>
+                      {heatmapColorMode === 'density' ? t('map.heatmapDensityLegend') : t('map.heatmapPriorityLegend')}
+                    </Text>
+                  </>
+                ) : (
+                  Object.entries(STATUS_COLORS).map(([key, color]) => (
+                    <View key={key} style={styles.legendItem}>
+                      <View style={[styles.legendDot, { backgroundColor: color }]} />
+                      <Text style={styles.legendText}>{t(`status.${key === 'in_progress' ? 'inProgress' : key}`)}</Text>
+                    </View>
+                  ))
+                )}
               </View>
             ) : null}
           </View>
@@ -1618,6 +1648,8 @@ const styles = StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6, marginRight: 4 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
   legendText: { fontSize: 11, color: '#334155', fontWeight: '600' },
+  heatmapLegendGradient: { width: 54, height: 10, borderRadius: 999, backgroundColor: '#EF4444', borderWidth: 1, borderColor: 'rgba(153, 27, 27, 0.18)' },
+  heatmapLegendPriority: { backgroundColor: '#F97316' },
   mapFilterFab: { position: 'absolute', right: 14, bottom: 14, zIndex: 8, minHeight: 42, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 13, borderRadius: 21, backgroundColor: 'rgba(255, 255, 255, 0.94)', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.08)', shadowColor: '#0F172A', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.12, shadowRadius: 18, elevation: 6 },
   mapFilterFabActive: { backgroundColor: ORANGE, borderColor: ORANGE },
   mapFilterFabText: { fontSize: 12, fontWeight: '900', color: '#475569' },

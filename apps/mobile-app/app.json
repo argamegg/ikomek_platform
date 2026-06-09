@@ -60,7 +60,7 @@
     },
     "extra": {
       "router": {},
-      "backendUrl": "https://ikomek-backend.onrender.com",
+      "backendUrl": "https://ikomekservice.kz",
       "eas": {
         "projectId": "40989f85-c02c-44eb-8c65-9ce231bd0de9"
       }

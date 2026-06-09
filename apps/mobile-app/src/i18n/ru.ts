@@ -183,6 +183,9 @@ export const ru = {
     detailsUnavailable: 'Не удалось загрузить полную информацию по заявке.',
     categoryAnalyticsTitle: 'Популярные категории',
     insufficientAnalyticsData: 'Недостаточно данных для аналитики',
+    heatmap: 'Тепловая карта',
+    heatmapDensityLegend: 'Светло-желтый - меньше заявок, темно-красный - скопление',
+    heatmapPriorityLegend: 'Тепловые пятна окрашены по приоритетам',
     filters: {
       title: 'Фильтры карты',
       show: 'Фильтры',

@@ -23,6 +23,7 @@ const MARKER_COLOR = 'rgba(51, 65, 85, 0.86)';
 const MARKER_STROKE = 'rgba(255,255,255,0.92)';
 const MY_MARKER_STROKE = 'rgba(15, 23, 42, 0.92)';
 const CAMERA_ANIMATION = 'flyTo';
+const DENSITY_HEAT_WEIGHT = 0.65;
 const NATIVE_MAP_STYLE = {
   version: 8,
   glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
@@ -50,7 +51,29 @@ type RequestsMapProps = {
   statusColors: Record<string, string>;
   onPointPress: (point: MapPoint) => void;
   focusPoints?: MapPoint[] | null;
+  renderMode?: 'markers' | 'heatmap';
+  heatmapColorMode?: 'density' | 'priority';
 };
+
+function getPriorityWeight(point: MapPoint) {
+  if (point.priority === 'high') return 1;
+  if (point.priority === 'medium') return 0.85;
+  if (point.priority === 'low') return 0.72;
+  return 0.68;
+}
+
+function getHeatmapWeight(point: MapPoint, colorMode: 'density' | 'priority') {
+  return colorMode === 'density' ? DENSITY_HEAT_WEIGHT : getPriorityWeight(point);
+}
+
+function getPriorityHeatColor(point: MapPoint) {
+  const weight = getPriorityWeight(point);
+
+  if (weight >= 0.98) return 'rgba(153, 27, 27, 0.72)';
+  if (weight >= 0.82) return 'rgba(249, 115, 22, 0.62)';
+  if (weight >= 0.72) return 'rgba(250, 204, 21, 0.54)';
+  return 'rgba(254, 240, 138, 0.44)';
+}
 
 export function RequestsMap({
   points,
@@ -58,6 +81,8 @@ export function RequestsMap({
   statusColors,
   onPointPress,
   focusPoints,
+  renderMode = 'markers',
+  heatmapColorMode = 'priority',
 }: RequestsMapProps) {
   const { t } = useTranslation();
   const cameraRef = useRef<any>(null);
@@ -97,6 +122,8 @@ export function RequestsMap({
           color: statusColors[point.status] || MARKER_COLOR,
           strokeColor: point.is_mine ? MY_MARKER_STROKE : MARKER_STROKE,
           radius: 8.5,
+          weight: getHeatmapWeight(point, heatmapColorMode),
+          heatColor: getPriorityHeatColor(point),
         },
         geometry: {
           type: 'Point',
@@ -104,7 +131,53 @@ export function RequestsMap({
         },
       })),
     }),
-    [points, statusColors],
+    [heatmapColorMode, points, statusColors],
+  );
+
+  const heatmapLayerStyle = useMemo(
+    () =>
+      ({
+        heatmapWeight: ['coalesce', ['get', 'weight'], DENSITY_HEAT_WEIGHT],
+        heatmapIntensity: ['interpolate', ['linear'], ['zoom'], 10, 1.65, 15, 3.15],
+        heatmapRadius: ['interpolate', ['linear'], ['zoom'], 10, 38, 15, 82],
+        heatmapOpacity: 0.88,
+        heatmapColor: [
+          'interpolate',
+          ['linear'],
+          ['heatmap-density'],
+          0,
+          'rgba(254, 249, 195, 0)',
+          0.015,
+          'rgba(254, 240, 138, 0.38)',
+          0.09,
+          'rgba(253, 224, 71, 0.52)',
+          0.2,
+          'rgba(250, 204, 21, 0.64)',
+          0.36,
+          'rgba(251, 146, 60, 0.76)',
+          0.54,
+          'rgba(249, 115, 22, 0.84)',
+          0.72,
+          'rgba(239, 68, 68, 0.92)',
+          0.88,
+          'rgba(153, 27, 27, 0.95)',
+          1,
+          'rgba(69, 10, 10, 0.96)',
+        ],
+      }) as any,
+    [],
+  );
+
+  const priorityHeatmapStyle = useMemo(
+    () =>
+      ({
+        circleColor: ['coalesce', ['get', 'heatColor'], 'rgba(254, 240, 138, 0.44)'],
+        circleRadius: ['interpolate', ['linear'], ['coalesce', ['get', 'weight'], 0.68], 0.68, 36, 0.85, 52, 1, 68],
+        circleBlur: 0.92,
+        circleOpacity: 0.9,
+        circleStrokeWidth: 0,
+      }) as any,
+    [],
   );
 
   const clusterCircleStyle = useMemo(
@@ -319,27 +392,37 @@ export function RequestsMap({
         ref={shapeSourceRef}
         id="requests"
         shape={pointFeatureCollection as any}
-        cluster
+        cluster={renderMode !== 'heatmap'}
         clusterRadius={40}
         clusterMaxZoomLevel={15}
         onPress={handleNativePointPress}
         hitbox={{ width: 44, height: 44 }}
       >
-        <MapLibre.CircleLayer
-          id="request-clusters"
-          filter={['has', 'point_count'] as any}
-          style={clusterCircleStyle}
-        />
-        <MapLibre.SymbolLayer
-          id="request-cluster-count"
-          filter={['has', 'point_count'] as any}
-          style={clusterCountStyle}
-        />
-        <MapLibre.CircleLayer
-          id="request-points"
-          filter={['!', ['has', 'point_count']] as any}
-          style={unclusteredPointStyle}
-        />
+        {renderMode === 'heatmap' && heatmapColorMode === 'density' ? (
+          <MapLibre.HeatmapLayer id="request-heatmap" style={heatmapLayerStyle} />
+        ) : null}
+        {renderMode === 'heatmap' && heatmapColorMode === 'priority' ? (
+          <MapLibre.CircleLayer id="request-priority-heatmap" style={priorityHeatmapStyle} />
+        ) : null}
+        {renderMode !== 'heatmap' ? (
+          <>
+            <MapLibre.CircleLayer
+              id="request-clusters"
+              filter={['has', 'point_count'] as any}
+              style={clusterCircleStyle}
+            />
+            <MapLibre.SymbolLayer
+              id="request-cluster-count"
+              filter={['has', 'point_count'] as any}
+              style={clusterCountStyle}
+            />
+            <MapLibre.CircleLayer
+              id="request-points"
+              filter={['!', ['has', 'point_count']] as any}
+              style={unclusteredPointStyle}
+            />
+          </>
+        ) : null}
       </MapLibre.ShapeSource>
     </MapLibre.MapView>
   );

@@ -183,6 +183,9 @@ export const kz = {
     detailsUnavailable: 'Өтініштің толық мәліметін жүктеу мүмкін болмады.',
     categoryAnalyticsTitle: 'Танымал санаттар',
     insufficientAnalyticsData: 'Аналитика үшін деректер жеткіліксіз',
+    heatmap: 'Жылу картасы',
+    heatmapDensityLegend: 'Ашық сары - аз өтініш, қою қызыл - шоғырланған орын',
+    heatmapPriorityLegend: 'Жылу нүктелері басымдық бойынша боялған',
     filters: {
       title: 'Карта сүзгілері',
       show: 'Сүзгілер',

@@ -183,6 +183,9 @@ export const en = {
     detailsUnavailable: 'Could not load full request details.',
     categoryAnalyticsTitle: 'Popular Categories',
     insufficientAnalyticsData: 'Not enough data for analytics',
+    heatmap: 'Heatmap',
+    heatmapDensityLegend: 'Light yellow means fewer requests, dark red means a hotspot',
+    heatmapPriorityLegend: 'Heat spots are colored by priority',
     filters: {
       title: 'Map filters',
       show: 'Filters',

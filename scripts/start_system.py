@@ -20,6 +20,7 @@ WEB_DIR = ROOT / "apps" / "web-app"
 COMPOSE_FILE = ROOT / "docker-compose.yml"
 PROJECT_NAME = "ikomek-local"
 LOCAL_API_URL = "http://127.0.0.1:8001/api"
+DEFAULT_EXPO_HOST = "lan"
 
 
 def docker_compose_command() -> list[str]:
@@ -70,6 +71,19 @@ def print_docker_urls() -> None:
     print("Web:     http://localhost:8080")
     print("Mongo:   mongodb://localhost:27018")
     print("")
+
+
+def detect_lan_host() -> str:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.connect(("8.8.8.8", 80))
+            return sock.getsockname()[0]
+    except OSError:
+        return "127.0.0.1"
+
+
+def default_mobile_api_url(backend_port: int) -> str:
+    return f"http://{detect_lan_host()}:{backend_port}"
 
 
 def seed_demo_via_backend() -> int:
@@ -157,6 +171,35 @@ def find_available_port(preferred_port: int, *, dry_run: bool) -> int:
     raise RuntimeError(f"No available mobile dev server port found near {preferred_port}.")
 
 
+def build_mobile_service_spec(args: argparse.Namespace, *, backend_port: int) -> ServiceSpec:
+    mobile_port = find_available_port(args.mobile_port, dry_run=args.dry_run)
+    if mobile_port != args.mobile_port:
+        print(f"[system] Mobile port {args.mobile_port} is busy. Using port {mobile_port} instead.")
+
+    mobile_api_url = args.mobile_api_url or default_mobile_api_url(backend_port)
+
+    return ServiceSpec(
+        name="mobile",
+        cwd=MOBILE_DIR,
+        command=[
+            npm_executable(),
+            "run",
+            "start",
+            "--",
+            "--dev-client",
+            "--host",
+            args.expo_host,
+            "--port",
+            str(mobile_port),
+        ],
+        extra_env={
+            "EXPO_NO_TELEMETRY": "1",
+            "EXPO_PUBLIC_BACKEND_URL": mobile_api_url,
+        },
+        interactive=True,
+    )
+
+
 # Build the list of services to start based on CLI arguments
 def build_service_specs(args: argparse.Namespace) -> list[ServiceSpec]:
     specs: list[ServiceSpec] = []
@@ -201,27 +244,7 @@ def build_service_specs(args: argparse.Namespace) -> list[ServiceSpec]:
         )
 
     if not args.skip_mobile:
-        mobile_port = find_available_port(args.mobile_port, dry_run=args.dry_run)
-        if mobile_port != args.mobile_port:
-            print(f"[system] Mobile port {args.mobile_port} is busy. Using port {mobile_port} instead.")
-
-        specs.append(
-            ServiceSpec(
-                name="mobile",
-                cwd=MOBILE_DIR,
-                command=[
-                    npm_executable(),
-                    "run",
-                    "start",
-                    "--",
-                    "--dev-client",
-                    "--port",
-                    str(mobile_port),
-                ],
-                extra_env={"EXPO_NO_TELEMETRY": "1"},
-                interactive=True,
-            )
-        )
+        specs.append(build_mobile_service_spec(args, backend_port=args.backend_port))
 
     if not specs:
         raise RuntimeError("All services were skipped. Start at least one service.")
@@ -241,6 +264,13 @@ def add_dev_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--backend-port", type=int, default=8001, help="Backend port.")
     parser.add_argument("--web-port", type=int, default=5173, help="Web app port.")
     parser.add_argument("--mobile-port", type=int, default=8081, help="Preferred Expo dev server port.")
+    parser.add_argument("--mobile-api-url", help="Backend base URL injected into the Expo app.")
+    parser.add_argument(
+        "--expo-host",
+        default=DEFAULT_EXPO_HOST,
+        choices=["lan", "localhost", "tunnel"],
+        help="Expo host mode for the QR code.",
+    )
     parser.add_argument("--dry-run", action="store_true", help="Print commands without starting them.")
 
 
@@ -250,11 +280,21 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     )
     subparsers = parser.add_subparsers(dest="command")
 
-    up = subparsers.add_parser("up", help="Build and start Mongo, backend, and web containers.")
-    up.add_argument("services", nargs="*", help="Optional service names: mongo, backend, web.")
+    up = subparsers.add_parser("up", help="Build and start Mongo, backend, web, and the Expo mobile dev server.")
+    up.add_argument("services", nargs="*", help="Optional service names: mongo, backend, web, mobile.")
     up.add_argument("-d", "--detach", action="store_true", help="Run containers in the background.")
     up.add_argument("--no-build", action="store_true", help="Start existing images without rebuilding.")
     up.add_argument("--force-recreate", action="store_true", help="Recreate containers to reload env files.")
+    up.add_argument("--skip-mobile", action="store_true", help="Do not start Expo after Docker services.")
+    up.add_argument("--mobile-port", type=int, default=8081, help="Preferred Expo dev server port.")
+    up.add_argument("--mobile-api-url", help="Backend base URL injected into the Expo app.")
+    up.add_argument(
+        "--expo-host",
+        default=DEFAULT_EXPO_HOST,
+        choices=["lan", "localhost", "tunnel"],
+        help="Expo host mode for the QR code.",
+    )
+    up.set_defaults(dry_run=False)
 
     build = subparsers.add_parser("build", help="Build Docker images.")
     build.add_argument("services", nargs="*", help="Optional service names: backend, web.")
@@ -279,6 +319,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         argv = ["up"]
     elif argv[0] == "--docker":
         argv = argv[1:] or ["up"]
+    elif argv[0] in {"--skip-mobile", "--mobile-port", "--mobile-api-url", "--expo-host"}:
+        argv = ["up", *argv]
     elif argv[0].startswith("--") and argv[0] not in {"-h", "--help"}:
         argv = ["dev", *argv]
 
@@ -368,6 +410,31 @@ def run_dev_services(args: argparse.Namespace) -> int:
         return 0
 
 
+def run_mobile_service(args: argparse.Namespace, *, backend_port: int = 8001) -> int:
+    spec = build_mobile_service_spec(args, backend_port=backend_port)
+    validate_layout([spec])
+
+    print("")
+    print("Mobile Expo:")
+    print(f"  cwd: {spec.cwd}")
+    print(f"  API: {spec.extra_env['EXPO_PUBLIC_BACKEND_URL']}")
+    print(f"  cmd: {' '.join(spec.command)}")
+    print("")
+    print("[mobile] Expo QR code and logs will appear below.")
+    print("[mobile] Stop Expo with Ctrl+C. Docker services will keep running; use `./setup.sh down` to stop them.")
+    print("")
+
+    env = os.environ.copy()
+    env.update(spec.extra_env)
+    process = subprocess.Popen(spec.command, cwd=spec.cwd, env=env)
+    try:
+        return process.wait()
+    except KeyboardInterrupt:
+        print("\n[mobile] Stopping Expo...")
+        terminate_processes([process])
+        return 0
+
+
 def run_docker_command(args: argparse.Namespace) -> int:
     if not COMPOSE_FILE.exists():
         print(f"Compose file was not found: {COMPOSE_FILE}", file=sys.stderr)
@@ -375,16 +442,28 @@ def run_docker_command(args: argparse.Namespace) -> int:
 
     try:
         if args.command == "up":
+            requested_services = list(args.services)
+            start_mobile = not args.detach and not args.skip_mobile and (
+                not requested_services or "mobile" in requested_services
+            )
+            compose_services = [service for service in requested_services if service != "mobile"]
             command = ["up"]
             if not args.no_build:
                 command.append("--build")
-            if args.detach:
+            if args.detach or start_mobile:
                 command.append("--detach")
             if args.force_recreate:
                 command.append("--force-recreate")
-            command.extend(args.services)
+            command.extend(compose_services)
             print_docker_urls()
-            return run_command(compose_args(*command))
+            if start_mobile:
+                mobile_api_url = args.mobile_api_url or default_mobile_api_url(8001)
+                print(f"Mobile API for Expo: {mobile_api_url}")
+                print("")
+            result = run_command(compose_args(*command))
+            if result != 0 or not start_mobile:
+                return result
+            return run_mobile_service(args, backend_port=8001)
 
         if args.command == "build":
             return run_command(compose_args("build", *args.services))

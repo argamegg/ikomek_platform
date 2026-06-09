@@ -45,7 +45,13 @@ EMAIL_VERIFICATION_MAX_ATTEMPTS=5
 Create `apps/mobile-app/.env`:
 
 ```env
-EXPO_PUBLIC_BACKEND_URL=http://localhost:8001
+EXPO_PUBLIC_BACKEND_URL=http://192.168.1.25:8001
+```
+
+Use a LAN IP that is reachable from your phone. For production builds use the public backend origin without `/api`:
+
+```env
+EXPO_PUBLIC_BACKEND_URL=https://ikomekservice.kz
 ```
 
 ### Web App
@@ -94,12 +100,16 @@ What it starts:
 - backend on `http://localhost:8001`
 - web app on `http://localhost:8080`
 - MongoDB on `mongodb://localhost:27018`
+- Expo mobile dev server with a QR code in the terminal
 
-By default this command builds and runs the Docker images from `docker-compose.yml`.
+By default this command builds and runs the Docker images from `docker-compose.yml` in the background, then starts Expo in the foreground so the QR code remains visible.
 
 Useful options:
 
 ```bash
+python3 scripts/start_system.py up --skip-mobile
+python3 scripts/start_system.py up --mobile-api-url http://192.168.1.25:8001
+python3 scripts/start_system.py up --expo-host tunnel
 python3 scripts/start_system.py up -d
 python3 scripts/start_system.py logs backend
 python3 scripts/start_system.py ps
@@ -112,6 +122,8 @@ python3 scripts/start_system.py down -v
 ```
 
 The Docker backend uses `apps/backend/.env`, but `docker-compose.yml` overrides `MONGO_URL` to `mongodb://mongo:27017` so the container talks to the local Mongo container.
+
+The mobile app reads `EXPO_PUBLIC_BACKEND_URL` and appends `/api` internally. Do not include `/api` in this value.
 
 ## 3.1 Start Without Docker
 
@@ -132,6 +144,7 @@ python3 scripts/start_system.py dev --skip-mobile
 python3 scripts/start_system.py dev --skip-web
 python3 scripts/start_system.py dev --skip-backend
 python3 scripts/start_system.py dev --mobile-port 8082
+python3 scripts/start_system.py dev --mobile-api-url http://192.168.1.25:8001
 python3 scripts/start_system.py dev --dry-run
 ```
 
